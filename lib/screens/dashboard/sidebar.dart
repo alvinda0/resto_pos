@@ -27,21 +27,25 @@ class SideBarScreen extends StatefulWidget {
 class _SideBarScreenState extends State<SideBarScreen> {
   int _selectedIndex = 0;
   int? _selectedSubIndex;
-  bool _isPengaturanExpanded = false;
-  bool _isCollapsed = false; // Untuk mengontrol collapsed/expanded sidebar
+  int? _expandedMenuIndex;
 
   final List<MenuItem> _menuItems = [
     MenuItem(Icons.home, 'Beranda'),
     MenuItem(Icons.table_restaurant, 'Meja'),
-    MenuItem(Icons.category, 'Kategori dan Menu'),
+    MenuItem(Icons.category, 'Menu'),
     MenuItem(Icons.local_offer, 'Promo'),
     MenuItem(Icons.shopping_cart, 'Pesanan'),
     MenuItem(Icons.kitchen, 'Dapur'),
-    MenuItem(Icons.person, 'Role dan Akun'),
+    MenuItem(Icons.person, 'Akun'),
     MenuItem(Icons.calculate, 'Tax'),
+    MenuItem(Icons.stars, 'Points', subItems: [
+      MenuItem(Icons.card_giftcard, 'Hadiah'),
+      MenuItem(Icons.history, 'Riwayat Penukaran'),
+      MenuItem(Icons.settings_applications, 'Konfigurasi Poin'),
+    ]),
     MenuItem(Icons.settings, 'Pengaturan', subItems: [
       MenuItem(Icons.palette, 'Tema'),
-      MenuItem(Icons.qr_code, 'Konfigurasi QRIS'),
+      MenuItem(Icons.qr_code, 'QRIS'),
       MenuItem(Icons.article, 'Logs'),
     ]),
   ];
@@ -50,7 +54,22 @@ class _SideBarScreenState extends State<SideBarScreen> {
     if (_selectedSubIndex != null) {
       // Handle sub-menu selections
       switch (_selectedIndex) {
-        case 8: // Pengaturan
+        case 8: // Points
+          switch (_selectedSubIndex) {
+            case 0:
+              return const Center(
+                  child: Text('Hadiah Page', style: TextStyle(fontSize: 24)));
+            case 1:
+              return const Center(
+                  child: Text('Riwayat Penukaran Page',
+                      style: TextStyle(fontSize: 24)));
+            case 2:
+              return const Center(
+                  child: Text('Konfigurasi Poin Page',
+                      style: TextStyle(fontSize: 24)));
+          }
+          break;
+        case 9: // Pengaturan
           switch (_selectedSubIndex) {
             case 0:
               return const Center(
@@ -67,7 +86,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
       }
     }
 
-    // Handle main menu selections
+    // Handle main menu selections (only for menus without submenus)
     switch (_selectedIndex) {
       case 0:
         return const DashboardPage();
@@ -87,8 +106,6 @@ class _SideBarScreenState extends State<SideBarScreen> {
       case 7:
         return const Center(
             child: Text('Tax Page', style: TextStyle(fontSize: 24)));
-      case 8:
-        return const SettingsPage();
       default:
         return const DashboardPage();
     }
@@ -97,172 +114,134 @@ class _SideBarScreenState extends State<SideBarScreen> {
   Widget _buildMenuItem(MenuItem item, int index) {
     final isSelected = _selectedIndex == index && _selectedSubIndex == null;
     final hasSubItems = item.subItems != null && item.subItems!.isNotEmpty;
+    final isExpanded = _expandedMenuIndex == index;
 
-    if (_isCollapsed) {
-      // Mode collapsed - hanya tampilkan icon
-      return Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Tooltip(
-              message: item.title,
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedIndex = index;
-                    _selectedSubIndex = null;
-                    if (hasSubItems) {
-                      _isPengaturanExpanded = !_isPengaturanExpanded;
-                    } else {
-                      _isPengaturanExpanded = false;
-                    }
-                  });
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.red.shade50 : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    item.icon,
-                    color: isSelected ? Colors.red : Colors.white70,
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Sub-menu items untuk mode collapsed
-          if (hasSubItems && _isPengaturanExpanded && _isCollapsed)
-            ...item.subItems!.asMap().entries.map((entry) {
-              final subIndex = entry.key;
-              final subItem = entry.value;
-              final isSubSelected =
-                  _selectedIndex == index && _selectedSubIndex == subIndex;
-
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                child: Tooltip(
-                  message: subItem.title,
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = index;
-                        _selectedSubIndex = subIndex;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isSubSelected
-                            ? Colors.red.shade50
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        subItem.icon,
-                        color: isSubSelected ? Colors.red : Colors.white60,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-        ],
-      );
-    }
-
-    // Mode expanded - tampilkan icon dan text
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          child: ListTile(
-            leading: Icon(
-              item.icon,
-              color: isSelected ? Colors.red : Colors.white70,
-              size: 20,
-            ),
-            title: Text(
-              item.title,
-              style: TextStyle(
-                color: isSelected ? Colors.red : Colors.white70,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14,
-              ),
-            ),
-            trailing: hasSubItems
-                ? Icon(
-                    _isPengaturanExpanded
-                        ? Icons.expand_less
-                        : Icons.expand_more,
-                    color: isSelected ? Colors.red : Colors.white70,
-                    size: 20,
-                  )
-                : null,
-            selected: isSelected,
-            selectedTileColor: Colors.red.shade50,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            onTap: () {
-              setState(() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            if (hasSubItems) {
+              // If it has subitems, toggle expansion but don't set as selected
+              if (_expandedMenuIndex == index) {
+                _expandedMenuIndex = null;
+              } else {
+                _expandedMenuIndex = index;
                 _selectedIndex = index;
                 _selectedSubIndex = null;
-                if (hasSubItems) {
-                  _isPengaturanExpanded = !_isPengaturanExpanded;
-                } else {
-                  _isPengaturanExpanded = false;
-                }
-              });
-            },
-          ),
-        ),
-        // Sub-menu items (hanya tampil jika tidak collapsed)
-        if (hasSubItems && _isPengaturanExpanded && !_isCollapsed)
-          ...item.subItems!.asMap().entries.map((entry) {
-            final subIndex = entry.key;
-            final subItem = entry.value;
-            final isSubSelected =
-                _selectedIndex == index && _selectedSubIndex == subIndex;
-
-            return Container(
-              margin:
-                  const EdgeInsets.only(left: 24, right: 8, top: 2, bottom: 2),
-              child: ListTile(
-                leading: Icon(
-                  subItem.icon,
-                  color: isSubSelected ? Colors.red : Colors.white60,
-                  size: 18,
-                ),
-                title: Text(
-                  subItem.title,
-                  style: TextStyle(
-                    color: isSubSelected ? Colors.red : Colors.white60,
-                    fontWeight:
-                        isSubSelected ? FontWeight.bold : FontWeight.normal,
-                    fontSize: 13,
+              }
+            } else {
+              // If no subitems, select normally
+              _selectedIndex = index;
+              _selectedSubIndex = null;
+              _expandedMenuIndex = null;
+            }
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 40,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: (isSelected && !hasSubItems) || isExpanded
+                      ? Colors.red
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: (isSelected && !hasSubItems) || isExpanded
+                        ? Colors.red
+                        : Colors.transparent,
+                    width: 2,
                   ),
                 ),
-                selected: isSubSelected,
-                selectedTileColor: Colors.red.shade50,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                child: Icon(
+                  item.icon,
+                  color: (isSelected && !hasSubItems) || isExpanded
+                      ? Colors.white
+                      : Colors.white70,
+                  size: 20,
                 ),
-                onTap: () {
-                  setState(() {
-                    _selectedIndex = index;
-                    _selectedSubIndex = subIndex;
-                  });
-                },
               ),
-            );
-          }).toList(),
-      ],
+              const SizedBox(height: 4),
+              Text(
+                item.title,
+                style: TextStyle(
+                  color: (isSelected && !hasSubItems) || isExpanded
+                      ? Colors.white
+                      : Colors.white60,
+                  fontSize: 10,
+                  fontWeight: (isSelected && !hasSubItems) || isExpanded
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubMenuItem(MenuItem subItem, int mainIndex, int subIndex) {
+    final isSelected =
+        _selectedIndex == mainIndex && _selectedSubIndex == subIndex;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedIndex = mainIndex;
+            _selectedSubIndex = subIndex;
+          });
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 32,
+                width: 32,
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.red.shade400 : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected ? Colors.red.shade400 : Colors.white24,
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  subItem.icon,
+                  color: isSelected ? Colors.white : Colors.white60,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subItem.title,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white54,
+                  fontSize: 8,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -271,210 +250,161 @@ class _SideBarScreenState extends State<SideBarScreen> {
     return Scaffold(
       body: Row(
         children: [
-          // Sidebar
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            width: _isCollapsed ? 80 : 280,
-            color: Colors.deepPurple.shade700,
+          // Sidebar - Icon Only
+          Container(
+            width: 90,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.deepPurple.shade700,
+                  Colors.deepPurple.shade800,
+                ],
+              ),
+            ),
             child: Column(
               children: [
-                // Header
+                // Header dengan Logo
                 Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    mainAxisAlignment: _isCollapsed
-                        ? MainAxisAlignment.center
-                        : MainAxisAlignment.spaceBetween,
+                  height: 80,
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Very',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Menu Items
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        ...List.generate(_menuItems.length, (index) {
+                          final item = _menuItems[index];
+                          final isExpanded = _expandedMenuIndex == index;
+
+                          return Column(
+                            children: [
+                              _buildMenuItem(item, index),
+                              // Show sub-menu items if this item is expanded and has sub-items
+                              if (item.subItems != null && isExpanded)
+                                Container(
+                                  margin:
+                                      const EdgeInsets.only(top: 8, bottom: 8),
+                                  child: Column(
+                                    children: item.subItems!
+                                        .asMap()
+                                        .entries
+                                        .map((entry) {
+                                      return _buildSubMenuItem(
+                                          entry.value, index, entry.key);
+                                    }).toList(),
+                                  ),
+                                ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // User Profile & Logout
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     children: [
-                      if (!_isCollapsed)
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '加班烧烤',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      // Divider
+                      Container(
+                        height: 1,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Colors.white24,
+                              Colors.transparent,
+                            ],
                           ),
                         ),
-                      // Toggle button
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _isCollapsed = !_isCollapsed;
-                            if (_isCollapsed) {
-                              _isPengaturanExpanded = false;
-                            }
-                          });
-                        },
-                        icon: Icon(
-                          _isCollapsed ? Icons.menu_open : Icons.menu,
-                          color: Colors.white,
-                          size: 20,
+                      ),
+
+                      // Logout Button
+                      Tooltip(
+                        message: 'Logout',
+                        child: InkWell(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Konfirmasi Logout'),
+                                content: const Text(
+                                    'Apakah Anda yakin ingin keluar?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Batal'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const LoginScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('Logout'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            height: 40,
+                            width: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade400.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.red.shade400.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.logout,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                // Menu Label
-                if (!_isCollapsed)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    alignment: Alignment.centerLeft,
-                    child: const Text(
-                      'MENU',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-
-                // Menu Items
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(top: 8),
-                    itemCount: _menuItems.length,
-                    itemBuilder: (context, index) {
-                      return _buildMenuItem(_menuItems[index], index);
-                    },
-                  ),
-                ),
-
-                // User Info
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: _isCollapsed
-                      ? Column(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Colors.red,
-                              radius: 20,
-                              child: const Text(
-                                'OU',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            IconButton(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Konfirmasi Logout'),
-                                    content: const Text(
-                                        'Apakah Anda yakin ingin keluar?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('Batal'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const LoginScreen(),
-                                            ),
-                                          );
-                                        },
-                                        child: const Text('Logout'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.logout,
-                                  color: Colors.white70, size: 20),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Colors.red,
-                              radius: 16,
-                              child: const Text(
-                                'OU',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Owner User',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    'owner@siresto.com',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Konfirmasi Logout'),
-                                    content: const Text(
-                                        'Apakah Anda yakin ingin keluar?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('Batal'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const LoginScreen(),
-                                            ),
-                                          );
-                                        },
-                                        child: const Text('Logout'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.logout,
-                                  color: Colors.white70, size: 20),
-                            ),
-                          ],
-                        ),
                 ),
               ],
             ),
@@ -482,7 +412,12 @@ class _SideBarScreenState extends State<SideBarScreen> {
 
           // Main Content
           Expanded(
-            child: _getSelectedPage(),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+              ),
+              child: _getSelectedPage(),
+            ),
           ),
         ],
       ),

@@ -6,11 +6,13 @@ import 'package:pos/models/tables/model_tables.dart';
 import 'package:pos/config/config.dart'; // Import Config class Anda
 
 abstract class TableRepository {
-  Future<TableResponseModel> getTables(String token);
-  Future<QrCodeModel> createTable(String token, String tableNumber);
-  Future<void> deleteTable(String token, String tableId);
+  Future<TableResponseModel> getTables(String token, {String? storeId});
+  Future<QrCodeModel> createTable(String token, String tableNumber,
+      {String? storeId});
+  Future<void> deleteTable(String token, String tableId, {String? storeId});
   Future<QrCodeModel> updateTable(
-      String token, String tableId, Map<String, dynamic> data);
+      String token, String tableId, Map<String, dynamic> data,
+      {String? storeId});
 }
 
 class TableRepositoryImpl implements TableRepository {
@@ -29,19 +31,53 @@ class TableRepositoryImpl implements TableRepository {
     return TableRepositoryImpl();
   }
 
-  Map<String, String> _getHeaders(String token) {
-    return {
+  // Method untuk extract store ID dari token
+  String? _extractStoreIdFromToken(String token) {
+    try {
+      // Decode JWT token untuk mendapatkan payload
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      final payload = parts[1];
+      // Add padding if needed
+      final normalizedPayload =
+          payload.padRight(payload.length + (4 - payload.length % 4) % 4, '=');
+
+      final decoded = utf8.decode(base64Url.decode(normalizedPayload));
+      final Map<String, dynamic> payloadData = json.decode(decoded);
+
+      // Ambil store_id dari payload token
+      // Sesuaikan dengan struktur token Anda
+      return payloadData['store_id']?.toString() ??
+          payloadData['storeId']?.toString() ??
+          payloadData['store']?.toString();
+    } catch (e) {
+      print('Error extracting store ID from token: $e');
+      return null;
+    }
+  }
+
+  Map<String, String> _getHeaders(String token, {String? storeId}) {
+    final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
+
+    // Prioritas: parameter storeId > extract dari token
+    final finalStoreId = storeId ?? _extractStoreIdFromToken(token);
+    if (finalStoreId != null) {
+      headers['X-Store-ID'] = finalStoreId;
+    }
+
+    return headers;
   }
 
   @override
-  Future<TableResponseModel> getTables(String token) async {
+  Future<TableResponseModel> getTables(String token, {String? storeId}) async {
     try {
       final response = await _client.get(
         Uri.parse('$baseUrl/api/v1/qr-codes'),
-        headers: _getHeaders(token),
+        headers: _getHeaders(token, storeId: storeId),
       );
 
       if (response.statusCode == 200) {
@@ -63,11 +99,12 @@ class TableRepositoryImpl implements TableRepository {
   }
 
   @override
-  Future<QrCodeModel> createTable(String token, String tableNumber) async {
+  Future<QrCodeModel> createTable(String token, String tableNumber,
+      {String? storeId}) async {
     try {
       final response = await _client.post(
         Uri.parse('$baseUrl/api/v1/qr-codes'),
-        headers: _getHeaders(token),
+        headers: _getHeaders(token, storeId: storeId),
         body: json.encode({
           'table_number': tableNumber,
           'type': 'menu',
@@ -94,11 +131,12 @@ class TableRepositoryImpl implements TableRepository {
   }
 
   @override
-  Future<void> deleteTable(String token, String tableId) async {
+  Future<void> deleteTable(String token, String tableId,
+      {String? storeId}) async {
     try {
       final response = await _client.delete(
         Uri.parse('$baseUrl/api/v1/qr-codes/$tableId'),
-        headers: _getHeaders(token),
+        headers: _getHeaders(token, storeId: storeId),
       );
 
       if (response.statusCode != 200 && response.statusCode != 204) {
@@ -118,11 +156,12 @@ class TableRepositoryImpl implements TableRepository {
 
   @override
   Future<QrCodeModel> updateTable(
-      String token, String tableId, Map<String, dynamic> data) async {
+      String token, String tableId, Map<String, dynamic> data,
+      {String? storeId}) async {
     try {
       final response = await _client.put(
         Uri.parse('$baseUrl/api/v1/qr-codes/$tableId'),
-        headers: _getHeaders(token),
+        headers: _getHeaders(token, storeId: storeId),
         body: json.encode(data),
       );
 

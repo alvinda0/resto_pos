@@ -6,6 +6,14 @@ import 'package:pos/blocs/tables/tables_bloc.dart';
 import 'package:pos/blocs/tables/tables_event.dart';
 import 'package:pos/blocs/tables/tables_state.dart';
 import 'package:pos/models/tables/model_tables.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+// Tambahkan import untuk download QR
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class TablesPage extends StatefulWidget {
   const TablesPage({super.key});
@@ -16,6 +24,8 @@ class TablesPage extends StatefulWidget {
 
 class _TablesPageState extends State<TablesPage> {
   final TextEditingController _tableNumberController = TextEditingController();
+  // GlobalKey untuk capture QR code widget
+  final GlobalKey _qrGlobalKey = GlobalKey();
 
   @override
   void initState() {
@@ -169,21 +179,6 @@ class _TablesPageState extends State<TablesPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _showEditTableDialog(table);
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -214,111 +209,250 @@ class _TablesPageState extends State<TablesPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('QR Code - Meja ${table.tableNumber}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Icon(
+                      Icons.qr_code_2,
+                      color: Colors.blue,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'QR Code - Meja ${table.tableNumber}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      iconSize: 24,
+                    ),
+                  ],
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.qr_code,
-                    size: 150,
-                    color: Colors.grey,
+                const SizedBox(height: 24),
+
+                // QR Code Display dengan GlobalKey untuk capture
+                RepaintBoundary(
+                  key: _qrGlobalKey,
+                  child: Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade300, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: QrImageView(
+                      data: table.menuUrl,
+                      version: QrVersions.auto,
+                      size: 248,
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      errorStateBuilder: (cxt, err) {
+                        return Container(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Error generating QR",
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Code: ${table.code}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontFamily: 'monospace',
+
+                const SizedBox(height: 20),
+
+                // Action Buttons - Ganti Share dengan Download
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _downloadQrCode(table);
+                        },
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Download QR'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 8),
+
+                // Close Button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Tutup'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tutup'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Implement share/print functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Fitur berbagi akan segera hadir')),
-                );
-              },
-              child: const Text('Bagikan'),
-            ),
-          ],
         );
       },
     );
   }
 
-  void _showEditTableDialog(QrCodeModel table) {
-    final TextEditingController editController = TextEditingController(
-      text: table.tableNumber,
-    );
+  // Fungsi untuk download QR Code sebagai image
+  Future<void> _downloadQrCode(QrCodeModel table) async {
+    try {
+      // Minta permission untuk storage
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+        if (!status.isGranted) {
+          _showSnackBar(
+              'Izin penyimpanan diperlukan untuk download', Colors.red);
+          return;
+        }
+      }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Edit Meja'),
-          content: TextField(
-            controller: editController,
-            decoration: const InputDecoration(
-              labelText: 'Nomor Meja',
-              hintText: 'Masukkan nomor meja',
-            ),
-            keyboardType: TextInputType.number,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                editController.dispose();
-              },
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (editController.text.isNotEmpty &&
-                    editController.text != table.tableNumber) {
-                  final authState = context.read<AuthBloc>().state;
-                  if (authState is AuthAuthenticated) {
-                    context.read<TableBloc>().add(
-                          TableUpdateRequested(
-                            token: authState.token,
-                            tableId: table.id,
-                            data: {'table_number': editController.text},
-                          ),
-                        );
-                  }
-                }
-                Navigator.of(context).pop();
-                editController.dispose();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Simpan'),
-            ),
-          ],
+      // Capture QR code widget sebagai image
+      RenderRepaintBoundary boundary = _qrGlobalKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+
+      if (byteData != null) {
+        Uint8List pngBytes = byteData.buffer.asUint8List();
+
+        // Simpan ke galeri
+        final result = await ImageGallerySaver.saveImage(
+          pngBytes,
+          name:
+              "QR_Meja_${table.tableNumber}_${DateTime.now().millisecondsSinceEpoch}",
+          quality: 100,
         );
-      },
+
+        if (result['isSuccess'] == true) {
+          _showSnackBar('QR Code berhasil disimpan ke galeri', Colors.green);
+        } else {
+          _showSnackBar('Gagal menyimpan QR Code', Colors.red);
+        }
+      }
+    } catch (e) {
+      print('Error downloading QR code: $e');
+      _showSnackBar('Terjadi kesalahan saat download QR Code', Colors.red);
+    }
+  }
+
+  // Helper method untuk menampilkan snackbar
+  void _showSnackBar(String message, Color backgroundColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        duration: const Duration(seconds: 3),
+      ),
     );
+  }
+
+  void _copyQrUrlToClipboard(String menuUrl) {
+    Clipboard.setData(ClipboardData(text: menuUrl));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Menu URL disalin ke clipboard'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+// Helper method for QR info rows
+  Widget _buildQrInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            '$label:',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontFamily: 'monospace',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+// Helper method to copy QR code to clipboard
+  void _copyQrCodeToClipboard(String qrCode) {
+    Clipboard.setData(ClipboardData(text: qrCode));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('QR Code disalin ke clipboard'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+// Helper method to format DateTime
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
   String _getLoadingText(String actionType) {

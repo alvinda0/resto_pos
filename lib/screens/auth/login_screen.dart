@@ -96,7 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (value == null || value.isEmpty) {
                                 return 'Email tidak boleh kosong';
                               }
-                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              // Updated regex to allow '+' in the local part of the email
+                              if (!RegExp(r'^[\w-+\.]+@([\w-]+\.)+[\w-]{2,4}$')
                                   .hasMatch(value)) {
                                 return 'Format email tidak valid';
                               }

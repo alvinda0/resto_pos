@@ -25,7 +25,10 @@ class TableBloc extends Bloc<TableEvent, TableState> {
     emit(TableLoading());
 
     try {
-      final response = await _tableRepository.getTables(event.token);
+      final response = await _tableRepository.getTables(
+        event.token,
+        storeId: event.storeId,
+      );
       emit(TableLoaded(tables: response.data.qrCodes));
     } catch (error) {
       if (error is ApiError) {
@@ -47,10 +50,17 @@ class TableBloc extends Bloc<TableEvent, TableState> {
     emit(TableActionLoading(tables: currentTables, actionType: 'create'));
 
     try {
-      await _tableRepository.createTable(event.token, event.tableNumber);
+      await _tableRepository.createTable(
+        event.token,
+        event.tableNumber,
+        storeId: event.storeId,
+      );
 
       // Refresh the tables list after successful creation
-      final response = await _tableRepository.getTables(event.token);
+      final response = await _tableRepository.getTables(
+        event.token,
+        storeId: event.storeId,
+      );
       emit(TableActionSuccess(
         tables: response.data.qrCodes,
         message: 'Meja berhasil ditambahkan',
@@ -75,10 +85,17 @@ class TableBloc extends Bloc<TableEvent, TableState> {
     emit(TableActionLoading(tables: currentTables, actionType: 'delete'));
 
     try {
-      await _tableRepository.deleteTable(event.token, event.tableId);
+      await _tableRepository.deleteTable(
+        event.token,
+        event.tableId,
+        storeId: event.storeId,
+      );
 
       // Refresh the tables list after successful deletion
-      final response = await _tableRepository.getTables(event.token);
+      final response = await _tableRepository.getTables(
+        event.token,
+        storeId: event.storeId,
+      );
       emit(TableActionSuccess(
         tables: response.data.qrCodes,
         message: 'Meja berhasil dihapus',
@@ -104,10 +121,17 @@ class TableBloc extends Bloc<TableEvent, TableState> {
 
     try {
       await _tableRepository.updateTable(
-          event.token, event.tableId, event.data);
+        event.token,
+        event.tableId,
+        event.data,
+        storeId: event.storeId,
+      );
 
       // Refresh the tables list after successful update
-      final response = await _tableRepository.getTables(event.token);
+      final response = await _tableRepository.getTables(
+        event.token,
+        storeId: event.storeId,
+      );
       emit(TableActionSuccess(
         tables: response.data.qrCodes,
         message: 'Meja berhasil diperbarui',
@@ -126,7 +150,10 @@ class TableBloc extends Bloc<TableEvent, TableState> {
     Emitter<TableState> emit,
   ) async {
     try {
-      final response = await _tableRepository.getTables(event.token);
+      final response = await _tableRepository.getTables(
+        event.token,
+        storeId: event.storeId,
+      );
       emit(TableLoaded(tables: response.data.qrCodes));
     } catch (error) {
       if (error is ApiError) {
