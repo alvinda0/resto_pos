@@ -11,14 +11,14 @@ import 'package:pos/widgets/dashboard/statistics_chart_widget.dart';
 import 'package:pos/widgets/dashboard/trending_menu_widget.dart';
 import 'package:pos/widgets/dashboard/weekly_chart_widget.dart';
 
-class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(

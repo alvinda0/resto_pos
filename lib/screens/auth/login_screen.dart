@@ -26,16 +26,32 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      final loginRequest = LoginRequest(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+  // Jika ingin ada loading effect singkat:
 
-      context.read<AuthBloc>().add(AuthLoginRequested(loginRequest));
-    }
+  void _login() async {
+    // Simulasi loading sebentar
+    context.read<AuthBloc>().add(
+        AuthLoginRequested(LoginRequest(email: 'dummy', password: 'dummy')));
+
+    // Tunggu sebentar lalu navigate
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const SideBarScreen()),
+    );
   }
+
+  // void _login() {
+  //   if (_formKey.currentState!.validate()) {
+  //     final loginRequest = LoginRequest(
+  //       email: _emailController.text.trim(),
+  //       password: _passwordController.text,
+  //     );
+
+  //     context.read<AuthBloc>().add(AuthLoginRequested(loginRequest));
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {

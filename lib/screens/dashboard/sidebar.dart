@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:pos/screens/auth/login_screen.dart';
-import 'package:pos/screens/dashboard/customers_page.dart';
-import 'package:pos/screens/dashboard/dashboard_page.dart';
+import 'package:pos/screens/dashboard/customers_screen.dart';
+import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/menu/products_page.dart';
-import 'package:pos/screens/dashboard/promo_page.dart';
+import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/sales_page.dart';
-import 'package:pos/screens/dashboard/settings_page.dart';
-import 'package:pos/screens/table/tables_page.dart';
+import 'package:pos/screens/dashboard/settings_screen.dart';
+import 'package:pos/screens/table/tables_screen.dart';
 
 class MenuItem {
   final IconData icon;
@@ -34,20 +34,28 @@ class _SideBarScreenState extends State<SideBarScreen> {
   final List<MenuItem> _menuItems = [
     MenuItem(Icons.home, 'Beranda'),
     MenuItem(Icons.table_restaurant, 'Meja'),
-    MenuItem(Icons.category, 'Menu'),
+    MenuItem(Icons.category, 'Menu dan Bahan', subItems: [
+      MenuItem(Icons.category, 'Menu'),
+      MenuItem(Icons.kitchen, 'Bahan'),
+    ]),
     MenuItem(Icons.local_offer, 'Promo'),
     MenuItem(Icons.shopping_cart, 'Pesanan'),
-    MenuItem(Icons.kitchen, 'Dapur'),
+    MenuItem(Icons.restaurant, 'Dapur'),
     MenuItem(Icons.person, 'Akun'),
-    MenuItem(Icons.calculate, 'Tax'),
+    MenuItem(Icons.person_add, 'Referral', subItems: [
+      MenuItem(Icons.person_add, 'Kelola Referral'),
+      MenuItem(Icons.attach_money, 'Pencairan'),
+    ]),
+    MenuItem(Icons.people, 'Customer'),
     MenuItem(Icons.stars, 'Points', subItems: [
       MenuItem(Icons.card_giftcard, 'Hadiah'),
       MenuItem(Icons.history, 'Riwayat Penukaran'),
-      MenuItem(Icons.settings_applications, 'Konfigurasi Poin'),
+      MenuItem(Icons.scale, 'Konfigurasi Point'),
     ]),
     MenuItem(Icons.settings, 'Pengaturan', subItems: [
       MenuItem(Icons.palette, 'Tema'),
-      MenuItem(Icons.qr_code, 'QRIS'),
+      MenuItem(Icons.calculate, 'Konfigurasi Pajak'),
+      MenuItem(Icons.qr_code, 'Konfigurasi QRIS'),
       MenuItem(Icons.article, 'Logs'),
     ]),
   ];
@@ -91,8 +99,9 @@ class _SideBarScreenState extends State<SideBarScreen> {
         _expandedMenuIndex = null;
       } else {
         _expandedMenuIndex = index;
-        _selectedIndex = index;
-        _selectedSubIndex = null;
+        // Jangan set _selectedIndex untuk menu yang memiliki submenu
+        // _selectedIndex = index;
+        // _selectedSubIndex = null;
       }
     });
   }
@@ -100,7 +109,28 @@ class _SideBarScreenState extends State<SideBarScreen> {
   Widget _getSelectedPage() {
     if (_selectedSubIndex != null) {
       switch (_selectedIndex) {
-        case 8: // Points
+        case 2: // Menu dan Bahan
+          switch (_selectedSubIndex) {
+            case 0:
+              return const ProductScreen(); // Menu
+            case 1:
+              return const Center(
+                  child: Text('Bahan Page', style: TextStyle(fontSize: 24)));
+          }
+          break;
+        case 7: // Referral
+          switch (_selectedSubIndex) {
+            case 0:
+              return const Center(
+                  child: Text('Kelola Referral Page',
+                      style: TextStyle(fontSize: 24)));
+            case 1:
+              return const Center(
+                  child:
+                      Text('Pencairan Page', style: TextStyle(fontSize: 24)));
+          }
+          break;
+        case 9: // Points
           switch (_selectedSubIndex) {
             case 0:
               return const Center(
@@ -111,20 +141,24 @@ class _SideBarScreenState extends State<SideBarScreen> {
                       style: TextStyle(fontSize: 24)));
             case 2:
               return const Center(
-                  child: Text('Konfigurasi Poin Page',
+                  child: Text('Konfigurasi Point Page',
                       style: TextStyle(fontSize: 24)));
           }
           break;
-        case 9: // Pengaturan
+        case 10: // Pengaturan
           switch (_selectedSubIndex) {
             case 0:
               return const Center(
                   child: Text('Tema Page', style: TextStyle(fontSize: 24)));
             case 1:
               return const Center(
-                  child: Text('Konfigurasi QRIS Page',
+                  child: Text('Konfigurasi Pajak Page',
                       style: TextStyle(fontSize: 24)));
             case 2:
+              return const Center(
+                  child: Text('Konfigurasi QRIS Page',
+                      style: TextStyle(fontSize: 24)));
+            case 3:
               return const Center(
                   child: Text('Logs Page', style: TextStyle(fontSize: 24)));
           }
@@ -134,25 +168,23 @@ class _SideBarScreenState extends State<SideBarScreen> {
 
     switch (_selectedIndex) {
       case 0:
-        return const DashboardPage();
+        return const DashboardScreen(); // Beranda
       case 1:
-        return const TablesPage();
-      case 2:
-        return const ProductsPage();
+        return const TableScreen(); // Meja
       case 3:
-        return const PromoPage();
+        return const PromoPage(); // Promo
       case 4:
-        return const SalesPage();
+        return const SalesPage(); // Pesanan
       case 5:
         return const Center(
             child: Text('Dapur Page', style: TextStyle(fontSize: 24)));
       case 6:
-        return const CustomersPage();
-      case 7:
         return const Center(
-            child: Text('Tax Page', style: TextStyle(fontSize: 24)));
+            child: Text('Akun Page', style: TextStyle(fontSize: 24)));
+      case 8:
+        return const CustomersScreen(); // Customer
       default:
-        return const DashboardPage();
+        return const DashboardScreen();
     }
   }
 
@@ -173,8 +205,14 @@ class _SideBarScreenState extends State<SideBarScreen> {
           onTap: () {
             setState(() {
               if (hasSubItems && showExpanded) {
+                // Jika memiliki submenu dan sidebar expanded, toggle submenu
                 _toggleSubmenu(index);
+              } else if (hasSubItems && !showExpanded) {
+                // Jika memiliki submenu tapi sidebar collapsed, expand sidebar dulu
+                _isSidebarExpanded = true;
+                _expandedMenuIndex = index;
               } else {
+                // Jika tidak memiliki submenu, set sebagai selected
                 _selectedIndex = index;
                 _selectedSubIndex = null;
                 _expandedMenuIndex = null;

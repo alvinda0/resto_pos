@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class CustomersPage extends StatefulWidget {
-  const CustomersPage({super.key});
+class CustomersScreen extends StatefulWidget {
+  const CustomersScreen({super.key});
 
   @override
-  State<CustomersPage> createState() => _CustomersPageState();
+  State<CustomersScreen> createState() => _CustomersScreenState();
 }
 
-class _CustomersPageState extends State<CustomersPage> {
+class _CustomersScreenState extends State<CustomersScreen> {
   List<Map<String, dynamic>> customers = [
     {
       'name': 'Ahmad Suryanto',
