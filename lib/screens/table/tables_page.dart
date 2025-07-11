@@ -137,12 +137,22 @@ class _TablesPageState extends State<TablesPage> {
   void _showTableOptions(QrCodeModel table) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width, // Force full width
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext context) {
         return Container(
-          padding: const EdgeInsets.all(20),
+          width:
+              MediaQuery.of(context).size.width, // Gunakan ukuran layar penuh
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width,
+          ),
+          padding: const EdgeInsets.fromLTRB(
+              20, 20, 20, 40), // Tambah bottom padding untuk safe area
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -163,23 +173,21 @@ class _TablesPageState extends State<TablesPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _showQrCode(table);
-                      },
-                      icon: const Icon(Icons.qr_code),
-                      label: const Text('Lihat QR Code'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showQrCode(table);
+                  },
+                  icon: const Icon(Icons.qr_code),
+                  label: const Text('Lihat QR Code'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 12),
               SizedBox(
@@ -194,6 +202,7 @@ class _TablesPageState extends State<TablesPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ),
