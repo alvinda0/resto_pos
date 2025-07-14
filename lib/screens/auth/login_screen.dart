@@ -1,57 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pos/blocs/auth/auth_bloc.dart';
-import 'package:pos/blocs/auth/auth_event.dart';
-import 'package:pos/blocs/auth/auth_state.dart';
-import 'package:pos/models/auth/auth_model.dart';
-import 'package:pos/screens/dashboard/sidebar.dart';
+import 'package:get/get.dart';
+import 'package:pos/controller/auth/auth_controller.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginScreen extends StatelessWidget {
+  LoginScreen({super.key});
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _obscurePassword = true;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  // Jika ingin ada loading effect singkat:
-
-  void _login() async {
-    // Simulasi loading sebentar
-    context.read<AuthBloc>().add(
-        AuthLoginRequested(LoginRequest(email: 'dummy', password: 'dummy')));
-
-    // Tunggu sebentar lalu navigate
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const SideBarScreen()),
-    );
-  }
-
-  // void _login() {
-  //   if (_formKey.currentState!.validate()) {
-  //     final loginRequest = LoginRequest(
-  //       email: _emailController.text.trim(),
-  //       password: _passwordController.text,
-  //     );
-
-  //     context.read<AuthBloc>().add(AuthLoginRequested(loginRequest));
-  //   }
-  // }
+  final AuthController authController = Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -59,154 +13,191 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthAuthenticated) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const SideBarScreen()),
-            );
-          } else if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo / Icon
-                const Icon(Icons.store, size: 72, color: Colors.deepPurple),
-                const SizedBox(height: 16),
-                Text(
-                  'POS Login',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo / Icon
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.deepPurple.withOpacity(0.1),
                 ),
-                const SizedBox(height: 32),
+                child: const Icon(
+                  Icons.store,
+                  size: 72,
+                  color: Colors.deepPurple,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'POS Login',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Masuk ke sistem Point of Sale',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 32),
 
-                // Form Card
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Email tidak boleh kosong';
-                              }
-                              // Updated regex to allow '+' in the local part of the email
-                              if (!RegExp(r'^[\w-+\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                  .hasMatch(value)) {
-                                return 'Format email tidak valid';
-                              }
-                              return null;
-                            },
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              prefixIcon: Icon(Icons.email),
-                              border: OutlineInputBorder(),
-                            ),
+              // Form Card
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Form(
+                    key: authController.loginFormKey,
+                    child: Column(
+                      children: [
+                        // Email Field
+                        TextFormField(
+                          controller: authController.emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: authController.validateEmail,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.email),
+                            border: OutlineInputBorder(),
+                            hintText: 'Masukkan email Anda',
                           ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Password tidak boleh kosong';
-                              }
-                              return null;
-                            },
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              prefixIcon: const Icon(Icons.lock),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  color: _obscurePassword
-                                      ? Colors.grey
-                                      : Colors.deepPurple,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child: BlocBuilder<AuthBloc, AuthState>(
-                              builder: (context, state) {
-                                final isLoading = state is AuthLoading;
+                        ),
+                        const SizedBox(height: 16),
 
-                                return ElevatedButton(
-                                  onPressed: isLoading ? null : _login,
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    backgroundColor: Colors.deepPurple,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                        // Password Field
+                        Obx(() => TextFormField(
+                              controller: authController.passwordController,
+                              obscureText: !authController.passwordVisible,
+                              validator: authController.validatePassword,
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                prefixIcon: const Icon(Icons.lock),
+                                border: const OutlineInputBorder(),
+                                hintText: 'Masukkan password Anda',
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    authController.passwordVisible
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                    color: authController.passwordVisible
+                                        ? Colors.deepPurple
+                                        : Colors.grey,
                                   ),
-                                  child: isLoading
-                                      ? const CircularProgressIndicator(
-                                          color: Colors.white)
-                                      : const Text(
-                                          'Login',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.white,
-                                          ),
+                                  onPressed:
+                                      authController.togglePasswordVisibility,
+                                ),
+                              ),
+                            )),
+                        const SizedBox(height: 24),
+
+                        // Login Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: Obx(() => ElevatedButton(
+                                onPressed: authController.isLoading
+                                    ? null
+                                    : authController.login,
+                                style: ElevatedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: Colors.deepPurple,
+                                  disabledBackgroundColor: Colors.grey[300],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: authController.isLoading ? 0 : 2,
+                                ),
+                                child: authController.isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
                                         ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                                      )
+                                    : const Text(
+                                        'Login',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              )),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 24),
-                TextButton(
-                  onPressed: () {
-                    // TODO: Implementasi lupa password
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur lupa password belum tersedia'),
-                      ),
-                    );
-                  },
-                  child: const Text('Lupa password?'),
+              const SizedBox(height: 24),
+
+              // Forgot Password
+              TextButton(
+                onPressed: () {
+                  Get.snackbar(
+                    'Info',
+                    'Fitur lupa password belum tersedia',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.orange[100],
+                    colorText: Colors.orange[800],
+                    duration: const Duration(seconds: 2),
+                  );
+                },
+                child: Text(
+                  'Lupa password?',
+                  style: TextStyle(
+                    color: Colors.deepPurple,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Development Info (hapus di production)
+              if (authController.emailController.text.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber[200]!),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Development Mode',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Email dan password sudah diisi otomatis',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.amber[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
       ),

@@ -1,47 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pos/blocs/auth/auth_bloc.dart';
-import 'package:pos/blocs/auth/auth_state.dart';
-import 'package:pos/blocs/dashboard/dashboard_bloc.dart';
-import 'package:pos/blocs/dashboard/dashboard_event.dart';
-import 'package:pos/blocs/dashboard/dashboard_state.dart';
-import 'package:pos/models/dashboard/dashboard_model.dart';
-import 'package:pos/repositories/dashboard/dashboard_repository.dart';
-import 'package:pos/widgets/dashboard/statistics_chart_widget.dart';
-import 'package:pos/widgets/dashboard/trending_menu_widget.dart';
-import 'package:pos/widgets/dashboard/weekly_chart_widget.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
-        if (authState is AuthAuthenticated) {
-          return BlocProvider(
-            create: (context) => DashboardBloc(
-              dashboardRepository: DashboardRepository(),
-              token: authState.token,
-            )..add(
-                const DashboardLoadRequested()), // Move the event trigger here
-            child: const _DashboardPageContent(),
-          );
-        }
-
-        // Handle unauthenticated state
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-      },
-    );
+    return const _DashboardPageContent();
   }
 }
 
@@ -55,58 +19,21 @@ class _DashboardPageContent extends StatelessWidget {
       appBar: _buildAppBar(context),
       body: RefreshIndicator(
         onRefresh: () async {
-          context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+          // Simulate a refresh action
+          await Future.delayed(const Duration(seconds: 1));
         },
-        child: BlocBuilder<DashboardBloc, DashboardState>(
-          builder: (context, state) {
-            if (state is DashboardLoading) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            } else if (state is DashboardError) {
-              return _buildErrorWidget(context, state);
-            } else if (state is DashboardLoaded) {
-              return _buildDashboardContent(context, state.stats);
-            }
-            return const SizedBox.shrink();
-          },
-        ),
+        child: _buildDashboardContent(context),
       ),
     );
   }
 
-  Widget _buildErrorWidget(BuildContext context, DashboardError state) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Error: ${state.error.message}',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              context.read<DashboardBloc>().add(const DashboardLoadRequested());
-            },
-            child: const Text('Retry'),
-          ),
-        ],
-      ),
+  Widget _buildDashboardContent(BuildContext context) {
+    // Mock data for demonstration
+    final stats = DashboardStats(
+      weeklyStats: [10, 20, 30, 40, 50, 60, 70],
+      trendingItems: ['Item 1', 'Item 2', 'Item 3'],
     );
-  }
 
-  Widget _buildDashboardContent(BuildContext context, DashboardStats stats) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(_getPadding(context)),
       child: Column(
@@ -225,5 +152,68 @@ class _DashboardPageContent extends StatelessWidget {
     } else {
       return 24.0;
     }
+  }
+}
+
+// Mock classes for demonstration
+class DashboardStats {
+  final List<int> weeklyStats;
+  final List<String> trendingItems;
+
+  DashboardStats({required this.weeklyStats, required this.trendingItems});
+}
+
+class StatisticsCardsWidget extends StatelessWidget {
+  final DashboardStats stats;
+
+  const StatisticsCardsWidget({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text('Statistics: ${stats.weeklyStats.join(', ')}'),
+      ),
+    );
+  }
+}
+
+class WeeklyChartWidget extends StatelessWidget {
+  final List<int> weeklyStats;
+
+  const WeeklyChartWidget({required this.weeklyStats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text('Weekly Chart: ${weeklyStats.join(', ')}'),
+      ),
+    );
+  }
+}
+
+class TrendingMenuWidget extends StatelessWidget {
+  final List<String> trendingItems;
+
+  const TrendingMenuWidget({required this.trendingItems});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Trending Items:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            ...trendingItems.map((item) => Text(item)).toList(),
+          ],
+        ),
+      ),
+    );
   }
 }

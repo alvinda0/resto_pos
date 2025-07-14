@@ -5,7 +5,6 @@ import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/menu/products_page.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/sales_page.dart';
-import 'package:pos/screens/dashboard/settings_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 
 class MenuItem {
@@ -574,7 +573,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const LoginScreen(),
+                                    builder: (context) => LoginScreen(),
                                   ),
                                 );
                               },
