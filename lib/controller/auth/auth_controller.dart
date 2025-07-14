@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/auth/auth_model.dart';
+import 'package:pos/screens/dashboard/sidebar.dart';
 import 'package:pos/services/auth_service.dart';
 import 'package:pos/models/routes.dart';
 
@@ -107,7 +108,7 @@ class AuthController extends GetxController {
         );
 
         // Navigate to dashboard
-        Get.offAllNamed(AppRoutes.dashboard);
+        Get.offAll(() => const SideBarScreen());
       } else {
         // Show error message
         Get.snackbar(

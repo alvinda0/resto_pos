@@ -5,6 +5,7 @@ import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/menu/products_page.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/sales_page.dart';
+import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 
 class MenuItem {
@@ -120,9 +121,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
         case 7: // Referral
           switch (_selectedSubIndex) {
             case 0:
-              return const Center(
-                  child: Text('Kelola Referral Page',
-                      style: TextStyle(fontSize: 24)));
+              return ReferralScreen();
             case 1:
               return const Center(
                   child:
@@ -150,9 +149,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
               return const Center(
                   child: Text('Tema Page', style: TextStyle(fontSize: 24)));
             case 1:
-              return const Center(
-                  child: Text('Konfigurasi Pajak Page',
-                      style: TextStyle(fontSize: 24)));
+              return ReferralScreen(); // Konfigurasi Pajak
             case 2:
               return const Center(
                   child: Text('Konfigurasi QRIS Page',
