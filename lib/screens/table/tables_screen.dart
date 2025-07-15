@@ -25,12 +25,15 @@ class _TableScreenState extends State<TableScreen> {
 
   Future<void> _initializeData() async {
     await _qrCodeController.fetchQrCodes();
+    // Tunggu sebentar untuk memastikan data sudah dimuat
+    await Future.delayed(Duration(milliseconds: 100));
     _filterTables();
   }
 
   void _filterTables() {
     final query = _searchController.text.toLowerCase();
     setState(() {
+      // Gunakan _qrCodeController.qrCodes.value untuk akses data terbaru
       _filteredTables = _qrCodeController.qrCodes.where((qrCode) {
         return qrCode.tableNumber.toLowerCase().contains(query);
       }).toList();
@@ -53,6 +56,10 @@ class _TableScreenState extends State<TableScreen> {
           ),
         ),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
@@ -60,103 +67,102 @@ class _TableScreenState extends State<TableScreen> {
           Container(
             color: Colors.white,
             padding: const EdgeInsets.all(16),
-            child: Column(
+            child: Row(
               children: [
-                // Search bar dan controls
-                Row(
-                  children: [
-                    // Search bar
-                    Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Cari Meja',
-                            hintStyle: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 14,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Colors.grey[500],
-                              size: 20,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
+                // Search bar
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
                     ),
-                    const SizedBox(width: 12),
-                    // Filter button
-                    Container(
-                      height: 40,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          _showFilterDialog();
-                        },
-                        icon: Icon(
-                          Icons.tune,
-                          color: Colors.grey[600],
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Cari Meja',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 14,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey[500],
                           size: 20,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Grid view button
-                    Container(
-                      height: 40,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          // Handle view change
-                        },
-                        icon: Icon(
-                          Icons.grid_view,
-                          color: Colors.grey[600],
-                          size: 20,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                // Stats row
-                Obx(() => Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildStatCard(
-                          'Total Meja',
-                          _qrCodeController.qrCodesCount.toString(),
-                          Colors.blue,
-                        ),
-                        _buildStatCard(
-                          'Aktif',
-                          _qrCodeController.activeQrCodesCount.toString(),
-                          Colors.green,
-                        ),
-                        _buildStatCard(
-                          'Expired',
-                          _qrCodeController.expiredQrCodesCount.toString(),
-                          Colors.red,
-                        ),
-                      ],
-                    )),
+                const SizedBox(width: 12),
+                // Filter button
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      _showFilterDialog();
+                    },
+                    icon: Icon(
+                      Icons.tune,
+                      color: Colors.grey[600],
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Grid view button
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      // Handle view change
+                    },
+                    icon: Icon(
+                      Icons.grid_view,
+                      color: Colors.grey[600],
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // QR Code button
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      // Handle QR code action
+                    },
+                    icon: Icon(
+                      Icons.qr_code,
+                      color: Colors.grey[600],
+                      size: 20,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -168,7 +174,9 @@ class _TableScreenState extends State<TableScreen> {
               child: Obx(() {
                 if (_qrCodeController.isLoading.value) {
                   return const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                    ),
                   );
                 }
 
@@ -190,12 +198,34 @@ class _TableScreenState extends State<TableScreen> {
                             color: Colors.grey[600],
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _qrCodeController.error.value,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            _qrCodeController.refreshData();
+                          },
+                          child: const Text('Coba Lagi'),
+                        ),
                       ],
                     ),
                   );
                 }
 
-                if (_filteredTables.isEmpty) {
+                // Update filtered tables setiap kali ada perubahan data
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _filterTables();
+                });
+
+                if (_filteredTables.isEmpty &&
+                    _qrCodeController.qrCodes.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -207,12 +237,50 @@ class _TableScreenState extends State<TableScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _searchController.text.isEmpty
-                              ? 'Belum ada meja'
-                              : 'Meja tidak ditemukan',
+                          'Belum ada meja',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tambahkan meja pertama Anda',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (_filteredTables.isEmpty &&
+                    _qrCodeController.qrCodes.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Meja tidak ditemukan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Coba kata kunci yang berbeda',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
                           ),
                         ),
                       ],
@@ -229,10 +297,10 @@ class _TableScreenState extends State<TableScreen> {
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
+                      crossAxisCount: 4,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 1.0,
+                      childAspectRatio: 1.2,
                     ),
                     itemCount: _filteredTables.length,
                     itemBuilder: (context, index) {
@@ -251,10 +319,8 @@ class _TableScreenState extends State<TableScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isExpired
-                                  ? Colors.red[300]!
-                                  : Colors.grey[300]!,
-                              width: 1.5,
+                              color: Colors.grey[300]!,
+                              width: 1,
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -268,47 +334,38 @@ class _TableScreenState extends State<TableScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.table_restaurant,
-                                size: 32,
-                                color: isExpired
-                                    ? Colors.red[400]
-                                    : Colors.blue[400],
-                              ),
-                              const SizedBox(height: 8),
+                              // Table number - large and prominent
                               Text(
-                                'Meja ${qrCode.tableNumber}',
+                                qrCode.tableNumber,
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
                                   color: isExpired
                                       ? Colors.red[400]
-                                      : Colors.black87,
+                                      : Colors.red[500],
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isExpired
-                                      ? Colors.red[100]
-                                      : Colors.green[100],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  isExpired ? 'Expired' : 'Aktif',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isExpired
-                                        ? Colors.red[700]
-                                        : Colors.green[700],
-                                    fontWeight: FontWeight.w500,
+                              // Status indicator
+                              if (isExpired)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Expired',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.red[700],
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
@@ -327,7 +384,7 @@ class _TableScreenState extends State<TableScreen> {
         onPressed: () {
           _showAddTableDialog();
         },
-        backgroundColor: Colors.red[400],
+        backgroundColor: Colors.red[500],
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           'Tambah Meja',
@@ -336,35 +393,6 @@ class _TableScreenState extends State<TableScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color.withOpacity(0.8),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -380,28 +408,31 @@ class _TableScreenState extends State<TableScreen> {
             ListTile(
               title: const Text('Semua'),
               onTap: () {
-                _filteredTables = _qrCodeController.qrCodes;
-                setState(() {});
+                setState(() {
+                  _filteredTables = _qrCodeController.qrCodes.toList();
+                });
                 Navigator.pop(context);
               },
             ),
             ListTile(
               title: const Text('Aktif'),
               onTap: () {
-                _filteredTables = _qrCodeController.qrCodes
-                    .where((qr) => !_qrCodeController.isExpired(qr))
-                    .toList();
-                setState(() {});
+                setState(() {
+                  _filteredTables = _qrCodeController.qrCodes
+                      .where((qr) => !_qrCodeController.isExpired(qr))
+                      .toList();
+                });
                 Navigator.pop(context);
               },
             ),
             ListTile(
               title: const Text('Expired'),
               onTap: () {
-                _filteredTables = _qrCodeController.qrCodes
-                    .where((qr) => _qrCodeController.isExpired(qr))
-                    .toList();
-                setState(() {});
+                setState(() {
+                  _filteredTables = _qrCodeController.qrCodes
+                      .where((qr) => _qrCodeController.isExpired(qr))
+                      .toList();
+                });
                 Navigator.pop(context);
               },
             ),
@@ -541,10 +572,12 @@ class _TableScreenState extends State<TableScreen> {
                     ? null
                     : () async {
                         await _qrCodeController.createQrCode(
-                          storeId:
-                              'your_store_id', // Replace with actual store ID
+                          storeId: 'your_store_id',
                         );
                         _filterTables();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       },
                 child: _qrCodeController.isLoading.value
                     ? const SizedBox(
@@ -618,6 +651,9 @@ class _TableScreenState extends State<TableScreen> {
                     : () async {
                         await _qrCodeController.updateQrCode(qrCode.id);
                         _filterTables();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       },
                 child: _qrCodeController.isLoading.value
                     ? const SizedBox(

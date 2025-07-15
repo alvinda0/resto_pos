@@ -75,7 +75,7 @@ class QrCodeService extends GetxService {
     }
   }
 
-  // Get all QR codes
+  // Get all QR codes - Updated to handle the specific response structure
   Future<List<QrCodeModel>> getQrCodes() async {
     try {
       final storeId = _getStoreId();
@@ -84,27 +84,48 @@ class QrCodeService extends GetxService {
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
 
-        // Handle different response structures
+        // Debug print untuk melihat struktur response
+        print('QR Code Response: $jsonResponse');
+
+        // Handle struktur response yang spesifik
         if (jsonResponse is Map<String, dynamic>) {
-          if (jsonResponse.containsKey('data')) {
-            // If response has 'data' field
-            final data = jsonResponse['data'];
-            if (data is List) {
-              return data.map((item) => QrCodeModel.fromJson(item)).toList();
-            } else if (data is Map && data.containsKey('qr_codes')) {
+          // Untuk struktur: { "data": { "qrcodes": [...] } }
+          if (jsonResponse.containsKey('data') &&
+              jsonResponse['data'] is Map<String, dynamic>) {
+            final data = jsonResponse['data'] as Map<String, dynamic>;
+
+            // Cek apakah ada field 'qrcodes'
+            if (data.containsKey('qrcodes') && data['qrcodes'] is List) {
+              final qrCodes = data['qrcodes'] as List;
+              return qrCodes.map((item) => QrCodeModel.fromJson(item)).toList();
+            }
+            // Cek apakah ada field 'qr_codes'
+            else if (data.containsKey('qr_codes') && data['qr_codes'] is List) {
               final qrCodes = data['qr_codes'] as List;
               return qrCodes.map((item) => QrCodeModel.fromJson(item)).toList();
             }
-          } else if (jsonResponse.containsKey('qr_codes')) {
-            // If response has direct 'qr_codes' field
+          }
+          // Untuk struktur: { "qrcodes": [...] }
+          else if (jsonResponse.containsKey('qrcodes') &&
+              jsonResponse['qrcodes'] is List) {
+            final qrCodes = jsonResponse['qrcodes'] as List;
+            return qrCodes.map((item) => QrCodeModel.fromJson(item)).toList();
+          }
+          // Untuk struktur: { "qr_codes": [...] }
+          else if (jsonResponse.containsKey('qr_codes') &&
+              jsonResponse['qr_codes'] is List) {
             final qrCodes = jsonResponse['qr_codes'] as List;
             return qrCodes.map((item) => QrCodeModel.fromJson(item)).toList();
-          } else {
-            // If response is direct array in data field
-            return [QrCodeModel.fromJson(jsonResponse)];
           }
-        } else if (jsonResponse is List) {
-          // If response is direct array
+          // Untuk struktur: { "data": [...] }
+          else if (jsonResponse.containsKey('data') &&
+              jsonResponse['data'] is List) {
+            final data = jsonResponse['data'] as List;
+            return data.map((item) => QrCodeModel.fromJson(item)).toList();
+          }
+        }
+        // Jika response langsung berupa array
+        else if (jsonResponse is List) {
           return jsonResponse
               .map((item) => QrCodeModel.fromJson(item))
               .toList();
@@ -116,8 +137,9 @@ class QrCodeService extends GetxService {
         throw Exception(errorMessage);
       }
     } catch (e) {
+      print('Error in getQrCodes: $e');
       if (e is Exception) {
-        rethrow; // Re-throw if it's already an Exception to avoid nesting
+        rethrow;
       }
       throw Exception('Network error: ${e.toString()}');
     }
@@ -135,7 +157,10 @@ class QrCodeService extends GetxService {
         // Handle different response structures
         if (jsonResponse is Map<String, dynamic>) {
           if (jsonResponse.containsKey('data')) {
-            return QrCodeModel.fromJson(jsonResponse['data']);
+            final data = jsonResponse['data'];
+            if (data is Map<String, dynamic>) {
+              return QrCodeModel.fromJson(data);
+            }
           } else {
             return QrCodeModel.fromJson(jsonResponse);
           }
@@ -181,7 +206,10 @@ class QrCodeService extends GetxService {
 
         if (jsonResponse is Map<String, dynamic>) {
           if (jsonResponse.containsKey('data')) {
-            return QrCodeModel.fromJson(jsonResponse['data']);
+            final responseData = jsonResponse['data'];
+            if (responseData is Map<String, dynamic>) {
+              return QrCodeModel.fromJson(responseData);
+            }
           } else {
             return QrCodeModel.fromJson(jsonResponse);
           }
