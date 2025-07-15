@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/tables/model_tables.dart';
 import 'package:pos/services/tables/tables_qr_code_service.dart';
+import 'package:pos/storage_service.dart';
 
 class QrCodeController extends GetxController {
   static QrCodeController get instance {
@@ -13,6 +14,7 @@ class QrCodeController extends GetxController {
   }
 
   final QrCodeService _qrCodeService = QrCodeService.instance;
+  final StorageService _storage = StorageService.instance;
 
   // Observable variables
   final RxList<QrCodeModel> qrCodes = <QrCodeModel>[].obs;
@@ -39,6 +41,9 @@ class QrCodeController extends GetxController {
     super.onClose();
   }
 
+  // Get current store ID
+  String? get currentStoreId => _storage.getString('store_id');
+
   // Fetch all QR codes
   Future<void> fetchQrCodes() async {
     try {
@@ -48,8 +53,10 @@ class QrCodeController extends GetxController {
       final codes = await _qrCodeService.getQrCodes();
       qrCodes.assignAll(codes);
     } catch (e) {
-      error.value = e.toString();
-      _showSnackBar('Error', error.value, isError: true);
+      // Extract clean error message
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -64,8 +71,9 @@ class QrCodeController extends GetxController {
       final codes = await _qrCodeService.getQrCodesByStore(storeId);
       qrCodes.assignAll(codes);
     } catch (e) {
-      error.value = e.toString();
-      _showSnackBar('Error', error.value, isError: true);
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -80,8 +88,9 @@ class QrCodeController extends GetxController {
       final qrCode = await _qrCodeService.getQrCodeById(id);
       selectedQrCode.value = qrCode;
     } catch (e) {
-      error.value = e.toString();
-      _showSnackBar('Error', error.value, isError: true);
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -89,7 +98,7 @@ class QrCodeController extends GetxController {
 
   // Create new QR code
   Future<void> createQrCode({
-    required String storeId,
+    String? storeId,
   }) async {
     try {
       if (!_validateForm()) return;
@@ -97,8 +106,14 @@ class QrCodeController extends GetxController {
       isLoading.value = true;
       error.value = '';
 
+      // Use provided storeId or get current one
+      final currentStoreId = storeId ?? this.currentStoreId;
+      if (currentStoreId == null) {
+        throw Exception('Store ID tidak ditemukan. Silakan login ulang.');
+      }
+
       final qrCode = await _qrCodeService.createQrCode(
-        storeId: storeId,
+        storeId: currentStoreId,
         tableNumber: tableNumberController.text,
         type: selectedType.value,
         menuUrl: menuUrlController.text,
@@ -112,8 +127,9 @@ class QrCodeController extends GetxController {
 
       Get.back(); // Close dialog/bottom sheet
     } catch (e) {
-      error.value = e.toString();
-      _showSnackBar('Error', error.value, isError: true);
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -145,8 +161,9 @@ class QrCodeController extends GetxController {
 
       Get.back(); // Close dialog/bottom sheet
     } catch (e) {
-      error.value = e.toString();
-      _showSnackBar('Error', error.value, isError: true);
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -185,8 +202,9 @@ class QrCodeController extends GetxController {
         _showSnackBar('Sukses', 'QR code berhasil dihapus');
       }
     } catch (e) {
-      error.value = e.toString();
-      _showSnackBar('Error', error.value, isError: true);
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -206,8 +224,9 @@ class QrCodeController extends GetxController {
             'Info', 'QR code untuk meja $tableNumber tidak ditemukan');
       }
     } catch (e) {
-      error.value = e.toString();
-      _showSnackBar('Error', error.value, isError: true);
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -244,6 +263,30 @@ class QrCodeController extends GetxController {
     }
 
     return true;
+  }
+
+  // Extract clean error message
+  String _extractCleanErrorMessage(String errorMessage) {
+    // Remove "Exception: " prefix if present
+    if (errorMessage.startsWith('Exception: ')) {
+      errorMessage = errorMessage.substring(11);
+    }
+
+    // Handle nested exception messages
+    if (errorMessage.contains('Exception: ')) {
+      final parts = errorMessage.split('Exception: ');
+      if (parts.length > 1) {
+        // Get the last (most specific) error message
+        errorMessage = parts.last.trim();
+      }
+    }
+
+    // Remove any "Error saat" prefixes for cleaner message
+    if (errorMessage.startsWith('Error saat ')) {
+      errorMessage = errorMessage.substring(11);
+    }
+
+    return errorMessage;
   }
 
   // Show snackbar

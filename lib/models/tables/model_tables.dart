@@ -20,14 +20,32 @@ class QrCodeModel {
 
   factory QrCodeModel.fromJson(Map<String, dynamic> json) {
     return QrCodeModel(
-      id: json['id'] ?? '',
-      storeId: json['store_id'] ?? '',
-      code: json['code'] ?? '',
-      tableNumber: json['table_number'] ?? '',
-      type: json['type'] ?? '',
-      menuUrl: json['menu_url'] ?? '',
-      expiresAt: DateTime.parse(json['expires_at']),
+      id: json['id']?.toString() ?? '',
+      storeId: json['store_id']?.toString() ?? '',
+      code: json['code']?.toString() ?? '',
+      tableNumber: json['table_number']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      menuUrl: json['menu_url']?.toString() ?? '',
+      expiresAt: _parseDateTime(json['expires_at']),
     );
+  }
+
+  // Helper method untuk parsing DateTime yang lebih robust
+  static DateTime _parseDateTime(dynamic dateStr) {
+    if (dateStr == null) return DateTime.now();
+
+    try {
+      if (dateStr is String) {
+        return DateTime.parse(dateStr);
+      } else if (dateStr is int) {
+        // Unix timestamp
+        return DateTime.fromMillisecondsSinceEpoch(dateStr * 1000);
+      }
+    } catch (e) {
+      print('Error parsing date: $e');
+    }
+
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -48,7 +66,7 @@ class QrCodeModel {
   }
 }
 
-// Response model untuk API
+// Response model untuk API - dengan multiple kemungkinan struktur
 class QrCodeResponse {
   final String message;
   final int status;
@@ -61,12 +79,60 @@ class QrCodeResponse {
   });
 
   factory QrCodeResponse.fromJson(Map<String, dynamic> json) {
-    return QrCodeResponse(
-      message: json['message'] ?? '',
-      status: json['status'] ?? 0,
-      qrCodes: (json['data']['qrcodes'] as List)
-          .map((qrCode) => QrCodeModel.fromJson(qrCode))
-          .toList(),
-    );
+    try {
+      List<QrCodeModel> qrCodeList = [];
+
+      // Debug: Print raw JSON
+      print('Raw JSON Response: $json');
+
+      // Coba berbagai kemungkinan struktur response
+      if (json['data'] != null) {
+        var data = json['data'];
+
+        // Kemungkinan 1: data.qrcodes
+        if (data['qrcodes'] != null && data['qrcodes'] is List) {
+          qrCodeList = (data['qrcodes'] as List)
+              .map((qrCode) => QrCodeModel.fromJson(qrCode))
+              .toList();
+        }
+        // Kemungkinan 2: data.qr_codes
+        else if (data['qr_codes'] != null && data['qr_codes'] is List) {
+          qrCodeList = (data['qr_codes'] as List)
+              .map((qrCode) => QrCodeModel.fromJson(qrCode))
+              .toList();
+        }
+        // Kemungkinan 3: data langsung adalah array
+        else if (data is List) {
+          qrCodeList = (data as List)
+              .map((qrCode) => QrCodeModel.fromJson(qrCode))
+              .toList();
+        }
+      }
+      // Kemungkinan 4: qrcodes langsung di root
+      else if (json['qrcodes'] != null && json['qrcodes'] is List) {
+        qrCodeList = (json['qrcodes'] as List)
+            .map((qrCode) => QrCodeModel.fromJson(qrCode))
+            .toList();
+      }
+      // Kemungkinan 5: qr_codes langsung di root
+      else if (json['qr_codes'] != null && json['qr_codes'] is List) {
+        qrCodeList = (json['qr_codes'] as List)
+            .map((qrCode) => QrCodeModel.fromJson(qrCode))
+            .toList();
+      }
+
+      return QrCodeResponse(
+        message: json['message']?.toString() ?? '',
+        status: json['status'] ?? json['statusCode'] ?? 200,
+        qrCodes: qrCodeList,
+      );
+    } catch (e) {
+      print('Error parsing QrCodeResponse: $e');
+      return QrCodeResponse(
+        message: 'Error parsing response',
+        status: 500,
+        qrCodes: [],
+      );
+    }
   }
 }
