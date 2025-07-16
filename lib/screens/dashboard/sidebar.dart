@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos/screens/akun/akun_role_screen.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
@@ -168,15 +169,14 @@ class _SideBarScreenState extends State<SideBarScreen> {
       case 1:
         return const TableScreen(); // Meja
       case 3:
-        return const PromoPage(); // Promo
+        return const PromoScreen(); // Promo
       case 4:
         return const SalesPage(); // Pesanan
       case 5:
         return const Center(
             child: Text('Dapur Page', style: TextStyle(fontSize: 24)));
       case 6:
-        return const Center(
-            child: Text('Akun Page', style: TextStyle(fontSize: 24)));
+        return const AkunRoleScreen();
       case 8:
         return const CustomersScreen(); // Customer
       default:

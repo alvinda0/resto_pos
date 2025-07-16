@@ -77,7 +77,7 @@ class AppRoutes {
       GetPage(name: dashboard, page: () => const DashboardScreen()),
       GetPage(name: tables, page: () => const TableScreen()),
       GetPage(name: customers, page: () => const CustomersScreen()),
-      GetPage(name: promo, page: () => const PromoPage()),
+      GetPage(name: promo, page: () => const PromoScreen()),
       GetPage(name: sales, page: () => const SalesPage()),
 
       // Menu Routes
