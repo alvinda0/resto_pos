@@ -5,7 +5,7 @@ import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/menu/products_page.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
-import 'package:pos/screens/dashboard/sales_page.dart';
+import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 
@@ -171,7 +171,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
       case 3:
         return const PromoScreen(); // Promo
       case 4:
-        return const SalesPage(); // Pesanan
+        return const OrderScreen(); // Pesanan
       case 5:
         return const Center(
             child: Text('Dapur Page', style: TextStyle(fontSize: 24)));
