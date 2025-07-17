@@ -22,6 +22,10 @@ class StorageService extends GetxService {
     return this;
   }
 
+  Future<void> clearUserData() async {
+    clearAuthData();
+  }
+
   // Cek apakah sudah diinisialisasi
   bool get isInitialized => _isInitialized;
 

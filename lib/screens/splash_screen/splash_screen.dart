@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pos/screens/auth/login_screen.dart';
+import 'package:get/get.dart';
+import 'package:pos/controller/splash/splash_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,9 +15,18 @@ class _SplashScreenState extends State<SplashScreen>
   Animation<double>? _fadeAnimation;
   Animation<double>? _scaleAnimation;
 
+  // Initialize the controller
+  final SplashController splashController = Get.put(SplashController());
+
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
+    _startAnimationAndCheckAuth();
+  }
+
+  /// Initialize animations
+  void _initializeAnimations() {
     _animationController = AnimationController(
       duration: Duration(seconds: 2),
       vsync: this,
@@ -29,15 +39,14 @@ class _SplashScreenState extends State<SplashScreen>
     _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(parent: _animationController!, curve: Curves.elasticOut),
     );
+  }
 
+  /// Start animation and check authentication
+  void _startAnimationAndCheckAuth() {
     _animationController!.forward();
 
-    // Navigate to login screen after 3 seconds
-    Future.delayed(Duration(seconds: 3), () {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
-    });
+    // Check authentication status after animation completes
+    splashController.checkAuthenticationStatus();
   }
 
   @override
