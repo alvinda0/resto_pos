@@ -5,6 +5,7 @@ import 'package:pos/models/routes.dart';
 import 'package:pos/controller/auth/auth_controller.dart';
 import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/services/auth_service.dart';
+import 'package:pos/services/tables/tables_qr_code_service.dart';
 import 'package:pos/storage_service.dart';
 
 void main() async {
@@ -23,6 +24,7 @@ Future<void> initServices() async {
 
   // Initialize auth service
   Get.put(AuthService.instance);
+  Get.lazyPut(() => QrCodeService());
 
   // Initialize auth controller
   Get.put(AuthController());
