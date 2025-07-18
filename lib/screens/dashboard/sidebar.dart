@@ -3,11 +3,13 @@ import 'package:pos/screens/akun/akun_role_screen.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
+import 'package:pos/screens/material/material_screen.dart';
 import 'package:pos/screens/menu/products_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
+import 'package:pos/screens/withdraw/withdraw_screen.dart';
 
 class MenuItem {
   final IconData icon;
@@ -115,8 +117,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
             case 0:
               return const ProductScreen(); // Menu
             case 1:
-              return const Center(
-                  child: Text('Bahan Page', style: TextStyle(fontSize: 24)));
+              return const MaterialScreen(); // Bahan
           }
           break;
         case 7: // Referral
@@ -124,9 +125,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
             case 0:
               return ReferralScreen();
             case 1:
-              return const Center(
-                  child:
-                      Text('Pencairan Page', style: TextStyle(fontSize: 24)));
+              return const WithdrawScreen(); // Pencairan
           }
           break;
         case 9: // Points
