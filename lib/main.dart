@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos/controller/category/category_controller.dart';
 import 'package:pos/models/routes.dart';
 import 'package:pos/controller/auth/auth_controller.dart';
 import 'package:pos/screens/splash_screen/splash_screen.dart';
@@ -28,8 +29,7 @@ Future<void> initServices() async {
 
   // Initialize auth controller
   Get.put(AuthController());
-
-  print('All services initialized successfully');
+  Get.lazyPut<CategoryController>(() => CategoryController());
 }
 
 class MyApp extends StatelessWidget {

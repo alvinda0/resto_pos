@@ -3,7 +3,7 @@ import 'package:pos/screens/akun/akun_role_screen.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
-import 'package:pos/screens/menu/products_page.dart';
+import 'package:pos/screens/menu/products_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
