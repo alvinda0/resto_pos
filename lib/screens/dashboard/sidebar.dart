@@ -3,7 +3,7 @@ import 'package:pos/screens/akun/akun_role_screen.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
-import 'package:pos/screens/material/material_screen.dart';
+import 'package:pos/screens/inventory/inventory_screen.dart';
 import 'package:pos/screens/menu/products_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
@@ -117,7 +117,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
             case 0:
               return const ProductScreen(); // Menu
             case 1:
-              return const MaterialScreen(); // Bahan
+              return const InventoryScreen(); // Bahan
           }
           break;
         case 7: // Referral
