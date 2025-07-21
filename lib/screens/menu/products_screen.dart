@@ -327,13 +327,20 @@ class _ProductScreenState extends State<ProductScreen> {
                                         ),
                                       ),
 
-                                      // Aksi
+                                      // Aksi - Modified to navigate to new page
                                       SizedBox(
                                         width: 120,
                                         child: ElevatedButton(
                                           onPressed: () {
-                                            // Navigate to product list for this category
-                                            _showProductList(category);
+                                            // Navigate to product list page
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    ProductListScreen(
+                                                        category: category),
+                                              ),
+                                            );
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.red,
@@ -593,80 +600,304 @@ class _ProductScreenState extends State<ProductScreen> {
       ),
     );
   }
+}
 
-  void _showProductList(Category category) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Menu dalam kategori "${category.name}"'),
-        content: SizedBox(
-          width: 600,
-          height: 400,
-          child: category.products == null || category.products!.isEmpty
-              ? const Center(child: Text('Tidak ada menu dalam kategori ini'))
-              : ListView.builder(
-                  itemCount: category.products!.length,
-                  itemBuilder: (context, index) {
-                    final product = category.products![index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: ListTile(
-                        leading: product.imageUrl != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  product.imageUrl!,
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.image_not_supported),
-                                ),
-                              )
-                            : const Icon(Icons.fastfood),
-                        title: Text(product.name),
-                        subtitle: Text(product.description),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'Rp ${product.basePrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: product.isAvailable
-                                    ? Colors.green
-                                    : Colors.red,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                product.isAvailable ? 'Tersedia' : 'Habis',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+// New separate screen for product list
+class ProductListScreen extends StatelessWidget {
+  final Category category;
+
+  const ProductListScreen({super.key, required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
+        title: Text(
+          'Menu - ${category.name}',
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: Colors.grey.shade300,
+            height: 1,
+          ),
+        ),
+      ),
+      body: Container(
+        margin: const EdgeInsets.all(24),
+        child: category.products == null || category.products!.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.restaurant_menu,
+                      size: 64,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Tidak ada menu dalam kategori ini',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tambahkan menu untuk kategori "${category.name}"',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Info
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 0,
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.category,
+                            color: Colors.red,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                category.name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${category.products!.length} menu tersedia',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color:
+                                category.isActive ? Colors.green : Colors.grey,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            category.isActive ? 'AKTIF' : 'TIDAK AKTIF',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Product List
+                  Expanded(
+                    child: GridView.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 0.85,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: category.products!.length,
+                      itemBuilder: (context, index) {
+                        final product = category.products![index];
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 0,
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Product Image
+                              Expanded(
+                                flex: 3,
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: const BoxDecoration(
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(12),
+                                      topRight: Radius.circular(12),
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(12),
+                                      topRight: Radius.circular(12),
+                                    ),
+                                    child: product.imageUrl != null
+                                        ? Image.network(
+                                            product.imageUrl!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                              color: Colors.grey.shade100,
+                                              child: Icon(
+                                                Icons.image_not_supported,
+                                                size: 48,
+                                                color: Colors.grey.shade400,
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: Colors.grey.shade100,
+                                            child: Icon(
+                                              Icons.fastfood,
+                                              size: 48,
+                                              color: Colors.grey.shade400,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
+
+                              // Product Info
+                              Expanded(
+                                flex: 2,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Product Name
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // Product Description
+                                      Text(
+                                        product.description,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const Spacer(),
+
+                                      // Price and Status
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Rp ${product.basePrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: product.isAvailable
+                                                  ? Colors.green
+                                                  : Colors.red,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              product.isAvailable
+                                                  ? 'Tersedia'
+                                                  : 'Habis',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
