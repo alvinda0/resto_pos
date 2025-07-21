@@ -137,6 +137,34 @@ class QrCodeService extends GetxService {
     return [];
   }
 
+  // Delete QR code by ID
+  Future<bool> deleteQrCode(String qrCodeId) async {
+    try {
+      final response = await _httpClient.delete(
+        '/qr-codes/$qrCodeId',
+        storeId: _storeId,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(_extractErrorMessage(response));
+      }
+
+      final data = jsonDecode(response.body);
+
+      // Check if the response indicates success
+      final success = data['success'] ?? false;
+      if (!success) {
+        final message = data['message'] ?? 'Failed to delete QR code';
+        throw Exception(message);
+      }
+
+      return true;
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to delete QR code: $e');
+    }
+  }
+
   // Extract QR codes list from various response structures
   List<dynamic> _extractQrCodesFromResponse(dynamic data) {
     if (data is List) return data;

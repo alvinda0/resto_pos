@@ -19,6 +19,7 @@ class QrCodeController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxBool isCreatingBulk = false.obs;
   final RxString error = ''.obs;
+  final RxBool isDeleting = false.obs;
 
   @override
   void onInit() {
@@ -103,6 +104,75 @@ class QrCodeController extends GetxController {
       return false;
     } finally {
       isCreatingBulk.value = false;
+    }
+  }
+
+  // Delete QR code
+  Future<bool> deleteQrCode(String qrCodeId, String tableNumber) async {
+    try {
+      isDeleting.value = true;
+      error.value = '';
+
+      // Call service to delete QR code
+      final success = await _qrCodeService.deleteQrCode(qrCodeId);
+
+      if (success) {
+        // Remove from local list
+        qrCodes.removeWhere((qr) => qr.id == qrCodeId);
+
+        _showSnackBar(
+          'Berhasil',
+          'Meja $tableNumber berhasil dihapus',
+          isError: false,
+        );
+
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      String cleanError = _extractCleanErrorMessage(e.toString());
+      error.value = cleanError;
+      _showSnackBar(
+        'Error',
+        'Gagal menghapus meja $tableNumber: $cleanError',
+        isError: true,
+      );
+      return false;
+    } finally {
+      isDeleting.value = false;
+    }
+  }
+
+  // Show delete confirmation dialog
+  Future<bool> showDeleteConfirmation(String tableNumber) async {
+    return await Get.dialog<bool>(
+          AlertDialog(
+            title: const Text('Konfirmasi Hapus'),
+            content:
+                Text('Apakah Anda yakin ingin menghapus Meja $tableNumber?'),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () => Get.back(result: true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Hapus'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  // Delete QR code with confirmation
+  Future<void> deleteQrCodeWithConfirmation(
+      String qrCodeId, String tableNumber) async {
+    final confirmed = await showDeleteConfirmation(tableNumber);
+    if (confirmed) {
+      await deleteQrCode(qrCodeId, tableNumber);
     }
   }
 

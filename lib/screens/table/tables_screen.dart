@@ -287,9 +287,22 @@ class _TableScreenState extends State<TableScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Meja ${qrCode.tableNumber}',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Meja ${qrCode.tableNumber}',
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showDeleteConfirmation(qrCode);
+                      },
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      tooltip: 'Hapus Meja',
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -349,6 +362,118 @@ class _TableScreenState extends State<TableScreen> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(QrCodeModel qrCode) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Hapus'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  'Apakah Anda yakin ingin menghapus Meja ${qrCode.tableNumber}?'),
+              const SizedBox(height: 8),
+              const Text(
+                'Tindakan ini tidak dapat dibatalkan.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            StreamBuilder<bool>(
+              stream: _qrCodeController.isDeleting.stream,
+              initialData: _qrCodeController.isDeleting.value,
+              builder: (context, snapshot) {
+                final isDeleting = snapshot.data ?? false;
+                return TextButton(
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                          Navigator.pop(context);
+                          final success = await _qrCodeController.deleteQrCode(
+                            qrCode.id!,
+                            qrCode.tableNumber,
+                          );
+                          if (success) {
+                            _filterTables(); // Refresh the filtered list
+                          }
+                        },
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: isDeleting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Hapus'),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTableGridItem(QrCodeModel qrCode) {
+    return GestureDetector(
+      onTap: () => _showQrCodeModal(qrCode),
+      onLongPress: () => _showDeleteConfirmation(qrCode),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, 2))
+          ],
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Text(qrCode.tableNumber,
+                  style: const TextStyle(
+                      fontSize: 28, fontWeight: FontWeight.bold)),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () => _showDeleteConfirmation(qrCode),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -481,28 +606,7 @@ class _TableScreenState extends State<TableScreen> {
           itemCount: _filteredTables.length,
           itemBuilder: (context, index) {
             final qrCode = _filteredTables[index];
-            return GestureDetector(
-              onTap: () => _showQrCodeModal(qrCode),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 4,
-                        offset: const Offset(0, 2))
-                  ],
-                ),
-                child: Center(
-                  child: Text(qrCode.tableNumber,
-                      style: const TextStyle(
-                          fontSize: 28, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            );
+            return _buildTableGridItem(qrCode); // Use the updated method
           },
         ),
       );
