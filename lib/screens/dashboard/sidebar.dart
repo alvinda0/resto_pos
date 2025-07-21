@@ -45,6 +45,10 @@ class _SideBarScreenState extends State<SideBarScreen> {
     MenuItem(Icons.shopping_cart, 'Pesanan'),
     MenuItem(Icons.restaurant, 'Dapur'),
     MenuItem(Icons.person, 'Akun'),
+    MenuItem(Icons.bar_chart, 'Laporan', subItems: [
+      MenuItem(Icons.receipt_long, 'Transaksi'),
+      MenuItem(Icons.account_balance_wallet, 'Wallet'),
+    ]),
     MenuItem(Icons.person_add, 'Referral', subItems: [
       MenuItem(Icons.person_add, 'Kelola Referral'),
       MenuItem(Icons.attach_money, 'Pencairan'),

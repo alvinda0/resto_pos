@@ -57,7 +57,7 @@ class _TableScreenState extends State<TableScreen> {
     final TextEditingController tableCountController = TextEditingController();
     final TextEditingController startNumberController = TextEditingController();
     final TextEditingController menuUrlController = TextEditingController();
-    String selectedType = 'Reguler';
+    String selectedType = 'menu'; // Changed default to 'menu'
     DateTime? selectedExpiryDate;
 
     showDialog(
@@ -135,7 +135,7 @@ class _TableScreenState extends State<TableScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Type Dropdown
+                      // Type Dropdown - Only showing 'menu' option
                       DropdownButtonFormField<String>(
                         value: selectedType,
                         decoration: InputDecoration(
@@ -150,13 +150,7 @@ class _TableScreenState extends State<TableScreen> {
                           ),
                         ),
                         items: const [
-                          DropdownMenuItem(
-                              value: 'Reguler', child: Text('Reguler')),
-                          DropdownMenuItem(value: 'VIP', child: Text('VIP')),
-                          DropdownMenuItem(
-                              value: 'Outdoor', child: Text('Outdoor')),
-                          DropdownMenuItem(
-                              value: 'Private', child: Text('Private')),
+                          DropdownMenuItem(value: 'menu', child: Text('menu')),
                         ],
                         onChanged: (value) {
                           setState(() {
