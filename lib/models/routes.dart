@@ -8,6 +8,7 @@ import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/menu/products_screen.dart';
+import 'package:pos/screens/menu/product_list_screen.dart'; // Add this import
 import 'package:pos/screens/table/tables_screen.dart';
 
 class AppRoutes {
@@ -33,6 +34,7 @@ class AppRoutes {
 
   // Menu Routes
   static const String products = '/products';
+  static const String productList = '/product-list'; // Add this constant
   static const String ingredients = '/ingredients';
 
   // Kitchen Routes
@@ -79,6 +81,13 @@ class AppRoutes {
       GetPage(name: customers, page: () => const CustomersScreen()),
       GetPage(name: promo, page: () => const PromoScreen()),
       GetPage(name: sales, page: () => const OrderScreen()),
+
+      // Product List Route - Fixed
+      GetPage(
+        name: productList,
+        page: () => const ProductListScreen(),
+        transition: Transition.rightToLeft,
+      ),
 
       // Menu Routes
       GetPage(name: products, page: () => const ProductScreen()),
@@ -167,6 +176,8 @@ class AppRoutes {
   static void toSales() => Get.toNamed(sales);
   static void toSettings() => Get.toNamed(settings);
   static void toProducts() => Get.toNamed(products);
+  static void toProductList(dynamic category) =>
+      Get.toNamed(productList, arguments: category); // Add helper method
   static void toIngredients() => Get.toNamed(ingredients);
   static void toKitchen() => Get.toNamed(kitchen);
   static void toAccount() => Get.toNamed(account);
