@@ -1,4 +1,3 @@
-// controllers/category_controller.dart
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:pos/models/category/category_model.dart';
@@ -17,6 +16,17 @@ class CategoryController extends GetxController {
   final RxBool isDeleting = false.obs;
   final RxString errorMessage = ''.obs;
 
+  // Pagination variables
+  final RxInt currentPage = 1.obs;
+  final RxInt itemsPerPage = 10.obs;
+  final RxInt totalItems = 0.obs;
+  final RxInt totalPages = 0.obs;
+  final Rxn<PaginationMetadata> paginationMetadata = Rxn<PaginationMetadata>();
+
+  // Search and filter
+  final RxString searchQuery = ''.obs;
+  final RxString selectedFilter = 'Semua'.obs;
+
   // Form controllers
   final TextEditingController nameController = TextEditingController();
   final RxBool isActive = true.obs;
@@ -25,10 +35,12 @@ class CategoryController extends GetxController {
   // Selected category for operations
   final Rxn<Category> selectedCategory = Rxn<Category>();
 
+  // Available page sizes
+  final List<int> availablePageSizes = [5, 10, 20, 50];
+
   @override
   void onInit() {
     super.onInit();
-    print('🎯 CategoryController initialized');
     loadCategories();
   }
 
@@ -38,50 +50,119 @@ class CategoryController extends GetxController {
     super.onClose();
   }
 
-  // Load all categories
-  Future<void> loadCategories({String? storeId}) async {
+  // Load categories with pagination
+  Future<void> loadCategories({
+    String? storeId,
+    int? page,
+    int? limit,
+    String? search,
+    bool showLoading = true,
+  }) async {
     try {
-      print('🔄 Loading categories...');
-      isLoading.value = true;
+      if (showLoading) {
+        isLoading.value = true;
+      }
       errorMessage.value = '';
 
-      final response = await _categoryService.getCategories(storeId: storeId);
+      final response = await _categoryService.getCategories(
+        storeId: storeId,
+        page: page ?? currentPage.value,
+        limit: limit ?? itemsPerPage.value,
+        search:
+            search ?? (searchQuery.value.isNotEmpty ? searchQuery.value : null),
+      );
 
-      print(
-          '📊 Load categories response: success=${response.success}, message=${response.message}');
-
-      // Fix: Check if we have data even if success is false
       if (response.data != null && response.data!.categories.isNotEmpty) {
         categories.value = response.data!.categories;
-        print('✅ Categories loaded successfully: ${categories.length} items');
 
-        // Debug: Print first few categories
-        if (categories.isNotEmpty) {
-          print('📋 First category: ${categories.first.name}');
+        // Update pagination metadata
+        if (response.metadata != null) {
+          paginationMetadata.value = response.metadata!;
+          currentPage.value = response.metadata!.page;
+          totalItems.value = response.metadata!.total;
+          totalPages.value = response.metadata!.totalPages;
         }
       } else if (response.success && response.data != null) {
         categories.value = response.data!.categories;
-        print('✅ Categories loaded successfully: ${categories.length} items');
+
+        // Handle empty results
+        if (response.metadata != null) {
+          paginationMetadata.value = response.metadata!;
+          currentPage.value = response.metadata!.page;
+          totalItems.value = response.metadata!.total;
+          totalPages.value = response.metadata!.totalPages;
+        }
       } else {
         final errorMsg = response.message.isNotEmpty
             ? response.message
             : 'Failed to load categories';
         errorMessage.value = errorMsg;
-        print('❌ Load categories failed: $errorMsg');
-
         _showErrorSnackbar('Load Categories Failed', errorMsg);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       final errorMsg = 'Error loading categories: $e';
       errorMessage.value = errorMsg;
-      print('💥 Exception in loadCategories: $e');
-      print('📍 Stack trace: $stackTrace');
-
       _showErrorSnackbar('Load Categories Error', errorMsg);
     } finally {
-      isLoading.value = false;
-      print('🏁 Load categories completed');
+      if (showLoading) {
+        isLoading.value = false;
+      }
     }
+  }
+
+  // Navigate to specific page
+  Future<void> goToPage(int page, {String? storeId}) async {
+    if (page < 1 || page > totalPages.value) return;
+
+    currentPage.value = page;
+    await loadCategories(
+      storeId: storeId,
+      page: page,
+      showLoading: false,
+    );
+  }
+
+  // Go to next page
+  Future<void> nextPage({String? storeId}) async {
+    if (currentPage.value < totalPages.value) {
+      await goToPage(currentPage.value + 1, storeId: storeId);
+    }
+  }
+
+  // Go to previous page
+  Future<void> previousPage({String? storeId}) async {
+    if (currentPage.value > 1) {
+      await goToPage(currentPage.value - 1, storeId: storeId);
+    }
+  }
+
+  // Change items per page
+  Future<void> changeItemsPerPage(int newLimit, {String? storeId}) async {
+    itemsPerPage.value = newLimit;
+    currentPage.value = 1; // Reset to first page
+    await loadCategories(
+      storeId: storeId,
+      page: 1,
+      limit: newLimit,
+    );
+  }
+
+  // Search categories
+  Future<void> searchCategories(String query, {String? storeId}) async {
+    searchQuery.value = query;
+    currentPage.value = 1; // Reset to first page
+    await loadCategories(
+      storeId: storeId,
+      page: 1,
+      search: query.isNotEmpty ? query : null,
+    );
+  }
+
+  // Filter categories and reload
+  Future<void> filterCategories(String filter, {String? storeId}) async {
+    selectedFilter.value = filter;
+    currentPage.value = 1; // Reset to first page
+    await loadCategories(storeId: storeId, page: 1);
   }
 
   // Create new category
@@ -89,7 +170,6 @@ class CategoryController extends GetxController {
     if (!_validateForm()) return;
 
     try {
-      print('🔄 Creating category: ${nameController.text}');
       isCreating.value = true;
       errorMessage.value = '';
 
@@ -104,33 +184,25 @@ class CategoryController extends GetxController {
         storeId: storeId,
       );
 
-      print('📊 Create category response: success=${response.success}');
-
       if (response.success && response.data != null) {
-        categories.add(response.data!);
         _resetForm();
-        print('✅ Category created successfully: ${response.data!.name}');
-
         _showSuccessSnackbar('Success', 'Category created successfully');
+
+        // Reload current page to reflect changes
+        await loadCategories(storeId: storeId, showLoading: false);
       } else {
         final errorMsg = response.message.isNotEmpty
             ? response.message
             : 'Failed to create category';
         errorMessage.value = errorMsg;
-        print('❌ Create category failed: $errorMsg');
-
         _showErrorSnackbar('Create Category Failed', errorMsg);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       final errorMsg = 'Error creating category: $e';
       errorMessage.value = errorMsg;
-      print('💥 Exception in createCategory: $e');
-      print('📍 Stack trace: $stackTrace');
-
       _showErrorSnackbar('Create Category Error', errorMsg);
     } finally {
       isCreating.value = false;
-      print('🏁 Create category completed');
     }
   }
 
@@ -139,7 +211,6 @@ class CategoryController extends GetxController {
     if (selectedCategory.value == null || !_validateForm()) return;
 
     try {
-      print('🔄 Updating category: ${selectedCategory.value!.id}');
       isUpdating.value = true;
       errorMessage.value = '';
 
@@ -155,46 +226,31 @@ class CategoryController extends GetxController {
         storeId: storeId,
       );
 
-      print('📊 Update category response: success=${response.success}');
-
       if (response.success && response.data != null) {
-        final index = categories
-            .indexWhere((cat) => cat.id == selectedCategory.value!.id);
-        if (index != -1) {
-          categories[index] = response.data!;
-          print('✅ Category updated successfully at index: $index');
-        } else {
-          print('⚠️ Warning: Category not found in list for update');
-        }
-
         _resetForm();
         _showSuccessSnackbar('Success', 'Category updated successfully');
+
+        // Reload current page to reflect changes
+        await loadCategories(storeId: storeId, showLoading: false);
       } else {
         final errorMsg = response.message.isNotEmpty
             ? response.message
             : 'Failed to update category';
         errorMessage.value = errorMsg;
-        print('❌ Update category failed: $errorMsg');
-
         _showErrorSnackbar('Update Category Failed', errorMsg);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       final errorMsg = 'Error updating category: $e';
       errorMessage.value = errorMsg;
-      print('💥 Exception in updateCategory: $e');
-      print('📍 Stack trace: $stackTrace');
-
       _showErrorSnackbar('Update Category Error', errorMsg);
     } finally {
       isUpdating.value = false;
-      print('🏁 Update category completed');
     }
   }
 
   // Delete category
   Future<void> deleteCategory(String categoryId, {String? storeId}) async {
     try {
-      print('🔄 Deleting category: $categoryId');
       isDeleting.value = true;
       errorMessage.value = '';
 
@@ -203,34 +259,29 @@ class CategoryController extends GetxController {
         storeId: storeId,
       );
 
-      print('📊 Delete category response: success=${response.success}');
-
       if (response.success) {
-        final removedCount = categories.length;
-        categories.removeWhere((cat) => cat.id == categoryId);
-        print(
-            '✅ Category deleted successfully. Removed: ${removedCount - categories.length} items');
-
         _showSuccessSnackbar('Success', 'Category deleted successfully');
+
+        // Reload current page to reflect changes
+        await loadCategories(storeId: storeId, showLoading: false);
+
+        // If current page is empty and not the first page, go to previous page
+        if (categories.isEmpty && currentPage.value > 1) {
+          await previousPage(storeId: storeId);
+        }
       } else {
         final errorMsg = response.message.isNotEmpty
             ? response.message
             : 'Failed to delete category';
         errorMessage.value = errorMsg;
-        print('❌ Delete category failed: $errorMsg');
-
         _showErrorSnackbar('Delete Category Failed', errorMsg);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       final errorMsg = 'Error deleting category: $e';
       errorMessage.value = errorMsg;
-      print('💥 Exception in deleteCategory: $e');
-      print('📍 Stack trace: $stackTrace');
-
       _showErrorSnackbar('Delete Category Error', errorMsg);
     } finally {
       isDeleting.value = false;
-      print('🏁 Delete category completed');
     }
   }
 
@@ -238,39 +289,25 @@ class CategoryController extends GetxController {
   Future<void> toggleCategoryStatus(String categoryId, bool newStatus,
       {String? storeId}) async {
     try {
-      print('🔄 Toggling category status: $categoryId -> $newStatus');
-
       final response = await _categoryService.toggleCategoryStatus(
         categoryId: categoryId,
         isActive: newStatus,
         storeId: storeId,
       );
 
-      print('📊 Toggle status response: success=${response.success}');
-
       if (response.success && response.data != null) {
-        final index = categories.indexWhere((cat) => cat.id == categoryId);
-        if (index != -1) {
-          categories[index] = response.data!;
-          print('✅ Category status toggled successfully at index: $index');
-        } else {
-          print('⚠️ Warning: Category not found in list for status toggle');
-        }
-
         _showSuccessSnackbar('Success', 'Category status updated successfully');
+
+        // Reload current page to reflect changes
+        await loadCategories(storeId: storeId, showLoading: false);
       } else {
         final errorMsg = response.message.isNotEmpty
             ? response.message
             : 'Failed to toggle category status';
-        print('❌ Toggle status failed: $errorMsg');
-
         _showErrorSnackbar('Toggle Status Failed', errorMsg);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       final errorMsg = 'Error toggling category status: $e';
-      print('💥 Exception in toggleCategoryStatus: $e');
-      print('📍 Stack trace: $stackTrace');
-
       _showErrorSnackbar('Toggle Status Error', errorMsg);
     }
   }
@@ -278,8 +315,6 @@ class CategoryController extends GetxController {
   // Show delete confirmation dialog
   Future<void> showDeleteConfirmation(Category category,
       {String? storeId}) async {
-    print('🗑️ Showing delete confirmation for: ${category.name}');
-
     Get.defaultDialog(
       title: 'Delete Category',
       middleText: 'Are you sure you want to delete "${category.name}"?',
@@ -295,51 +330,36 @@ class CategoryController extends GetxController {
 
   // Prepare form for editing
   void prepareForEdit(Category category) {
-    print('📝 Preparing form for edit: ${category.name}');
-
     selectedCategory.value = category;
     nameController.text = category.name;
     isActive.value = category.isActive;
     position.value = category.position;
-
-    print('✅ Form prepared for editing');
   }
 
   // Reset form
   void _resetForm() {
-    print('🔄 Resetting form');
-
     nameController.clear();
     isActive.value = true;
     position.value = 1;
     selectedCategory.value = null;
     errorMessage.value = '';
-
-    print('✅ Form reset completed');
   }
 
   // Validate form
   bool _validateForm() {
-    print('🔍 Validating form...');
-
     if (nameController.text.trim().isEmpty) {
       errorMessage.value = 'Category name is required';
-      print('❌ Validation failed: Category name is required');
-
       _showWarningSnackbar('Validation Error', 'Category name is required');
       return false;
     }
 
     if (position.value < 1) {
       errorMessage.value = 'Position must be greater than 0';
-      print('❌ Validation failed: Position must be greater than 0');
-
       _showWarningSnackbar(
           'Validation Error', 'Position must be greater than 0');
       return false;
     }
 
-    print('✅ Form validation passed');
     return true;
   }
 
@@ -377,55 +397,70 @@ class CategoryController extends GetxController {
     );
   }
 
-  // Get categories by status
-  List<Category> getCategoriesByStatus(bool isActive) {
-    final filtered =
-        categories.where((cat) => cat.isActive == isActive).toList();
-    print('📊 Categories by status ($isActive): ${filtered.length}');
-    return filtered;
+  // Get filtered categories based on current filter
+  List<Category> getFilteredCategories() {
+    List<Category> filteredList = categories;
+
+    // Filter by status
+    if (selectedFilter.value == 'Aktif') {
+      filteredList =
+          filteredList.where((category) => category.isActive).toList();
+    } else if (selectedFilter.value == 'Tidak Aktif') {
+      filteredList =
+          filteredList.where((category) => !category.isActive).toList();
+    }
+
+    return filteredList;
   }
 
   // Get active categories
-  List<Category> get activeCategories => getCategoriesByStatus(true);
+  List<Category> get activeCategories =>
+      categories.where((cat) => cat.isActive).toList();
 
   // Get inactive categories
-  List<Category> get inactiveCategories => getCategoriesByStatus(false);
-
-  // Sort categories by position
-  List<Category> get sortedCategories {
-    final sortedList = List<Category>.from(categories);
-    sortedList.sort((a, b) => a.position.compareTo(b.position));
-    print('📊 Categories sorted by position: ${sortedList.length}');
-    return sortedList;
-  }
+  List<Category> get inactiveCategories =>
+      categories.where((cat) => !cat.isActive).toList();
 
   // Get category by ID
   Category? getCategoryById(String id) {
     try {
-      final category = categories.firstWhere((cat) => cat.id == id);
-      print('🔍 Category found by ID ($id): ${category.name}');
-      return category;
+      return categories.firstWhere((cat) => cat.id == id);
     } catch (e) {
-      print('❌ Category not found by ID: $id');
       return null;
     }
   }
 
   // Refresh categories
   Future<void> refreshCategories({String? storeId}) async {
-    print('🔄 Refreshing categories...');
+    currentPage.value = 1;
+    searchQuery.value = '';
+    selectedFilter.value = 'Semua';
     await loadCategories(storeId: storeId);
   }
 
-  // Debug method to print current state
-  void debugPrintState() {
-    print('🐛 CategoryController Debug State:');
-    print('   - Categories count: ${categories.length}');
-    print('   - Is loading: ${isLoading.value}');
-    print('   - Is creating: ${isCreating.value}');
-    print('   - Is updating: ${isUpdating.value}');
-    print('   - Is deleting: ${isDeleting.value}');
-    print('   - Error message: ${errorMessage.value}');
-    print('   - Selected category: ${selectedCategory.value?.name ?? 'None'}');
+  // Get page numbers for pagination UI
+  List<int> getPageNumbers() {
+    List<int> pages = [];
+    int start = (currentPage.value - 2).clamp(1, totalPages.value);
+    int end = (start + 4).clamp(1, totalPages.value);
+
+    for (int i = start; i <= end; i++) {
+      pages.add(i);
+    }
+
+    return pages;
   }
+
+  // Check if has next page
+  bool get hasNextPage => currentPage.value < totalPages.value;
+
+  // Check if has previous page
+  bool get hasPreviousPage => currentPage.value > 1;
+
+  // Get start index for current page
+  int get startIndex => (currentPage.value - 1) * itemsPerPage.value + 1;
+
+  // Get end index for current page
+  int get endIndex =>
+      (startIndex + categories.length - 1).clamp(startIndex, totalItems.value);
 }

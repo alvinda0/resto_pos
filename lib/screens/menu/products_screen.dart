@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos/controller/category/category_controller.dart';
 import 'package:pos/models/category/category_model.dart';
 import 'package:pos/models/routes.dart';
+import 'package:pos/widgets/pagination_widget.dart'; // Import widget pagination
 
 class ProductScreen extends StatefulWidget {
   const ProductScreen({super.key});
@@ -21,7 +22,6 @@ class _ProductScreenState extends State<ProductScreen> {
   @override
   void initState() {
     super.initState();
-    // Load categories when screen is initialized
     categoryController.loadCategories();
   }
 
@@ -31,31 +31,15 @@ class _ProductScreenState extends State<ProductScreen> {
     super.dispose();
   }
 
-  List<Category> getFilteredCategories() {
-    List<Category> filteredList = categoryController.categories;
+  void _handleSearch(String query) {
+    categoryController.searchCategories(query);
+  }
 
-    // Filter by search
-    if (searchController.text.isNotEmpty) {
-      filteredList = filteredList
-          .where((category) => category.name
-              .toLowerCase()
-              .contains(searchController.text.toLowerCase()))
-          .toList();
-    }
-
-    // Filter by status
-    if (selectedFilter == 'Aktif') {
-      filteredList =
-          filteredList.where((category) => category.isActive).toList();
-    } else if (selectedFilter == 'Tidak Aktif') {
-      filteredList =
-          filteredList.where((category) => !category.isActive).toList();
-    }
-
-    // Sort by position
-    filteredList.sort((a, b) => a.position.compareTo(b.position));
-
-    return filteredList;
+  void _handleFilterChange(String filter) {
+    setState(() {
+      selectedFilter = filter;
+    });
+    categoryController.filterCategories(filter);
   }
 
   @override
@@ -98,9 +82,7 @@ class _ProductScreenState extends State<ProductScreen> {
                         ),
                         child: TextField(
                           controller: searchController,
-                          onChanged: (value) {
-                            setState(() {});
-                          },
+                          onChanged: _handleSearch,
                           decoration: InputDecoration(
                             hintText: 'Cari Kategori',
                             hintStyle: TextStyle(color: Colors.grey.shade500),
@@ -141,14 +123,15 @@ class _ProductScreenState extends State<ProductScreen> {
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
-                            setState(() {
-                              selectedFilter = newValue!;
-                            });
+                            if (newValue != null) {
+                              _handleFilterChange(newValue);
+                            }
                           },
                         ),
                       ),
                     ),
                     const SizedBox(width: 16),
+
                     // Add Category Button
                     ElevatedButton.icon(
                       onPressed: () {
@@ -195,7 +178,7 @@ class _ProductScreenState extends State<ProductScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final filteredCategories = getFilteredCategories();
+                final categories = categoryController.categories;
 
                 return Column(
                   children: [
@@ -249,7 +232,7 @@ class _ProductScreenState extends State<ProductScreen> {
 
                     // Table Body
                     Expanded(
-                      child: filteredCategories.isEmpty
+                      child: categories.isEmpty
                           ? const Center(
                               child: Text(
                                 'Tidak ada kategori ditemukan',
@@ -257,11 +240,13 @@ class _ProductScreenState extends State<ProductScreen> {
                               ),
                             )
                           : ListView.builder(
-                              itemCount: filteredCategories.length,
+                              itemCount: categories.length,
                               itemBuilder: (context, index) {
-                                final category = filteredCategories[index];
+                                final category = categories[index];
                                 final productCount =
                                     category.products?.length ?? 0;
+                                final globalIndex =
+                                    categoryController.startIndex + index;
 
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
@@ -277,7 +262,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                       // No.
                                       SizedBox(
                                         width: 60,
-                                        child: Text('${index + 1}'),
+                                        child: Text('$globalIndex'),
                                       ),
 
                                       // Nama Kategori
@@ -328,16 +313,12 @@ class _ProductScreenState extends State<ProductScreen> {
                                         ),
                                       ),
 
-                                      // Aksi - Navigate using route name to maintain sidebar
+                                      // Aksi
                                       SizedBox(
                                         width: 120,
                                         child: ElevatedButton(
                                           onPressed: () {
-                                            // Navigate using route name with parameters
                                             AppRoutes.toProductList(category);
-
-                                            // Alternative: jika menggunakan parameter dalam route
-                                            // Get.toNamed('/product-list/${category.id}');
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.red,
@@ -431,6 +412,32 @@ class _ProductScreenState extends State<ProductScreen> {
                               },
                             ),
                     ),
+
+                    // Pagination Section - Menggunakan widget terpisah
+                    Obx(() => PaginationWidget(
+                          currentPage: categoryController.currentPage.value,
+                          totalItems: categoryController.totalItems.value,
+                          itemsPerPage: categoryController.itemsPerPage.value,
+                          availablePageSizes:
+                              categoryController.availablePageSizes,
+                          startIndex: categoryController.startIndex,
+                          endIndex: categoryController.endIndex,
+                          hasPreviousPage: categoryController.hasPreviousPage,
+                          hasNextPage: categoryController.hasNextPage,
+                          pageNumbers: categoryController.getPageNumbers(),
+                          onPageSizeChanged: (int newSize) {
+                            categoryController.changeItemsPerPage(newSize);
+                          },
+                          onPreviousPage: () {
+                            categoryController.previousPage();
+                          },
+                          onNextPage: () {
+                            categoryController.nextPage();
+                          },
+                          onPageSelected: (int page) {
+                            categoryController.goToPage(page);
+                          },
+                        )),
                   ],
                 );
               }),

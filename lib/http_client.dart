@@ -18,8 +18,6 @@ class HttpClient extends GetxService {
   // Lazy loading storage service
   StorageService get _storage => StorageService.instance;
 
-  // Extract store ID from JWT token
-
   // Get store ID with priority: parameter > storage > token
   String? _getStoreId([String? providedStoreId]) {
     // 1. Use provided store ID if available
@@ -96,17 +94,30 @@ class HttpClient extends GetxService {
     return headers;
   }
 
-  // Method to get headers without store ID (for login, register, etc.)
+  // Helper method to build URI with query parameters
+  Uri _buildUri(String endpoint, {Map<String, String>? queryParameters}) {
+    final uri = Uri.parse('$baseUrl$endpoint');
+
+    if (queryParameters != null && queryParameters.isNotEmpty) {
+      return uri.replace(queryParameters: queryParameters);
+    }
+
+    return uri;
+  }
 
   Future<http.Response> get(String endpoint,
-      {bool requireAuth = true, String? storeId}) async {
+      {bool requireAuth = true,
+      String? storeId,
+      Map<String, String>? queryParameters}) async {
     try {
       final headers = storeId != null
           ? _getHeadersWithStoreId(storeId, requireAuth: requireAuth)
           : (requireAuth ? _headers : _headersWithoutAuth);
 
+      final uri = _buildUri(endpoint, queryParameters: queryParameters);
+
       final response = await http.get(
-        Uri.parse('$baseUrl$endpoint'),
+        uri,
         headers: headers,
       );
 

@@ -1,4 +1,3 @@
-// services/category_service.dart
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:pos/http_client.dart';
@@ -14,28 +13,35 @@ class CategoryService extends GetxService {
 
   final HttpClient _httpClient = HttpClient.instance;
 
-  // Get all categories
-  Future<ApiResponse<CategoriesResponse>> getCategories(
-      {String? storeId}) async {
+  // Get all categories with pagination and search
+  Future<ApiResponse<CategoriesResponse>> getCategories({
+    String? storeId,
+    int page = 1,
+    int limit = 10,
+    String? search,
+  }) async {
     try {
-      print('🔄 Fetching categories from API...');
+      // Build query parameters
+      Map<String, String> queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
 
       final response = await _httpClient.get(
         '/categories',
         storeId: storeId,
+        queryParameters: queryParams,
       );
-
-      print('📡 API Response Status: ${response.statusCode}');
-      print('📡 API Response Body: ${response.body}');
 
       final jsonResponse = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        print('✅ Categories retrieved successfully');
-
         // Check if data exists and is valid
         if (jsonResponse['data'] == null) {
-          print('⚠️ Warning: API returned null data');
           return ApiResponse<CategoriesResponse>(
             success: false,
             message: 'No data received from server',
@@ -45,10 +51,17 @@ class CategoryService extends GetxService {
           );
         }
 
-        final categoriesResponse =
-            CategoriesResponse.fromJson(jsonResponse['data']);
+        // Parse metadata if available
+        PaginationMetadata? metadata;
+        if (jsonResponse['metadata'] != null) {
+          metadata = PaginationMetadata.fromJson(jsonResponse['metadata']);
+        }
 
-        print('📊 Categories loaded: ${categoriesResponse.categories.length}');
+        // Create categories response - data is now direct array
+        final categoriesResponse = CategoriesResponse.fromJson(
+          jsonResponse['data'],
+          metadata: metadata,
+        );
 
         return ApiResponse<CategoriesResponse>(
           success: jsonResponse['success'] ?? true,
@@ -58,10 +71,9 @@ class CategoryService extends GetxService {
           timestamp:
               jsonResponse['timestamp'] ?? DateTime.now().toIso8601String(),
           data: categoriesResponse,
+          metadata: metadata,
         );
       } else {
-        print(
-            '❌ API Error: ${response.statusCode} - ${jsonResponse['message']}');
         return ApiResponse<CategoriesResponse>(
           success: false,
           message: jsonResponse['message'] ?? 'Failed to get categories',
@@ -73,10 +85,7 @@ class CategoryService extends GetxService {
               : null,
         );
       }
-    } catch (e, stackTrace) {
-      print('💥 Exception in getCategories: $e');
-      print('📍 Stack trace: $stackTrace');
-
+    } catch (e) {
       return ApiResponse<CategoriesResponse>(
         success: false,
         message: 'Error getting categories: $e',
@@ -92,20 +101,15 @@ class CategoryService extends GetxService {
     String? storeId,
   }) async {
     try {
-      print('🔄 Creating category: ${categoryRequest.name}');
-
       final response = await _httpClient.post(
         '/categories',
         categoryRequest.toJson(),
         storeId: storeId,
       );
 
-      print('📡 Create Category Response: ${response.statusCode}');
       final jsonResponse = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ Category created successfully');
-
         if (jsonResponse['data'] == null) {
           throw Exception('Server returned null data for created category');
         }
@@ -120,7 +124,6 @@ class CategoryService extends GetxService {
           data: category,
         );
       } else {
-        print('❌ Create Category Error: ${response.statusCode}');
         return ApiResponse<Category>(
           success: false,
           message: jsonResponse['message'] ?? 'Failed to create category',
@@ -132,10 +135,7 @@ class CategoryService extends GetxService {
               : null,
         );
       }
-    } catch (e, stackTrace) {
-      print('💥 Exception in createCategory: $e');
-      print('📍 Stack trace: $stackTrace');
-
+    } catch (e) {
       return ApiResponse<Category>(
         success: false,
         message: 'Error creating category: $e',
@@ -152,20 +152,15 @@ class CategoryService extends GetxService {
     String? storeId,
   }) async {
     try {
-      print('🔄 Updating category: $categoryId');
-
       final response = await _httpClient.put(
         '/categories/$categoryId',
         categoryRequest.toJson(),
         storeId: storeId,
       );
 
-      print('📡 Update Category Response: ${response.statusCode}');
       final jsonResponse = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        print('✅ Category updated successfully');
-
         if (jsonResponse['data'] == null) {
           throw Exception('Server returned null data for updated category');
         }
@@ -180,7 +175,6 @@ class CategoryService extends GetxService {
           data: category,
         );
       } else {
-        print('❌ Update Category Error: ${response.statusCode}');
         return ApiResponse<Category>(
           success: false,
           message: jsonResponse['message'] ?? 'Failed to update category',
@@ -192,10 +186,7 @@ class CategoryService extends GetxService {
               : null,
         );
       }
-    } catch (e, stackTrace) {
-      print('💥 Exception in updateCategory: $e');
-      print('📍 Stack trace: $stackTrace');
-
+    } catch (e) {
       return ApiResponse<Category>(
         success: false,
         message: 'Error updating category: $e',
@@ -211,18 +202,14 @@ class CategoryService extends GetxService {
     String? storeId,
   }) async {
     try {
-      print('🔄 Deleting category: $categoryId');
-
       final response = await _httpClient.delete(
         '/categories/$categoryId',
         storeId: storeId,
       );
 
-      print('📡 Delete Category Response: ${response.statusCode}');
       final jsonResponse = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        print('✅ Category deleted successfully');
         return ApiResponse<void>(
           success: jsonResponse['success'] ?? true,
           message: jsonResponse['message'] ?? 'Category deleted successfully',
@@ -231,7 +218,6 @@ class CategoryService extends GetxService {
               jsonResponse['timestamp'] ?? DateTime.now().toIso8601String(),
         );
       } else {
-        print('❌ Delete Category Error: ${response.statusCode}');
         return ApiResponse<void>(
           success: false,
           message: jsonResponse['message'] ?? 'Failed to delete category',
@@ -243,10 +229,7 @@ class CategoryService extends GetxService {
               : null,
         );
       }
-    } catch (e, stackTrace) {
-      print('💥 Exception in deleteCategory: $e');
-      print('📍 Stack trace: $stackTrace');
-
+    } catch (e) {
       return ApiResponse<void>(
         success: false,
         message: 'Error deleting category: $e',
@@ -262,19 +245,14 @@ class CategoryService extends GetxService {
     String? storeId,
   }) async {
     try {
-      print('🔄 Fetching category by ID: $categoryId');
-
       final response = await _httpClient.get(
         '/categories/$categoryId',
         storeId: storeId,
       );
 
-      print('📡 Get Category Response: ${response.statusCode}');
       final jsonResponse = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        print('✅ Category retrieved successfully');
-
         if (jsonResponse['data'] == null) {
           throw Exception('Server returned null data for category');
         }
@@ -289,7 +267,6 @@ class CategoryService extends GetxService {
           data: category,
         );
       } else {
-        print('❌ Get Category Error: ${response.statusCode}');
         return ApiResponse<Category>(
           success: false,
           message: jsonResponse['message'] ?? 'Failed to get category',
@@ -301,10 +278,7 @@ class CategoryService extends GetxService {
               : null,
         );
       }
-    } catch (e, stackTrace) {
-      print('💥 Exception in getCategoryById: $e');
-      print('📍 Stack trace: $stackTrace');
-
+    } catch (e) {
       return ApiResponse<Category>(
         success: false,
         message: 'Error getting category: $e',
@@ -321,20 +295,15 @@ class CategoryService extends GetxService {
     String? storeId,
   }) async {
     try {
-      print('🔄 Toggling category status: $categoryId -> $isActive');
-
       final response = await _httpClient.patch(
         '/categories/$categoryId',
         {'is_active': isActive},
         storeId: storeId,
       );
 
-      print('📡 Toggle Status Response: ${response.statusCode}');
       final jsonResponse = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        print('✅ Category status toggled successfully');
-
         if (jsonResponse['data'] == null) {
           throw Exception('Server returned null data for toggled category');
         }
@@ -350,7 +319,6 @@ class CategoryService extends GetxService {
           data: category,
         );
       } else {
-        print('❌ Toggle Status Error: ${response.statusCode}');
         return ApiResponse<Category>(
           success: false,
           message:
@@ -363,10 +331,7 @@ class CategoryService extends GetxService {
               : null,
         );
       }
-    } catch (e, stackTrace) {
-      print('💥 Exception in toggleCategoryStatus: $e');
-      print('📍 Stack trace: $stackTrace');
-
+    } catch (e) {
       return ApiResponse<Category>(
         success: false,
         message: 'Error toggling category status: $e',

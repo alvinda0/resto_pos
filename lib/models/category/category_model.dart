@@ -110,6 +110,39 @@ class Product {
   }
 }
 
+// models/pagination_metadata.dart
+class PaginationMetadata {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  PaginationMetadata({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory PaginationMetadata.fromJson(Map<String, dynamic> json) {
+    return PaginationMetadata(
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 10,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 1,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'page': page,
+      'limit': limit,
+      'total': total,
+      'total_pages': totalPages,
+    };
+  }
+}
+
 // models/category_request.dart
 class CategoryRequest {
   final String name;
@@ -139,6 +172,7 @@ class ApiResponse<T> {
   final String timestamp;
   final T? data;
   final ApiError? error;
+  final PaginationMetadata? metadata;
 
   ApiResponse({
     required this.success,
@@ -147,10 +181,11 @@ class ApiResponse<T> {
     required this.timestamp,
     this.data,
     this.error,
+    this.metadata,
   });
 
   factory ApiResponse.fromJson(
-      Map<String, dynamic> json, T Function(Map<String, dynamic>)? fromJsonT) {
+      Map<String, dynamic> json, T Function(dynamic)? fromJsonT) {
     return ApiResponse<T>(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
@@ -160,6 +195,9 @@ class ApiResponse<T> {
           ? fromJsonT(json['data'])
           : json['data'],
       error: json['error'] != null ? ApiError.fromJson(json['error']) : null,
+      metadata: json['metadata'] != null
+          ? PaginationMetadata.fromJson(json['metadata'])
+          : null,
     );
   }
 }
@@ -182,21 +220,34 @@ class ApiError {
   }
 }
 
-// models/categories_response.dart
+// models/categories_response.dart - Updated to handle direct array response
 class CategoriesResponse {
   final List<Category> categories;
+  final PaginationMetadata? metadata;
 
   CategoriesResponse({
     required this.categories,
+    this.metadata,
   });
 
-  factory CategoriesResponse.fromJson(Map<String, dynamic> json) {
+  // Updated to handle direct array from API response
+  factory CategoriesResponse.fromJson(dynamic json,
+      {PaginationMetadata? metadata}) {
+    List<Category> categories = [];
+
+    if (json is List) {
+      // Direct array response
+      categories = json.map((category) => Category.fromJson(category)).toList();
+    } else if (json is Map<String, dynamic> && json['categories'] != null) {
+      // Wrapped in categories object (fallback)
+      categories = (json['categories'] as List)
+          .map((category) => Category.fromJson(category))
+          .toList();
+    }
+
     return CategoriesResponse(
-      categories: json['categories'] != null
-          ? (json['categories'] as List)
-              .map((category) => Category.fromJson(category))
-              .toList()
-          : [],
+      categories: categories,
+      metadata: metadata,
     );
   }
 }
