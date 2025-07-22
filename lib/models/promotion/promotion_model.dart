@@ -1,3 +1,4 @@
+// promotion_model.dart - Updated model
 class Promotion {
   final String id;
   final String name;
@@ -120,24 +121,86 @@ class Promotion {
   }
 }
 
+// Updated response models to match your API structure
+class PromotionMetadata {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  PromotionMetadata({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory PromotionMetadata.fromJson(Map<String, dynamic> json) {
+    return PromotionMetadata(
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 10,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 0,
+    );
+  }
+}
+
 class PromotionResponse {
+  final bool success;
   final String message;
   final int status;
+  final String timestamp;
   final List<Promotion> promotions;
+  final PromotionMetadata? metadata;
 
   PromotionResponse({
+    required this.success,
     required this.message,
     required this.status,
+    required this.timestamp,
     required this.promotions,
+    this.metadata,
   });
 
   factory PromotionResponse.fromJson(Map<String, dynamic> json) {
     return PromotionResponse(
+      success: json['success'] ?? false,
       message: json['message'] ?? '',
       status: json['status'] ?? 0,
-      promotions: (json['data']['promotions'] as List)
+      timestamp: json['timestamp'] ?? '',
+      promotions: (json['data'] as List? ?? [])
           .map((item) => Promotion.fromJson(item))
           .toList(),
+      metadata: json['metadata'] != null
+          ? PromotionMetadata.fromJson(json['metadata'])
+          : null,
+    );
+  }
+}
+
+// For single promotion response (used in getById, create, update)
+class SinglePromotionResponse {
+  final bool success;
+  final String message;
+  final int status;
+  final String timestamp;
+  final Promotion promotion;
+
+  SinglePromotionResponse({
+    required this.success,
+    required this.message,
+    required this.status,
+    required this.timestamp,
+    required this.promotion,
+  });
+
+  factory SinglePromotionResponse.fromJson(Map<String, dynamic> json) {
+    return SinglePromotionResponse(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: json['timestamp'] ?? '',
+      promotion: Promotion.fromJson(json['data']),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/promotion/promotion_model.dart';
@@ -10,13 +11,24 @@ class PromotionController extends GetxController {
 
   // Observable variables
   var isLoading = false.obs;
+  var isLoadingMore = false.obs;
   var promotions = <Promotion>[].obs;
   var filteredPromotions = <Promotion>[].obs;
   var selectedFilter = 'Semua'.obs;
   var searchQuery = ''.obs;
 
+  // Pagination variables
+  var currentPage = 1.obs;
+  var totalPages = 1.obs;
+  var totalPromotions = 0.obs;
+  var limit = 10.obs;
+  var hasMoreData = true.obs;
+
   // Search controller
   final TextEditingController searchController = TextEditingController();
+
+  // Scroll controller for pagination
+  final ScrollController scrollController = ScrollController();
 
   // Filter options
   final List<String> filterOptions = [
@@ -34,32 +46,64 @@ class PromotionController extends GetxController {
     // Listen to search changes
     searchController.addListener(() {
       searchQuery.value = searchController.text;
-      filterPromotions();
+      _debounceSearch();
+    });
+
+    // Listen to scroll for pagination
+    scrollController.addListener(() {
+      if (scrollController.position.pixels >=
+          scrollController.position.maxScrollExtent - 200) {
+        if (!isLoadingMore.value &&
+            hasMoreData.value &&
+            searchQuery.value.isEmpty) {
+          loadMorePromotions();
+        }
+      }
     });
   }
 
   @override
   void onClose() {
     searchController.dispose();
+    scrollController.dispose();
     super.onClose();
   }
 
-  // Load promotions from API
+  // Debounce untuk search agar tidak terlalu sering hit API
+  Timer? _searchDebounceTimer;
+  void _debounceSearch() {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (searchQuery.value.isNotEmpty) {
+        searchPromotions();
+      } else {
+        resetAndLoadPromotions();
+      }
+    });
+  }
+
+  // Load promotions from API (first page)
   Future<void> loadPromotions() async {
     try {
       isLoading.value = true;
+      currentPage.value = 1;
+      hasMoreData.value = true;
 
       final storeId = _storageService.getStoreIdWithFallback();
-      print('🏪 Loading promotions for store: $storeId');
 
-      final result = await _promotionService.getPromotions(storeId: storeId);
+      final result = await _promotionService.getPromotionsWithMetadata(
+        storeId: storeId,
+        page: currentPage.value,
+        limit: limit.value,
+      );
 
-      promotions.value = result;
+      promotions.value = result.promotions;
+      totalPages.value = result.metadata?.totalPages ?? 1;
+      totalPromotions.value = result.metadata?.total ?? 0;
+      hasMoreData.value = currentPage.value < totalPages.value;
+
       filterPromotions();
-
-      print('✅ Loaded ${result.length} promotions');
     } catch (e) {
-      print('❌ Error loading promotions: $e');
       Get.snackbar(
         'Error',
         'Gagal memuat data promosi: ${e.toString()}',
@@ -72,21 +116,90 @@ class PromotionController extends GetxController {
     }
   }
 
-  // Filter promotions based on search and filter
+  // Load more promotions (pagination)
+  Future<void> loadMorePromotions() async {
+    if (!hasMoreData.value || isLoadingMore.value) return;
+
+    try {
+      isLoadingMore.value = true;
+      currentPage.value++;
+
+      final storeId = _storageService.getStoreIdWithFallback();
+
+      final result = await _promotionService.getPromotionsWithMetadata(
+        storeId: storeId,
+        page: currentPage.value,
+        limit: limit.value,
+      );
+
+      // Append new promotions to existing list
+      promotions.addAll(result.promotions);
+      hasMoreData.value =
+          currentPage.value < (result.metadata?.totalPages ?? 1);
+
+      filterPromotions();
+    } catch (e) {
+      currentPage.value--; // Rollback page increment
+      Get.snackbar(
+        'Error',
+        'Gagal memuat data promosi selanjutnya: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
+  // Search promotions
+  Future<void> searchPromotions() async {
+    if (searchQuery.value.isEmpty) {
+      resetAndLoadPromotions();
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      final storeId = _storageService.getStoreIdWithFallback();
+
+      final result = await _promotionService.searchPromotions(
+        searchQuery.value,
+        storeId: storeId,
+        page: 1,
+        limit: 100, // Load more results for search
+      );
+
+      promotions.value = result;
+      hasMoreData.value = false; // Disable pagination for search results
+
+      filterPromotions();
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Gagal mencari promosi: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Reset and load promotions (used when clearing search)
+  Future<void> resetAndLoadPromotions() async {
+    currentPage.value = 1;
+    hasMoreData.value = true;
+    await loadPromotions();
+  }
+
+  // Filter promotions based on status filter (local filtering)
   void filterPromotions() {
     List<Promotion> filtered = promotions.toList();
 
-    // Apply search filter
-    if (searchQuery.value.isNotEmpty) {
-      filtered = filtered.where((promotion) {
-        final query = searchQuery.value.toLowerCase();
-        return promotion.name.toLowerCase().contains(query) ||
-            promotion.promoCode.toLowerCase().contains(query) ||
-            promotion.description.toLowerCase().contains(query);
-      }).toList();
-    }
-
-    // Apply status filter
+    // Apply status filter (local filtering, tidak hit API)
     if (selectedFilter.value != 'Semua') {
       filtered = filtered.where((promotion) {
         switch (selectedFilter.value) {
@@ -115,7 +228,7 @@ class PromotionController extends GetxController {
   void clearSearch() {
     searchController.clear();
     searchQuery.value = '';
-    filterPromotions();
+    resetAndLoadPromotions();
   }
 
   // Delete promotion
@@ -150,6 +263,7 @@ class PromotionController extends GetxController {
 
         // Remove from local list
         promotions.removeWhere((promotion) => promotion.id == id);
+        totalPromotions.value--;
         filterPromotions();
 
         Get.snackbar(
@@ -161,7 +275,6 @@ class PromotionController extends GetxController {
         );
       }
     } catch (e) {
-      print('❌ Error deleting promotion: $e');
       Get.snackbar(
         'Error',
         'Gagal menghapus promosi: ${e.toString()}',
@@ -221,7 +334,6 @@ class PromotionController extends GetxController {
         colorText: Colors.white,
       );
     } catch (e) {
-      print('❌ Error toggling promotion status: $e');
       Get.snackbar(
         'Error',
         'Gagal mengubah status promosi: ${e.toString()}',
@@ -234,9 +346,9 @@ class PromotionController extends GetxController {
     }
   }
 
-  // Refresh promotions
+  // Refresh promotions (pull to refresh)
   Future<void> refreshPromotions() async {
-    await loadPromotions();
+    await resetAndLoadPromotions();
   }
 
   // Get promotion by ID
@@ -245,7 +357,6 @@ class PromotionController extends GetxController {
       final storeId = _storageService.getStoreIdWithFallback();
       return await _promotionService.getPromotionById(id, storeId: storeId);
     } catch (e) {
-      print('❌ Error getting promotion by ID: $e');
       Get.snackbar(
         'Error',
         'Gagal memuat detail promosi: ${e.toString()}',
@@ -261,17 +372,20 @@ class PromotionController extends GetxController {
   void navigateToAddPromotion() {
     // Navigate to add promotion screen
     // Get.toNamed('/add-promotion');
-    print('🎯 Navigate to add promotion');
+  }
+// Add this method to your PromotionController class
+  void updateLimit(int newLimit) {
+    limit.value = newLimit;
+    resetAndLoadPromotions();
   }
 
   // Navigate to edit promotion screen
   void navigateToEditPromotion(String id) {
     // Navigate to edit promotion screen
     // Get.toNamed('/edit-promotion/$id');
-    print('🎯 Navigate to edit promotion: $id');
   }
 
-  // Get promotion count by status
+  // Get promotion count by status (from current loaded data)
   int getPromotionCountByStatus(String status) {
     if (status == 'Semua') return promotions.length;
 
@@ -288,4 +402,59 @@ class PromotionController extends GetxController {
       }
     }).length;
   }
+
+  // Change page size
+  void changePageSize(int newLimit) {
+    limit.value = newLimit;
+    resetAndLoadPromotions();
+  }
+
+  // Jump to specific page
+  Future<void> jumpToPage(int page) async {
+    if (page < 1 || page > totalPages.value) return;
+
+    try {
+      isLoading.value = true;
+      currentPage.value = page;
+
+      final storeId = _storageService.getStoreIdWithFallback();
+      final result = await _promotionService.getPromotionsWithMetadata(
+        storeId: storeId,
+        page: currentPage.value,
+        limit: limit.value,
+      );
+
+      promotions.value = result.promotions;
+      hasMoreData.value =
+          currentPage.value < (result.metadata?.totalPages ?? 1);
+
+      filterPromotions();
+
+      // Scroll to top
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    } catch (e) {
+      print('❌ Error jumping to page: $e');
+      Get.snackbar(
+        'Error',
+        'Gagal memuat halaman: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Helper methods for pagination info
+  bool get isFirstPage => currentPage.value == 1;
+  bool get isLastPage => currentPage.value >= totalPages.value;
+  String get paginationInfo =>
+      'Halaman ${currentPage.value} dari ${totalPages.value} (${totalPromotions.value} total)';
 }
