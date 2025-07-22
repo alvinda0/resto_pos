@@ -9,16 +9,28 @@ class InventoryController extends GetxController {
 
   // Observable variables
   final RxList<InventoryModel> inventories = <InventoryModel>[].obs;
-  final RxList<InventoryModel> filteredInventories = <InventoryModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxString searchQuery = ''.obs;
   final RxString selectedStatus = 'Semua'.obs;
+
+  // Pagination variables
+  final RxInt currentPage = 1.obs;
+  final RxInt itemsPerPage = 10.obs;
+  final RxInt totalItems = 0.obs;
+  final RxInt totalPages = 0.obs;
+
+  // Available page sizes
+  final List<int> availablePageSizes = [5, 10, 25, 50, 100];
+
+  // Pagination metadata
+  Rx<PaginationMetadata?> paginationMetadata = Rx<PaginationMetadata?>(null);
 
   // Text editing controllers for form
   final TextEditingController nameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController unitController = TextEditingController();
   final TextEditingController minimumStockController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
   // Form key
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -27,19 +39,18 @@ class InventoryController extends GetxController {
   final List<String> unitOptions = ['kg', 'gram', 'liter', 'mili', 'pcs'];
 
   // Status filter options
-  final List<String> statusOptions = ['Semua', 'CUKUP', 'MENIPIS'];
 
   @override
   void onInit() {
     super.onInit();
     loadInventories();
 
-    // Listen to search query changes
-    debounce(searchQuery, (_) => filterInventories(),
-        time: const Duration(milliseconds: 500));
+    // Listen to search query changes with debounce
+    debounce(searchQuery, (_) => _performSearch(),
+        time: const Duration(milliseconds: 800));
 
     // Listen to status filter changes
-    ever(selectedStatus, (_) => filterInventories());
+    ever(selectedStatus, (_) => _performSearch());
   }
 
   @override
@@ -48,16 +59,30 @@ class InventoryController extends GetxController {
     quantityController.dispose();
     unitController.dispose();
     minimumStockController.dispose();
+    searchController.dispose();
     super.onClose();
   }
 
-  // Load all inventories
-  Future<void> loadInventories() async {
+  // Load inventories with pagination
+  Future<void> loadInventories({bool resetPage = false}) async {
     try {
       isLoading.value = true;
-      final result = await _inventoryService.getInventories();
-      inventories.value = result;
-      filteredInventories.value = result;
+
+      if (resetPage) {
+        currentPage.value = 1;
+      }
+
+      final result = await _inventoryService.getInventories(
+        page: currentPage.value,
+        limit: itemsPerPage.value,
+        search: searchQuery.value.isNotEmpty ? searchQuery.value : null,
+        status: selectedStatus.value != 'Semua' ? selectedStatus.value : null,
+      );
+
+      inventories.value = result.data;
+      paginationMetadata.value = result.metadata;
+      totalItems.value = result.metadata.total;
+      totalPages.value = result.metadata.totalPages;
     } catch (e) {
       Get.snackbar(
         'Error',
@@ -71,29 +96,69 @@ class InventoryController extends GetxController {
     }
   }
 
-  // Filter inventories based on search query and status
-  void filterInventories() {
-    List<InventoryModel> result = inventories;
+  // Perform search with current filters
+  Future<void> _performSearch() async {
+    await loadInventories(resetPage: true);
+  }
 
-    // Filter by search query
-    if (searchQuery.value.isNotEmpty) {
-      result = result
-          .where((inventory) => inventory.name
-              .toLowerCase()
-              .contains(searchQuery.value.toLowerCase()))
-          .toList();
+  // Pagination controls
+  void goToPage(int page) {
+    if (page != currentPage.value && page >= 1 && page <= totalPages.value) {
+      currentPage.value = page;
+      loadInventories();
+    }
+  }
+
+  void goToNextPage() {
+    if (currentPage.value < totalPages.value) {
+      currentPage.value++;
+      loadInventories();
+    }
+  }
+
+  void goToPreviousPage() {
+    if (currentPage.value > 1) {
+      currentPage.value--;
+      loadInventories();
+    }
+  }
+
+  void changeItemsPerPage(int newSize) {
+    if (newSize != itemsPerPage.value) {
+      itemsPerPage.value = newSize;
+      currentPage.value = 1; // Reset to first page
+      loadInventories();
+    }
+  }
+
+  // Get pagination data for widget
+  Map<String, dynamic> get paginationData {
+    final metadata = paginationMetadata.value;
+    if (metadata == null) {
+      return {
+        'currentPage': 1,
+        'totalItems': 0,
+        'itemsPerPage': itemsPerPage.value,
+        'availablePageSizes': availablePageSizes,
+        'startIndex': 0,
+        'endIndex': 0,
+        'hasPreviousPage': false,
+        'hasNextPage': false,
+        'pageNumbers': <int>[],
+      };
     }
 
-    // Filter by status
-    if (selectedStatus.value != 'Semua') {
-      if (selectedStatus.value == 'MENIPIS') {
-        result = result.where((inventory) => inventory.isLowStock).toList();
-      } else if (selectedStatus.value == 'CUKUP') {
-        result = result.where((inventory) => !inventory.isLowStock).toList();
-      }
-    }
-
-    filteredInventories.value = result;
+    return {
+      'currentPage': metadata.page,
+      'totalItems': metadata.total,
+      'itemsPerPage': metadata.limit,
+      'availablePageSizes': availablePageSizes,
+      'startIndex': metadata.startIndex,
+      'endIndex': metadata.endIndex,
+      'hasPreviousPage': metadata.hasPreviousPage,
+      'hasNextPage': metadata.hasNextPage,
+      'pageNumbers': metadata.getPageNumbers(),
+    };
   }
 
   // Create new inventory
@@ -242,6 +307,7 @@ class InventoryController extends GetxController {
   // Update search query
   void updateSearchQuery(String query) {
     searchQuery.value = query;
+    searchController.text = query;
   }
 
   // Update status filter
@@ -252,6 +318,21 @@ class InventoryController extends GetxController {
   // Refresh data
   Future<void> refreshData() async {
     await loadInventories();
+  }
+
+  // Clear search
+  void clearSearch() {
+    searchQuery.value = '';
+    searchController.clear();
+  }
+
+  // Clear all filters
+  void clearAllFilters() {
+    searchQuery.value = '';
+    searchController.clear();
+    selectedStatus.value = 'Semua';
+    currentPage.value = 1;
+    loadInventories();
   }
 
   // Validators

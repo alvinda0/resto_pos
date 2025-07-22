@@ -14,23 +14,55 @@ class InventoryService extends GetxService {
     return Get.find<InventoryService>();
   }
 
-  // Get all inventories
-  Future<List<InventoryModel>> getInventories() async {
+  // Get inventories with pagination and search
+  Future<InventoryListResponse> getInventories({
+    int page = 1,
+    int limit = 10,
+    String? search,
+    String? status,
+  }) async {
     try {
-      final response = await _httpClient.get('/inventories');
+      // Build query parameters
+      Map<String, String> queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
+
+      // Note: Status filtering might need to be handled on backend
+      // For now, we'll filter on frontend if needed
+      if (status != null && status.isNotEmpty && status != 'Semua') {
+        queryParams['status'] = status;
+      }
+
+      final response = await _httpClient.get(
+        '/inventories',
+        queryParameters: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
-        final List<dynamic> inventoriesData = jsonData['data'] ?? [];
-
-        return inventoriesData
-            .map((json) => InventoryModel.fromJson(json))
-            .toList();
+        return InventoryListResponse.fromJson(jsonData);
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(
             errorData['message'] ?? 'Gagal mengambil data inventori');
       }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+
+  // Get all inventories (for backward compatibility)
+  Future<List<InventoryModel>> getAllInventories() async {
+    try {
+      // Get first page with high limit to get all data
+      // This is for backward compatibility with existing filter methods
+      final response = await getInventories(page: 1, limit: 1000);
+      return response.data;
     } catch (e) {
       throw Exception('Error: $e');
     }
@@ -106,35 +138,36 @@ class InventoryService extends GetxService {
     }
   }
 
-  // Search inventories by name
-  Future<List<InventoryModel>> searchInventories(String query) async {
+  // Search inventories (now uses server-side search via pagination)
+  Future<InventoryListResponse> searchInventories(
+    String query, {
+    int page = 1,
+    int limit = 10,
+  }) async {
     try {
-      // Since the API doesn't have search endpoint, we'll filter locally
-      final inventories = await getInventories();
-      if (query.isEmpty) return inventories;
-
-      return inventories
-          .where((inventory) =>
-              inventory.name.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      return await getInventories(
+        page: page,
+        limit: limit,
+        search: query.isNotEmpty ? query : null,
+      );
     } catch (e) {
       throw Exception('Error: $e');
     }
   }
 
-  // Filter inventories by status
+  // Filter inventories by status (legacy method for local filtering)
   Future<List<InventoryModel>> filterInventoriesByStatus(String status) async {
     try {
-      final inventories = await getInventories();
-      if (status.isEmpty || status == 'Semua') return inventories;
+      final response = await getAllInventories();
+      if (status.isEmpty || status == 'Semua') return response;
 
       if (status == 'MENIPIS') {
-        return inventories.where((inventory) => inventory.isLowStock).toList();
+        return response.where((inventory) => inventory.isLowStock).toList();
       } else if (status == 'CUKUP') {
-        return inventories.where((inventory) => !inventory.isLowStock).toList();
+        return response.where((inventory) => !inventory.isLowStock).toList();
       }
 
-      return inventories;
+      return response;
     } catch (e) {
       throw Exception('Error: $e');
     }

@@ -1,4 +1,4 @@
-// models/inventory_model.dart
+// models/inventory/inventory_model.dart
 class InventoryModel {
   final String id;
   final String storeId;
@@ -42,24 +42,6 @@ class InventoryModel {
     };
   }
 
-  Map<String, dynamic> toCreateJson() {
-    return {
-      'name': name,
-      'quantity': quantity,
-      'unit': unit,
-      'minimum_stock': minimumStock,
-    };
-  }
-
-  Map<String, dynamic> toUpdateJson() {
-    return {
-      'name': name,
-      'quantity': quantity,
-      'unit': unit,
-      'minimum_stock': minimumStock,
-    };
-  }
-
   // Helper method to check if stock is low
   bool get isLowStock => quantity <= minimumStock;
 
@@ -67,10 +49,10 @@ class InventoryModel {
   String get status => isLowStock ? 'MENIPIS' : 'CUKUP';
 
   // Helper method to get formatted quantity with unit
-  String get formattedQuantity => '$quantity $unit';
+  String get formattedQuantity => '${quantity.toInt()} $unit';
 
   // Helper method to get formatted minimum stock with unit
-  String get formattedMinimumStock => '$minimumStock $unit';
+  String get formattedMinimumStock => '${minimumStock.toInt()} $unit';
 
   InventoryModel copyWith({
     String? id,
@@ -137,6 +119,111 @@ class UpdateInventoryRequest {
       'quantity': quantity,
       'unit': unit,
       'minimum_stock': minimumStock,
+    };
+  }
+}
+
+// Pagination metadata model
+class PaginationMetadata {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  PaginationMetadata({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory PaginationMetadata.fromJson(Map<String, dynamic> json) {
+    return PaginationMetadata(
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 10,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'page': page,
+      'limit': limit,
+      'total': total,
+      'total_pages': totalPages,
+    };
+  }
+
+  // Helper methods for pagination logic
+  bool get hasPreviousPage => page > 1;
+  bool get hasNextPage => page < totalPages;
+
+  int get startIndex => total == 0 ? 0 : ((page - 1) * limit) + 1;
+  int get endIndex {
+    if (total == 0) return 0;
+    final end = page * limit;
+    return end > total ? total : end;
+  }
+
+  // Generate page numbers for pagination UI
+  List<int> getPageNumbers({int maxVisible = 5}) {
+    if (totalPages <= maxVisible) {
+      return List.generate(totalPages, (index) => index + 1);
+    }
+
+    List<int> pages = [];
+    int start = (page - maxVisible ~/ 2).clamp(1, totalPages - maxVisible + 1);
+    int end = (start + maxVisible - 1).clamp(1, totalPages);
+
+    for (int i = start; i <= end; i++) {
+      pages.add(i);
+    }
+
+    return pages;
+  }
+}
+
+// Response model for inventory list with pagination
+class InventoryListResponse {
+  final bool success;
+  final String message;
+  final int status;
+  final String timestamp;
+  final List<InventoryModel> data;
+  final PaginationMetadata metadata;
+
+  InventoryListResponse({
+    required this.success,
+    required this.message,
+    required this.status,
+    required this.timestamp,
+    required this.data,
+    required this.metadata,
+  });
+
+  factory InventoryListResponse.fromJson(Map<String, dynamic> json) {
+    return InventoryListResponse(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: json['timestamp'] ?? '',
+      data: (json['data'] as List<dynamic>?)
+              ?.map((item) => InventoryModel.fromJson(item))
+              .toList() ??
+          [],
+      metadata: PaginationMetadata.fromJson(json['metadata'] ?? {}),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'success': success,
+      'message': message,
+      'status': status,
+      'timestamp': timestamp,
+      'data': data.map((item) => item.toJson()).toList(),
+      'metadata': metadata.toJson(),
     };
   }
 }
