@@ -8,8 +8,9 @@ import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/menu/products_screen.dart';
-import 'package:pos/screens/menu/product_list_screen.dart'; // Add this import
+import 'package:pos/screens/menu/product_list_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
+import 'package:pos/screens/akun/akun_role_users_screen.dart'; // Import screen baru
 
 class AppRoutes {
   // Route Names - Dikelompokkan untuk clarity
@@ -34,7 +35,7 @@ class AppRoutes {
 
   // Menu Routes
   static const String products = '/products';
-  static const String productList = '/product-list'; // Add this constant
+  static const String productList = '/product-list';
   static const String ingredients = '/ingredients';
 
   // Kitchen Routes
@@ -42,6 +43,7 @@ class AppRoutes {
 
   // Account Routes
   static const String account = '/account';
+  static const String accountRoleUsers = '/account/role-users'; // Route baru
 
   // Referral Routes
   static const String referral = '/referral';
@@ -82,7 +84,7 @@ class AppRoutes {
       GetPage(name: promo, page: () => const PromoScreen()),
       GetPage(name: sales, page: () => const OrderScreen()),
 
-      // Product List Route - Fixed
+      // Product List Route
       GetPage(
         name: productList,
         page: () => const ProductListScreen(),
@@ -106,6 +108,12 @@ class AppRoutes {
       GetPage(
         name: account,
         page: () => const PlaceholderScreen(title: 'Akun'),
+      ),
+      // Route baru untuk menampilkan users berdasarkan role
+      GetPage(
+        name: accountRoleUsers,
+        page: () => const AkunRoleUsersScreen(),
+        transition: Transition.rightToLeft,
       ),
 
       // Referral Routes
@@ -177,10 +185,14 @@ class AppRoutes {
   static void toSettings() => Get.toNamed(settings);
   static void toProducts() => Get.toNamed(products);
   static void toProductList(dynamic category) =>
-      Get.toNamed(productList, arguments: category); // Add helper method
+      Get.toNamed(productList, arguments: category);
   static void toIngredients() => Get.toNamed(ingredients);
   static void toKitchen() => Get.toNamed(kitchen);
   static void toAccount() => Get.toNamed(account);
+
+  // Method baru untuk navigasi ke screen akun role users
+  static void toAccountRoleUsers(dynamic role) =>
+      Get.toNamed(accountRoleUsers, arguments: role);
 
   // Referral navigation helpers
   static void toReferral() => Get.toNamed(referral);

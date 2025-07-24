@@ -74,15 +74,11 @@ class RoleController extends GetxController {
   Future<void> loadRoles({String? storeId}) async {
     try {
       _isLoading.value = true;
-      print('=== ROLE CONTROLLER: LOAD ROLES ===');
 
       final roles = await _roleService.getRoles(storeId: storeId);
       _roles.value = roles;
       filterRoles();
-
-      print('✅ Roles loaded successfully: ${roles.length} roles');
     } catch (e) {
-      print('❌ Error loading roles: $e');
       Get.snackbar(
         'Error',
         'Failed to load roles: ${e.toString()}',
@@ -98,15 +94,9 @@ class RoleController extends GetxController {
   // Load available permissions
   Future<void> loadAvailablePermissions({String? storeId}) async {
     try {
-      print('=== ROLE CONTROLLER: LOAD PERMISSIONS ===');
-
       final permissions = await _roleService.getPermissions(storeId: storeId);
       _availablePermissions.value = permissions;
-
-      print(
-          '✅ Permissions loaded successfully: ${permissions.length} permissions');
     } catch (e) {
-      print('❌ Error loading permissions: $e');
       Get.snackbar(
         'Error',
         'Failed to load permissions: ${e.toString()}',
@@ -134,8 +124,6 @@ class RoleController extends GetxController {
 
     // Reset to first page when filtering
     _currentPage.value = 1;
-
-    print('🔍 Filtered roles: ${_filteredRoles.length} results');
   }
 
   // Create new role
@@ -143,7 +131,6 @@ class RoleController extends GetxController {
       {String? storeId}) async {
     try {
       _isCreating.value = true;
-      print('=== ROLE CONTROLLER: CREATE ROLE ===');
 
       final newRole = await _roleService.createRole(roleData, storeId: storeId);
       _roles.add(newRole);
@@ -156,10 +143,7 @@ class RoleController extends GetxController {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-
-      print('✅ Role created successfully: ${newRole.name}');
     } catch (e) {
-      print('❌ Error creating role: $e');
       Get.snackbar(
         'Error',
         'Failed to create role: ${e.toString()}',
@@ -177,7 +161,6 @@ class RoleController extends GetxController {
       {String? storeId}) async {
     try {
       _isUpdating.value = true;
-      print('=== ROLE CONTROLLER: UPDATE ROLE ===');
 
       final updatedRole =
           await _roleService.updateRole(roleId, roleData, storeId: storeId);
@@ -195,10 +178,7 @@ class RoleController extends GetxController {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-
-      print('✅ Role updated successfully: ${updatedRole.name}');
     } catch (e) {
-      print('❌ Error updating role: $e');
       Get.snackbar(
         'Error',
         'Failed to update role: ${e.toString()}',
@@ -215,7 +195,6 @@ class RoleController extends GetxController {
   Future<void> deleteRole(String roleId, {String? storeId}) async {
     try {
       _isDeleting.value = true;
-      print('=== ROLE CONTROLLER: DELETE ROLE ===');
 
       await _roleService.deleteRole(roleId, storeId: storeId);
 
@@ -229,10 +208,7 @@ class RoleController extends GetxController {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-
-      print('✅ Role deleted successfully');
     } catch (e) {
-      print('❌ Error deleting role: $e');
       Get.snackbar(
         'Error',
         'Failed to delete role: ${e.toString()}',

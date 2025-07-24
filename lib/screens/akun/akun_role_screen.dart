@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/role/role_controller.dart';
 import 'package:pos/models/role/role_model.dart';
-import 'package:pos/services/role/role_service.dart';
+import 'package:pos/models/routes.dart';
+import 'package:pos/models/user/user_model.dart';
+import 'package:pos/services/user/user_service.dart';
 
 class AkunRoleScreen extends StatefulWidget {
   const AkunRoleScreen({super.key});
@@ -199,10 +201,11 @@ class _AkunRoleScreenState extends State<AkunRoleScreen> {
                                     width: 100,
                                     child: Row(
                                       children: [
-                                        // View Users Button
+                                        // View Users Button - MENGGUNAKAN NAVIGASI BUKAN DIALOG
                                         TextButton(
                                           onPressed: () =>
-                                              _showUsersDialog(role),
+                                              AppRoutes.toAccountRoleUsers(
+                                                  role),
                                           style: TextButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 8,
@@ -419,53 +422,6 @@ class _AkunRoleScreenState extends State<AkunRoleScreen> {
     );
   }
 
-  void _showUsersDialog(Role role) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Akun dengan Role: ${role.name}'),
-        content: SizedBox(
-          width: 400,
-          height: 300,
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: RoleService.instance.getUsersByRole(role.id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-
-              final users = snapshot.data ?? [];
-
-              if (users.isEmpty) {
-                return const Center(
-                    child: Text('Tidak ada akun dengan role ini'));
-              }
-
-              return ListView.builder(
-                itemCount: users.length,
-                itemBuilder: (context, index) {
-                  final user = users[index];
-                  return ListTile(
-                    leading: const Icon(Icons.person),
-                    title: Text(user['name'] ?? 'Unknown'),
-                    subtitle: Text(user['email'] ?? ''),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
-    );
-  }
+  // DIHAPUS: Method _showUsersDialog tidak diperlukan lagi
+  // karena sekarang menggunakan navigasi ke screen terpisah
 }
