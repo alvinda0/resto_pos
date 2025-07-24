@@ -1,4 +1,6 @@
-// promotion_model.dart - Updated model
+// promotion_model.dart - Fixed model
+import 'package:intl/intl.dart';
+
 class Promotion {
   final String id;
   final String name;
@@ -8,7 +10,7 @@ class Promotion {
   final double maxDiscount;
   final String timeType;
   final DateTime startDate;
-  final DateTime endDate;
+  final DateTime? endDate; // Make nullable for daily type
   final String days;
   final DateTime startTime;
   final DateTime endTime;
@@ -27,7 +29,7 @@ class Promotion {
     required this.maxDiscount,
     required this.timeType,
     required this.startDate,
-    required this.endDate,
+    this.endDate,
     required this.days,
     required this.startTime,
     required this.endTime,
@@ -48,7 +50,8 @@ class Promotion {
       maxDiscount: (json['max_discount'] ?? 0).toDouble(),
       timeType: json['time_type'] ?? '',
       startDate: DateTime.tryParse(json['start_date'] ?? '') ?? DateTime.now(),
-      endDate: DateTime.tryParse(json['end_date'] ?? '') ?? DateTime.now(),
+      endDate:
+          json['end_date'] != null ? DateTime.tryParse(json['end_date']) : null,
       days: json['days'] ?? '',
       startTime: DateTime.tryParse(json['start_time'] ?? '') ?? DateTime.now(),
       endTime: DateTime.tryParse(json['end_time'] ?? '') ?? DateTime.now(),
@@ -61,7 +64,7 @@ class Promotion {
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final Map<String, dynamic> data = {
       'id': id,
       'name': name,
       'description': description,
@@ -70,7 +73,6 @@ class Promotion {
       'max_discount': maxDiscount,
       'time_type': timeType,
       'start_date': startDate.toIso8601String(),
-      'end_date': endDate.toIso8601String(),
       'days': days,
       'start_time': startTime.toIso8601String(),
       'end_time': endTime.toIso8601String(),
@@ -80,27 +82,118 @@ class Promotion {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+
+    // Only include end_date for period type
+    if (timeType == 'period' && endDate != null) {
+      data['end_date'] = endDate!.toIso8601String();
+    }
+
+    return data;
+  }
+
+  // Create a copy with updated fields (for updates)
+  Promotion copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? discountType,
+    double? discountValue,
+    double? maxDiscount,
+    String? timeType,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? days,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? promoCode,
+    int? usageLimit,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Promotion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      discountType: discountType ?? this.discountType,
+      discountValue: discountValue ?? this.discountValue,
+      maxDiscount: maxDiscount ?? this.maxDiscount,
+      timeType: timeType ?? this.timeType,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      days: days ?? this.days,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      promoCode: promoCode ?? this.promoCode,
+      usageLimit: usageLimit ?? this.usageLimit,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 
   String get formattedDiscount {
     if (discountType == 'percent') {
       return '${discountValue.toInt()}%';
     } else {
-      return 'Rp ${discountValue.toStringAsFixed(0)}';
+      return 'Rp ${NumberFormat('#,###').format(discountValue)}';
     }
   }
 
+  String get formattedMaxDiscount {
+    return 'Rp ${NumberFormat('#,###').format(maxDiscount)}';
+  }
+
   String get formattedPeriod {
-    if (timeType == 'period') {
-      return '${_formatDate(startDate)} - ${_formatDate(endDate)}';
+    if (timeType == 'period' && endDate != null) {
+      return '${_formatDate(startDate)} - ${_formatDate(endDate!)}';
     } else {
-      return 'Setiap Hari';
+      return 'Harian';
     }
   }
 
   String get formattedDays {
     if (days.isEmpty) return 'Setiap Hari';
-    return days;
+
+    // Convert comma-separated days to readable format
+    final daysList = days.split(',');
+    final dayNames = <String>[];
+
+    for (String day in daysList) {
+      switch (day.trim().toLowerCase()) {
+        case 'monday':
+          dayNames.add('Senin');
+          break;
+        case 'tuesday':
+          dayNames.add('Selasa');
+          break;
+        case 'wednesday':
+          dayNames.add('Rabu');
+          break;
+        case 'thursday':
+          dayNames.add('Kamis');
+          break;
+        case 'friday':
+          dayNames.add('Jumat');
+          break;
+        case 'saturday':
+          dayNames.add('Sabtu');
+          break;
+        case 'sunday':
+          dayNames.add('Minggu');
+          break;
+        default:
+          dayNames.add(day.trim());
+      }
+    }
+
+    return dayNames.join(', ');
+  }
+
+  String get formattedTimeRange {
+    final startTimeStr = DateFormat('HH:mm').format(startTime);
+    final endTimeStr = DateFormat('HH:mm').format(endTime);
+    return '$startTimeStr - $endTimeStr';
   }
 
   String get statusDisplayName {
@@ -117,7 +210,58 @@ class Promotion {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
+
+  // Helper method to check if promotion is currently valid
+  bool get isCurrentlyActive {
+    if (status.toLowerCase() != 'active') return false;
+
+    final now = DateTime.now();
+
+    if (timeType == 'period') {
+      if (endDate != null && now.isAfter(endDate!)) return false;
+    }
+
+    // Check if current day is in allowed days
+    if (days.isNotEmpty) {
+      final currentDay = _getCurrentDayName();
+      final allowedDays =
+          days.toLowerCase().split(',').map((d) => d.trim()).toList();
+      if (!allowedDays.contains(currentDay)) return false;
+    }
+
+    // Check time range
+    final currentTime =
+        DateTime(now.year, now.month, now.day, now.hour, now.minute);
+    final todayStart = DateTime(
+        now.year, now.month, now.day, startTime.hour, startTime.minute);
+    final todayEnd =
+        DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
+
+    return currentTime.isAfter(todayStart) && currentTime.isBefore(todayEnd);
+  }
+
+  String _getCurrentDayName() {
+    final now = DateTime.now();
+    switch (now.weekday) {
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return '';
+    }
   }
 }
 

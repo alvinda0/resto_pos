@@ -38,39 +38,49 @@ class PromotionController extends GetxController {
     'Kedaluwarsa'
   ];
 
+  // Debounce timer for search
+  Timer? _searchDebounceTimer;
+
   @override
   void onInit() {
     super.onInit();
+    // Initialize data loading
     loadPromotions();
 
-    // Listen to search changes
-    searchController.addListener(() {
-      searchQuery.value = searchController.text;
-      _debounceSearch();
-    });
+    // Listen to search changes with debounce
+    searchController.addListener(_onSearchChanged);
 
     // Listen to scroll for pagination
-    scrollController.addListener(() {
-      if (scrollController.position.pixels >=
-          scrollController.position.maxScrollExtent - 200) {
-        if (!isLoadingMore.value &&
-            hasMoreData.value &&
-            searchQuery.value.isEmpty) {
-          loadMorePromotions();
-        }
-      }
-    });
+    scrollController.addListener(_onScrollChanged);
   }
 
   @override
   void onClose() {
+    _searchDebounceTimer?.cancel();
+    searchController.removeListener(_onSearchChanged);
     searchController.dispose();
+    scrollController.removeListener(_onScrollChanged);
     scrollController.dispose();
     super.onClose();
   }
 
+  void _onSearchChanged() {
+    searchQuery.value = searchController.text;
+    _debounceSearch();
+  }
+
+  void _onScrollChanged() {
+    if (scrollController.position.pixels >=
+        scrollController.position.maxScrollExtent - 200) {
+      if (!isLoadingMore.value &&
+          hasMoreData.value &&
+          searchQuery.value.isEmpty) {
+        loadMorePromotions();
+      }
+    }
+  }
+
   // Debounce untuk search agar tidak terlalu sering hit API
-  Timer? _searchDebounceTimer;
   void _debounceSearch() {
     _searchDebounceTimer?.cancel();
     _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -104,13 +114,7 @@ class PromotionController extends GetxController {
 
       filterPromotions();
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Gagal memuat data promosi: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorSnackbar('Gagal memuat data promosi', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -140,13 +144,7 @@ class PromotionController extends GetxController {
       filterPromotions();
     } catch (e) {
       currentPage.value--; // Rollback page increment
-      Get.snackbar(
-        'Error',
-        'Gagal memuat data promosi selanjutnya: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorSnackbar('Gagal memuat data promosi selanjutnya', e.toString());
     } finally {
       isLoadingMore.value = false;
     }
@@ -176,13 +174,7 @@ class PromotionController extends GetxController {
 
       filterPromotions();
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Gagal mencari promosi: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorSnackbar('Gagal mencari promosi', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -266,22 +258,10 @@ class PromotionController extends GetxController {
         totalPromotions.value--;
         filterPromotions();
 
-        Get.snackbar(
-          'Berhasil',
-          'Promosi berhasil dihapus',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+        _showSuccessSnackbar('Promosi berhasil dihapus');
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Gagal menghapus promosi: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorSnackbar('Gagal menghapus promosi', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -302,45 +282,16 @@ class PromotionController extends GetxController {
       // Update local list
       final index = promotions.indexWhere((promotion) => promotion.id == id);
       if (index != -1) {
-        final updatedPromotion = Promotion(
-          id: promotions[index].id,
-          name: promotions[index].name,
-          description: promotions[index].description,
-          discountType: promotions[index].discountType,
-          discountValue: promotions[index].discountValue,
-          maxDiscount: promotions[index].maxDiscount,
-          timeType: promotions[index].timeType,
-          startDate: promotions[index].startDate,
-          endDate: promotions[index].endDate,
-          days: promotions[index].days,
-          startTime: promotions[index].startTime,
-          endTime: promotions[index].endTime,
-          promoCode: promotions[index].promoCode,
-          usageLimit: promotions[index].usageLimit,
+        promotions[index] = promotions[index].copyWith(
           status: newStatus,
-          createdAt: promotions[index].createdAt,
           updatedAt: DateTime.now(),
         );
-
-        promotions[index] = updatedPromotion;
         filterPromotions();
       }
 
-      Get.snackbar(
-        'Berhasil',
-        'Status promosi berhasil diubah',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      _showSuccessSnackbar('Status promosi berhasil diubah');
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Gagal mengubah status promosi: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorSnackbar('Gagal mengubah status promosi', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -357,32 +308,26 @@ class PromotionController extends GetxController {
       final storeId = _storageService.getStoreIdWithFallback();
       return await _promotionService.getPromotionById(id, storeId: storeId);
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Gagal memuat detail promosi: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorSnackbar('Gagal memuat detail promosi', e.toString());
       return null;
     }
   }
 
-  // Navigate to add promotion screen
+  // Navigation methods (implement as needed)
   void navigateToAddPromotion() {
-    // Navigate to add promotion screen
-    // Get.toNamed('/add-promotion');
+    // TODO: Navigate to add promotion screen
+    Get.snackbar('Info', 'Fitur tambah promosi akan segera tersedia');
   }
-// Add this method to your PromotionController class
+
+  void navigateToEditPromotion(String id) {
+    // TODO: Navigate to edit promotion screen
+    Get.snackbar('Info', 'Fitur edit promosi akan segera tersedia');
+  }
+
+  // Update limit and reload data
   void updateLimit(int newLimit) {
     limit.value = newLimit;
     resetAndLoadPromotions();
-  }
-
-  // Navigate to edit promotion screen
-  void navigateToEditPromotion(String id) {
-    // Navigate to edit promotion screen
-    // Get.toNamed('/edit-promotion/$id');
   }
 
   // Get promotion count by status (from current loaded data)
@@ -411,7 +356,8 @@ class PromotionController extends GetxController {
 
   // Jump to specific page
   Future<void> jumpToPage(int page) async {
-    if (page < 1 || page > totalPages.value) return;
+    if (page < 1 || page > totalPages.value || page == currentPage.value)
+      return;
 
     try {
       isLoading.value = true;
@@ -439,14 +385,7 @@ class PromotionController extends GetxController {
         );
       }
     } catch (e) {
-      print('❌ Error jumping to page: $e');
-      Get.snackbar(
-        'Error',
-        'Gagal memuat halaman: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorSnackbar('Gagal memuat halaman', e.toString());
     } finally {
       isLoading.value = false;
     }
@@ -455,6 +394,48 @@ class PromotionController extends GetxController {
   // Helper methods for pagination info
   bool get isFirstPage => currentPage.value == 1;
   bool get isLastPage => currentPage.value >= totalPages.value;
-  String get paginationInfo =>
-      'Halaman ${currentPage.value} dari ${totalPages.value} (${totalPromotions.value} total)';
+
+  String get paginationInfo {
+    final start = (currentPage.value - 1) * limit.value + 1;
+    final end =
+        (currentPage.value * limit.value).clamp(0, totalPromotions.value);
+    return 'Menampilkan $start-$end dari ${totalPromotions.value} promosi';
+  }
+
+  // Helper methods for snackbar
+  void _showSuccessSnackbar(String message) {
+    Get.snackbar(
+      'Berhasil',
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  void _showErrorSnackbar(String title, String message) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 5),
+    );
+  }
+
+  // Additional helper methods
+  String getDisplayedItemsInfo() {
+    if (filteredPromotions.isEmpty) return 'Tidak ada data';
+
+    final start = (currentPage.value - 1) * limit.value + 1;
+    final end =
+        (start + filteredPromotions.length - 1).clamp(0, totalPromotions.value);
+
+    return 'Menampilkan $start-$end dari ${totalPromotions.value}';
+  }
+
+  bool get canLoadMore =>
+      hasMoreData.value && !isLoadingMore.value && searchQuery.value.isEmpty;
 }
