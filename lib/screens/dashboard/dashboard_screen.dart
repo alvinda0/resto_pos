@@ -104,14 +104,25 @@ class DashboardScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Weekly Chart
-                _buildWeeklyChart(controller),
+                // Weekly Chart & Trending Items Side by Side
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Weekly Chart - Left Side (60% width)
+                    Expanded(
+                      flex: 3,
+                      child: _buildWeeklyChart(controller),
+                    ),
 
-                const SizedBox(height: 24),
+                    const SizedBox(width: 16),
 
-                // Trending Items
-                if (controller.hasTrendingItems)
-                  _buildTrendingItems(controller),
+                    // Trending Items - Right Side (40% width)
+                    Expanded(
+                      flex: 2,
+                      child: _buildTrendingItems(controller),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -320,9 +331,9 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Menu Trending hari ini',
+            'Menu Trending',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
@@ -331,7 +342,9 @@ class DashboardScreen extends StatelessWidget {
 
           // Show trending items if available, else show empty state
           if (controller.hasTrendingItems)
-            ...controller.trendingItems.map((item) => _buildTrendingItem(item))
+            ...controller.trendingItems
+                .take(3)
+                .map((item) => _buildTrendingItem(item))
           else
             _buildEmptyTrendingState(),
         ],
@@ -341,28 +354,29 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildEmptyTrendingState() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32),
+      padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
           Icon(
             Icons.trending_up_outlined,
-            size: 48,
+            size: 36,
             color: Colors.grey[400],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            'Belum ada menu trending hari ini',
+            'Belum ada menu trending',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: Colors.grey[600],
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Text(
-            'Menu trending akan muncul setelah ada pesanan',
+            'Akan muncul setelah ada pesanan',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,
@@ -374,87 +388,79 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildTrendingItem(TrendingItem item) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              item.imageUrl,
-              width: 50,
-              height: 50,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 50,
-                  height: 50,
-                  color: Colors.grey[300],
-                  child: Icon(
-                    Icons.image_not_supported,
-                    color: Colors.grey[500],
-                    size: 24,
-                  ),
-                );
-              },
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // Product details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
+          Row(
+            children: [
+              // Product image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(
+                  item.imageUrl,
+                  width: 30,
+                  height: 30,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 30,
+                      height: 30,
+                      color: Colors.grey[300],
+                      child: Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey[500],
+                        size: 16,
+                      ),
+                    );
+                  },
                 ),
-                Text(
-                  'Rp${item.totalRevenue.toString().replaceAllMapped(
-                        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                        (Match m) => '${m[1]}.',
-                      )}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                Text(
-                  'Orders: ${item.orderCount}x',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Trending indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              '#1',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
               ),
+
+              const SizedBox(width: 8),
+
+              // Product details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${item.orderCount}x orders',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Rp${item.totalRevenue.toString().replaceAllMapped(
+                  RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                  (Match m) => '${m[1]}.',
+                )}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Colors.green[700],
             ),
           ),
         ],
