@@ -28,10 +28,10 @@ class KitchenController extends GetxController {
   // Filter options
   final List<String> statusOptions = [
     'Semua Status',
-    'PENDING',
-    'PAID',
-    'CANCELLED',
-    'COMPLETED'
+    'PROCESSED',
+    'COOKING',
+    'READY',
+    'SERVED'
   ];
 
   final List<String> methodOptions = [
@@ -116,12 +116,16 @@ class KitchenController extends GetxController {
       if (!isAutoRefresh || !_isKitchensEqual(kitchens, response.data)) {
         kitchens.value = response.data;
 
-        // Update pagination info - assuming response has pagination metadata
-        // If your API doesn't provide this, you might need to calculate it
-        // totalItems.value = response.totalItems ?? response.data.length;
-        // totalPages.value = response.totalPages ??
-        //     ((response.totalItems ?? response.data.length) / itemsPerPage.value)
-        //         .ceil();
+        // Update pagination info from metadata
+        if (response.metadata != null) {
+          totalItems.value = response.metadata!.total;
+          totalPages.value = response.metadata!.totalPages;
+          currentPage.value = response.metadata!.page;
+        } else {
+          // Fallback if no metadata
+          totalItems.value = response.data.length;
+          totalPages.value = 1;
+        }
 
         filterKitchens();
       }
@@ -333,35 +337,24 @@ class KitchenController extends GetxController {
     return months[month - 1];
   }
 
-  // Get status color
-  String getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return '#10B981'; // Green
-      case 'pending':
-        return '#F59E0B'; // Yellow
-      case 'cancelled':
-        return '#EF4444'; // Red
-      case 'completed':
+  // Get dish status color (updated to use dish_status)
+  String getDishStatusColor(String dishStatus) {
+    switch (dishStatus.toLowerCase()) {
+      case 'processed':
         return '#3B82F6'; // Blue
+      case 'cooking':
+        return '#F59E0B'; // Orange/Yellow
+      case 'ready':
+        return '#10B981'; // Green
+      case 'served':
+        return '#6B7280'; // Gray
       default:
         return '#6B7280'; // Gray
     }
   }
 
-  // Get status text color
-  String getStatusTextColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return '#FFFFFF';
-      case 'pending':
-        return '#FFFFFF';
-      case 'cancelled':
-        return '#FFFFFF';
-      case 'completed':
-        return '#FFFFFF';
-      default:
-        return '#FFFFFF';
-    }
+  // Get dish status text color
+  String getDishStatusTextColor(String dishStatus) {
+    return '#FFFFFF'; // Always white for better contrast
   }
 }

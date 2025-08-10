@@ -50,10 +50,15 @@ class KitchenService {
         final List<KitchenModel> kitchens =
             ordersData.map((order) => KitchenModel.fromJson(order)).toList();
 
+        // Extract metadata for pagination
+        final metadata = jsonData['metadata'];
+
         return KitchenResponse(
           message: jsonData['message'] ?? 'Success',
           status: jsonData['status'] ?? 200,
           data: kitchens,
+          metadata:
+              metadata != null ? PaginationMetadata.fromJson(metadata) : null,
         );
       } else {
         throw Exception('Failed to load kitchens: ${response.statusCode}');

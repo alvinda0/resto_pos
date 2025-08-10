@@ -13,6 +13,7 @@ class KitchenModel {
   final double totalAmount;
   final String? notes;
   final DateTime createdAt;
+  final OrderTracking? tracking;
   final List<PaymentMethod> paymentMethods;
   final List<KitchenItem> items;
 
@@ -30,6 +31,7 @@ class KitchenModel {
     required this.totalAmount,
     this.notes,
     required this.createdAt,
+    this.tracking,
     required this.paymentMethods,
     required this.items,
   });
@@ -47,8 +49,12 @@ class KitchenModel {
       taxRate: (json['tax_rate'] as num).toDouble(),
       taxAmount: (json['tax_amount'] as num).toDouble(),
       totalAmount: (json['total_amount'] as num).toDouble(),
-      notes: json['notes'],
+      notes: json['notes'] ??
+          json['note'], // Handle both 'notes' and 'note' fields
       createdAt: DateTime.parse(json['created_at']),
+      tracking: json['tracking'] != null
+          ? OrderTracking.fromJson(json['tracking'])
+          : null,
       paymentMethods: (json['payment_methods'] as List)
           .map((e) => PaymentMethod.fromJson(e))
           .toList(),
@@ -72,6 +78,7 @@ class KitchenModel {
       'total_amount': totalAmount,
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
+      'tracking': tracking?.toJson(),
       'payment_methods': paymentMethods.map((e) => e.toJson()).toList(),
       'items': items.map((e) => e.toJson()).toList(),
     };
@@ -84,18 +91,87 @@ class KitchenModel {
       paymentMethods.isNotEmpty ? paymentMethods.first.method : 'N/A';
   int get totalItems => items.length;
 
-  // Status color helpers
-  String get statusColor {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return 'success';
-      case 'pending':
+  // Status color helpers - using dish_status instead
+  String get dishStatusColor {
+    switch (dishStatus.toLowerCase()) {
+      case 'processed':
+        return 'info';
+      case 'cooking':
         return 'warning';
-      case 'cancelled':
-        return 'danger';
+      case 'ready':
+        return 'success';
+      case 'served':
+        return 'secondary';
       default:
         return 'primary';
     }
+  }
+}
+
+// Add OrderTracking classes to handle tracking information
+class OrderTracking {
+  final TrackingEvent? created;
+  final TrackingEvent? lastModified;
+  final TrackingEvent? cancelled;
+  final TrackingEvent? paid;
+
+  OrderTracking({
+    this.created,
+    this.lastModified,
+    this.cancelled,
+    this.paid,
+  });
+
+  factory OrderTracking.fromJson(Map<String, dynamic> json) {
+    return OrderTracking(
+      created: json['created'] != null
+          ? TrackingEvent.fromJson(json['created'])
+          : null,
+      lastModified: json['last_modified'] != null
+          ? TrackingEvent.fromJson(json['last_modified'])
+          : null,
+      cancelled: json['cancelled'] != null && json['cancelled'].isNotEmpty
+          ? TrackingEvent.fromJson(json['cancelled'])
+          : null,
+      paid: json['paid'] != null ? TrackingEvent.fromJson(json['paid']) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'created': created?.toJson(),
+      'last_modified': lastModified?.toJson(),
+      'cancelled': cancelled?.toJson(),
+      'paid': paid?.toJson(),
+    };
+  }
+}
+
+class TrackingEvent {
+  final DateTime? at;
+  final String? by;
+  final String? byType;
+
+  TrackingEvent({
+    this.at,
+    this.by,
+    this.byType,
+  });
+
+  factory TrackingEvent.fromJson(Map<String, dynamic> json) {
+    return TrackingEvent(
+      at: json['at'] != null ? DateTime.parse(json['at']) : null,
+      by: json['by'],
+      byType: json['by_type'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'at': at?.toIso8601String(),
+      'by': by,
+      'by_type': byType,
+    };
   }
 }
 
@@ -187,15 +263,50 @@ class KitchenItem {
   }
 }
 
+// Add PaginationMetadata class to handle metadata from API
+class PaginationMetadata {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  PaginationMetadata({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory PaginationMetadata.fromJson(Map<String, dynamic> json) {
+    return PaginationMetadata(
+      page: json['page'],
+      limit: json['limit'],
+      total: json['total'],
+      totalPages: json['total_pages'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'page': page,
+      'limit': limit,
+      'total': total,
+      'total_pages': totalPages,
+    };
+  }
+}
+
 class KitchenResponse {
   final String message;
   final int status;
   final List<KitchenModel> data;
+  final PaginationMetadata? metadata;
 
   KitchenResponse({
     required this.message,
     required this.status,
     required this.data,
+    this.metadata,
   });
 
   factory KitchenResponse.fromJson(Map<String, dynamic> json) {
@@ -204,6 +315,9 @@ class KitchenResponse {
       status: json['status'],
       data:
           (json['data'] as List).map((e) => KitchenModel.fromJson(e)).toList(),
+      metadata: json['metadata'] != null
+          ? PaginationMetadata.fromJson(json['metadata'])
+          : null,
     );
   }
 }

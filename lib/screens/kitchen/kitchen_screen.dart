@@ -51,23 +51,6 @@ class _KitchenScreenState extends State<KitchenScreen> {
             ),
           ),
           // Auto refresh toggle
-          Obx(() => Row(
-                children: [
-                  Text(
-                    'Auto Refresh',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Switch(
-                    value: kitchenController.isAutoRefreshEnabled.value,
-                    onChanged: (_) => kitchenController.toggleAutoRefresh(),
-                    activeColor: Colors.red,
-                  ),
-                ],
-              )),
         ],
       ),
     );
@@ -251,11 +234,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold))),
                 Expanded(
                     flex: 2,
-                    child: Text('Status',
-                        style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
-                    flex: 2,
-                    child: Text('Metode',
+                    child: Text('Status Masakan',
                         style: TextStyle(fontWeight: FontWeight.bold))),
                 Expanded(
                     flex: 2,
@@ -314,6 +293,15 @@ class _KitchenScreenState extends State<KitchenScreen> {
             ],
           ),
           const SizedBox(height: 8),
+          // Add dish status badge for mobile
+          Row(
+            children: [
+              Text('Status Masakan: ',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              _buildDishStatusBadge(kitchen.dishStatus),
+            ],
+          ),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -324,9 +312,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
-          const SizedBox(height: 8),
-          Text('Metode: ${kitchen.paymentMethod}',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+
           const SizedBox(height: 12),
           _buildActionButtons(kitchen, true),
         ],
@@ -356,8 +342,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
               flex: 2,
               child: Text(kitchen.formattedTotal,
                   style: const TextStyle(fontWeight: FontWeight.w500))),
-          Expanded(flex: 2, child: _buildStatusBadge(kitchen.status)),
-          Expanded(flex: 2, child: Text(kitchen.paymentMethod)),
+          Expanded(flex: 2, child: _buildDishStatusBadge(kitchen.dishStatus)),
           Expanded(flex: 2, child: _buildActionButtons(kitchen, false)),
         ],
       ),
@@ -393,6 +378,88 @@ class _KitchenScreenState extends State<KitchenScreen> {
         status.toUpperCase(),
         style: const TextStyle(
             color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  // New method for dish status badge
+  Widget _buildDishStatusBadge(String dishStatus) {
+    Color color;
+    switch (dishStatus.toLowerCase()) {
+      case 'processed':
+        color = Colors.blue;
+        break;
+      case 'cooking':
+        color = Colors.orange;
+        break;
+      case 'ready':
+        color = Colors.green;
+        break;
+      case 'served':
+        color = Colors.grey;
+        break;
+      default:
+        color = Colors.grey.shade400;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        dishStatus.toUpperCase(),
+        style: const TextStyle(
+            color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  // New method for tracking info
+  Widget _buildTrackingInfo(OrderTracking tracking) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Tracking Info:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          const SizedBox(height: 4),
+          if (tracking.created != null)
+            _buildTrackingItem('Created', tracking.created!),
+          if (tracking.lastModified != null)
+            _buildTrackingItem('Last Modified', tracking.lastModified!),
+          if (tracking.paid != null) _buildTrackingItem('Paid', tracking.paid!),
+          if (tracking.cancelled != null)
+            _buildTrackingItem('Cancelled', tracking.cancelled!),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrackingItem(String label, TrackingEvent event) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Text('$label: ',
+              style:
+                  const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+          Expanded(
+            child: Text(
+              event.at != null
+                  ? '${kitchenController.formatDate(event.at!)} by ${event.by ?? 'Unknown'}'
+                  : 'N/A',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -448,8 +515,16 @@ class _KitchenScreenState extends State<KitchenScreen> {
               Text('Phone: ${kitchen.customerPhone}'),
               Text('Table: ${kitchen.tableNumber}'),
               Text('Status: ${kitchen.status}'),
+              Text('Dish Status: ${kitchen.dishStatus}'),
               Text('Total: ${kitchen.formattedTotal}'),
               const SizedBox(height: 16),
+              if (kitchen.tracking != null) ...[
+                const Text('Tracking Information:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                _buildTrackingInfo(kitchen.tracking!),
+                const SizedBox(height: 16),
+              ],
               const Text('Items:',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               ...kitchen.items.map((item) => Padding(
