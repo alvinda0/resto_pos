@@ -23,15 +23,16 @@ class KitchenController extends GetxController {
 
   // Auto refresh settings
   var isAutoRefreshEnabled = true.obs;
-  final int autoRefreshInterval = 1; // seconds
+  final int autoRefreshInterval =
+      30; // detik (ubah dari 1 detik menjadi 30 detik)
 
-  // Filter options
+  // Filter options - disesuaikan dengan API
   final List<String> statusOptions = [
     'Semua Status',
+    'RECEIVED',
     'PROCESSED',
-    'COOKING',
-    'READY',
-    'SERVED'
+    'COMPLETED',
+    'CANCELLED'
   ];
 
   final List<String> methodOptions = [
@@ -102,7 +103,7 @@ class KitchenController extends GetxController {
       }
 
       final response = await _kitchenService.getKitchens(
-        status: selectedStatus.value != 'Semua Status'
+        statusPesanan: selectedStatus.value != 'Semua Status'
             ? selectedStatus.value
             : null,
         method: selectedMethod.value != 'Semua Metode'
@@ -112,17 +113,17 @@ class KitchenController extends GetxController {
         limit: itemsPerPage.value,
       );
 
-      // Only update if data actually changed (optional optimization)
+      // Update data jika berubah atau bukan auto refresh
       if (!isAutoRefresh || !_isKitchensEqual(kitchens, response.data)) {
         kitchens.value = response.data;
 
-        // Update pagination info from metadata
+        // Update pagination info dari metadata
         if (response.metadata != null) {
           totalItems.value = response.metadata!.total;
           totalPages.value = response.metadata!.totalPages;
           currentPage.value = response.metadata!.page;
         } else {
-          // Fallback if no metadata
+          // Fallback jika tidak ada metadata
           totalItems.value = response.data.length;
           totalPages.value = 1;
         }
@@ -130,10 +131,10 @@ class KitchenController extends GetxController {
         filterKitchens();
       }
     } catch (e) {
-      // Only show error snackbar if it's not auto refresh
+      // Hanya tampilkan error snackbar jika bukan auto refresh
       if (!isAutoRefresh) {
         Get.snackbar(
-          'Error',
+          'Kesalahan',
           'Gagal memuat data dapur: ${e.toString()}',
           snackPosition: SnackPosition.TOP,
         );
@@ -145,7 +146,7 @@ class KitchenController extends GetxController {
     }
   }
 
-  // Helper method to check if kitchens data has changed
+  // Helper method untuk cek apakah data kitchens berubah
   bool _isKitchensEqual(
       List<KitchenModel> oldKitchens, List<KitchenModel> newKitchens) {
     if (oldKitchens.length != newKitchens.length) return false;
@@ -153,6 +154,7 @@ class KitchenController extends GetxController {
     for (int i = 0; i < oldKitchens.length; i++) {
       if (oldKitchens[i].id != newKitchens[i].id ||
           oldKitchens[i].status != newKitchens[i].status ||
+          oldKitchens[i].dishStatus != newKitchens[i].dishStatus ||
           oldKitchens[i].totalAmount != newKitchens[i].totalAmount) {
         return false;
       }
@@ -167,7 +169,7 @@ class KitchenController extends GetxController {
     isRefreshing.value = false;
   }
 
-  // Filter kitchens based on search query
+  // Filter kitchens berdasarkan search query
   void filterKitchens() {
     if (searchQuery.value.isEmpty) {
       filteredKitchens.value = kitchens;
@@ -190,7 +192,7 @@ class KitchenController extends GetxController {
   void updateStatusFilter(String status) {
     selectedStatus.value = status;
     currentPage.value = 1;
-    // Stop auto refresh temporarily when user changes filter
+    // Hentikan auto refresh sementara ketika user mengubah filter
     stopAutoRefresh();
     fetchKitchens().then((_) {
       if (isAutoRefreshEnabled.value) {
@@ -203,7 +205,7 @@ class KitchenController extends GetxController {
   void updateMethodFilter(String method) {
     selectedMethod.value = method;
     currentPage.value = 1;
-    // Stop auto refresh temporarily when user changes filter
+    // Hentikan auto refresh sementara ketika user mengubah filter
     stopAutoRefresh();
     fetchKitchens().then((_) {
       if (isAutoRefreshEnabled.value) {
@@ -216,7 +218,7 @@ class KitchenController extends GetxController {
   void updateItemsPerPage(int items) {
     itemsPerPage.value = items;
     currentPage.value = 1;
-    // Stop auto refresh temporarily when user changes items per page
+    // Hentikan auto refresh sementara ketika user mengubah items per page
     stopAutoRefresh();
     fetchKitchens().then((_) {
       if (isAutoRefreshEnabled.value) {
@@ -229,7 +231,7 @@ class KitchenController extends GetxController {
   void goToPage(int page) {
     if (page >= 1 && page <= totalPages.value) {
       currentPage.value = page;
-      // Stop auto refresh temporarily when user changes page
+      // Hentikan auto refresh sementara ketika user mengubah halaman
       stopAutoRefresh();
       fetchKitchens().then((_) {
         if (isAutoRefreshEnabled.value) {
@@ -239,11 +241,11 @@ class KitchenController extends GetxController {
     }
   }
 
-  // Next page
+  // Halaman berikutnya
   void nextPage() {
     if (currentPage.value < totalPages.value) {
       currentPage.value++;
-      // Stop auto refresh temporarily when user changes page
+      // Hentikan auto refresh sementara ketika user mengubah halaman
       stopAutoRefresh();
       fetchKitchens().then((_) {
         if (isAutoRefreshEnabled.value) {
@@ -253,11 +255,11 @@ class KitchenController extends GetxController {
     }
   }
 
-  // Previous page
+  // Halaman sebelumnya
   void previousPage() {
     if (currentPage.value > 1) {
       currentPage.value--;
-      // Stop auto refresh temporarily when user changes page
+      // Hentikan auto refresh sementara ketika user mengubah halaman
       stopAutoRefresh();
       fetchKitchens().then((_) {
         if (isAutoRefreshEnabled.value) {
@@ -288,20 +290,20 @@ class KitchenController extends GetxController {
 
   List<int> get pageNumbers {
     final List<int> pages = [];
-    const int maxVisible = 5; // Maximum visible page numbers
+    const int maxVisible = 5; // Maksimal nomor halaman yang terlihat
 
     if (totalPages.value <= maxVisible) {
-      // If total pages is less than max visible, show all pages
+      // Jika total halaman kurang dari max visible, tampilkan semua halaman
       for (int i = 1; i <= totalPages.value; i++) {
         pages.add(i);
       }
     } else {
-      // Calculate range around current page
+      // Hitung range sekitar halaman saat ini
       int start =
           (currentPage.value - (maxVisible ~/ 2)).clamp(1, totalPages.value);
       int end = (start + maxVisible - 1).clamp(1, totalPages.value);
 
-      // Adjust start if we're near the end
+      // Sesuaikan start jika mendekati akhir
       if (end == totalPages.value) {
         start = (end - maxVisible + 1).clamp(1, totalPages.value);
       }
@@ -337,24 +339,56 @@ class KitchenController extends GetxController {
     return months[month - 1];
   }
 
-  // Get dish status color (updated to use dish_status)
+  // Dapatkan warna status masakan
   String getDishStatusColor(String dishStatus) {
     switch (dishStatus.toLowerCase()) {
+      case 'received':
+        return '#6366F1'; // Indigo
       case 'processed':
-        return '#3B82F6'; // Blue
-      case 'cooking':
-        return '#F59E0B'; // Orange/Yellow
-      case 'ready':
-        return '#10B981'; // Green
-      case 'served':
-        return '#6B7280'; // Gray
+        return '#3B82F6'; // Biru
+      case 'completed':
+        return '#10B981'; // Hijau
+      case 'cancelled':
+        return '#EF4444'; // Merah
       default:
-        return '#6B7280'; // Gray
+        return '#6B7280'; // Abu-abu
     }
   }
 
-  // Get dish status text color
+  // Dapatkan warna teks status masakan
   String getDishStatusTextColor(String dishStatus) {
-    return '#FFFFFF'; // Always white for better contrast
+    return '#FFFFFF'; // Selalu putih untuk kontras yang lebih baik
+  }
+
+  // Method untuk mendapatkan label status dalam bahasa Indonesia
+  String getStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'received':
+        return 'Diterima';
+      case 'processed':
+        return 'Diproses';
+      case 'completed':
+        return 'Selesai';
+      case 'cancelled':
+        return 'Dibatalkan';
+      default:
+        return status;
+    }
+  }
+
+  // Method untuk mendapatkan ikon status
+  String getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'received':
+        return '📝';
+      case 'processed':
+        return '🍳';
+      case 'completed':
+        return '✅';
+      case 'cancelled':
+        return '❌';
+      default:
+        return '❓';
+    }
   }
 }

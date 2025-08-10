@@ -51,6 +51,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
             ),
           ),
           // Auto refresh toggle
+          Obx(() => Switch(
+                value: kitchenController.isAutoRefreshEnabled.value,
+                onChanged: (value) => kitchenController.toggleAutoRefresh(),
+              )),
         ],
       ),
     );
@@ -174,14 +178,15 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 if (kitchenController.isLoading.value) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (kitchenController.filteredKitchens.isEmpty) {
+                // Use the API data directly instead of filtered data
+                if (kitchenController.kitchens.isEmpty) {
                   return const Center(
                       child: Text('Tidak ada pesanan dapur ditemukan'));
                 }
                 return ListView.builder(
-                  itemCount: kitchenController.filteredKitchens.length,
+                  itemCount: kitchenController.kitchens.length,
                   itemBuilder: (context, index) {
-                    final kitchen = kitchenController.filteredKitchens[index];
+                    final kitchen = kitchenController.kitchens[index];
                     return isDesktop
                         ? _buildDesktopRow(kitchen, index)
                         : _buildMobileCard(kitchen);
@@ -385,21 +390,28 @@ class _KitchenScreenState extends State<KitchenScreen> {
   // New method for dish status badge
   Widget _buildDishStatusBadge(String dishStatus) {
     Color color;
+    String displayText;
+
     switch (dishStatus.toLowerCase()) {
+      case 'received':
+        color = const Color(0xFF6366F1); // Indigo
+        displayText = 'DITERIMA';
+        break;
       case 'processed':
-        color = Colors.blue;
+        color = const Color(0xFF3B82F6); // Blue
+        displayText = 'DIPROSES';
         break;
-      case 'cooking':
-        color = Colors.orange;
+      case 'completed':
+        color = const Color(0xFF10B981); // Green
+        displayText = 'SELESAI';
         break;
-      case 'ready':
-        color = Colors.green;
-        break;
-      case 'served':
-        color = Colors.grey;
+      case 'cancelled':
+        color = const Color(0xFFEF4444); // Red
+        displayText = 'DIBATALKAN';
         break;
       default:
-        color = Colors.grey.shade400;
+        color = const Color(0xFF6B7280); // Gray
+        displayText = dishStatus.toUpperCase();
     }
 
     return Container(
@@ -409,7 +421,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        dishStatus.toUpperCase(),
+        displayText,
         style: const TextStyle(
             color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
       ),
@@ -471,10 +483,36 @@ class _KitchenScreenState extends State<KitchenScreen> {
       children: [
         IconButton(
           onPressed: () => _showKitchenDetails(kitchen),
-          icon: const Icon(Icons.receipt_long),
+          icon: const Icon(Icons.visibility),
           style: IconButton.styleFrom(
               backgroundColor: Colors.grey.shade200,
               padding: const EdgeInsets.all(8)),
+        ),
+        const SizedBox(width: 8),
+        ElevatedButton(
+          onPressed: () {
+            // TODO: Implement selesai functionality
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: const Size(0, 32),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                'Selesai',
+                style: TextStyle(
+                  fontSize: isMobile ? 12 : 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
