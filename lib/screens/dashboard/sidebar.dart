@@ -1,15 +1,6 @@
+// layouts/main_layout.dart
 import 'package:flutter/material.dart';
-import 'package:pos/screens/akun/akun_role_screen.dart';
-import 'package:pos/screens/auth/login_screen.dart';
-import 'package:pos/screens/dashboard/customers_screen.dart';
-import 'package:pos/screens/dashboard/dashboard_screen.dart';
-import 'package:pos/screens/inventory/inventory_screen.dart';
-import 'package:pos/screens/menu/products_screen.dart';
-import 'package:pos/screens/dashboard/promo_screen.dart';
-import 'package:pos/screens/dashboard/order_screen.dart';
-import 'package:pos/screens/referral/referral_screen.dart';
-import 'package:pos/screens/table/tables_screen.dart';
-import 'package:pos/screens/withdraw/withdraw_screen.dart';
+import 'package:get/get.dart';
 
 class MenuItem {
   final IconData icon;
@@ -20,14 +11,21 @@ class MenuItem {
   MenuItem(this.icon, this.title, {this.subItems, this.isExpanded = false});
 }
 
-class SideBarScreen extends StatefulWidget {
-  const SideBarScreen({super.key});
+class MainLayout extends StatefulWidget {
+  final Widget child;
+  final String? currentRoute;
+
+  const MainLayout({
+    super.key,
+    required this.child,
+    this.currentRoute,
+  });
 
   @override
-  State<SideBarScreen> createState() => _SideBarScreenState();
+  State<MainLayout> createState() => _MainLayoutState();
 }
 
-class _SideBarScreenState extends State<SideBarScreen> {
+class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
   int? _selectedSubIndex;
   int? _expandedMenuIndex;
@@ -70,11 +68,91 @@ class _SideBarScreenState extends State<SideBarScreen> {
   @override
   void initState() {
     super.initState();
+    _setInitialRoute();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  void _setInitialRoute() {
+    // Set selected index based on current route using GetX route names
+    final currentRoute = Get.currentRoute;
+
+    switch (currentRoute) {
+      case '/dashboard':
+        _selectedIndex = 0;
+        break;
+      case '/tables':
+        _selectedIndex = 1;
+        break;
+      case '/products':
+        _selectedIndex = 2;
+        _selectedSubIndex = 0;
+        _expandedMenuIndex = 2;
+        break;
+      case '/ingredients':
+        _selectedIndex = 2;
+        _selectedSubIndex = 1;
+        _expandedMenuIndex = 2;
+        break;
+      case '/promo':
+        _selectedIndex = 3;
+        break;
+      case '/sales':
+        _selectedIndex = 4;
+        break;
+      case '/kitchen':
+        _selectedIndex = 5;
+        break;
+      case '/account':
+        _selectedIndex = 6;
+        break;
+      case '/referral':
+        _selectedIndex = 8;
+        _selectedSubIndex = 0;
+        _expandedMenuIndex = 8;
+        break;
+      case '/referral/withdrawal':
+        _selectedIndex = 8;
+        _selectedSubIndex = 1;
+        _expandedMenuIndex = 8;
+        break;
+      case '/customers':
+        _selectedIndex = 9;
+        break;
+      case '/points/gifts':
+        _selectedIndex = 10;
+        _selectedSubIndex = 0;
+        _expandedMenuIndex = 10;
+        break;
+      case '/points/history':
+        _selectedIndex = 10;
+        _selectedSubIndex = 1;
+        _expandedMenuIndex = 10;
+        break;
+      case '/points/configuration':
+        _selectedIndex = 10;
+        _selectedSubIndex = 2;
+        _expandedMenuIndex = 10;
+        break;
+      case '/settings/theme':
+        _selectedIndex = 11;
+        _selectedSubIndex = 0;
+        _expandedMenuIndex = 11;
+        break;
+      case '/settings/tax':
+        _selectedIndex = 11;
+        _selectedSubIndex = 1;
+        _expandedMenuIndex = 11;
+        break;
+      case '/settings/qris':
+        _selectedIndex = 11;
+        _selectedSubIndex = 2;
+        _expandedMenuIndex = 11;
+        break;
+      case '/settings/logs':
+        _selectedIndex = 11;
+        _selectedSubIndex = 3;
+        _expandedMenuIndex = 11;
+        break;
+    }
   }
 
   bool get isMobile => MediaQuery.of(context).size.width < 768;
@@ -106,84 +184,117 @@ class _SideBarScreenState extends State<SideBarScreen> {
         _expandedMenuIndex = null;
       } else {
         _expandedMenuIndex = index;
-        // Jangan set _selectedIndex untuk menu yang memiliki submenu
-        // _selectedIndex = index;
-        // _selectedSubIndex = null;
       }
     });
   }
 
-  Widget _getSelectedPage() {
-    if (_selectedSubIndex != null) {
-      switch (_selectedIndex) {
+  void _navigateToPage(int index, [int? subIndex]) {
+    setState(() {
+      _selectedIndex = index;
+      _selectedSubIndex = subIndex;
+      _expandedMenuIndex = subIndex != null ? index : null;
+      if (isMobile) {
+        _isMobileSidebarOpen = false;
+      }
+    });
+
+    // Navigate using GetX routing
+    String routeName = '/dashboard';
+
+    if (subIndex != null) {
+      switch (index) {
         case 2: // Menu dan Bahan
-          switch (_selectedSubIndex) {
+          switch (subIndex) {
             case 0:
-              return const ProductScreen(); // Menu
+              routeName = '/products';
+              break;
             case 1:
-              return const InventoryScreen(); // Bahan
+              routeName = '/ingredients';
+              break;
+          }
+          break;
+        case 7: // Laporan - Note: These routes don't exist in AppRoutes yet
+          switch (subIndex) {
+            case 0:
+              // routeName = '/reports/transactions'; // Add to AppRoutes if needed
+              Get.snackbar(
+                  'Info', 'Halaman Laporan Transaksi dalam pengembangan');
+              return;
+            case 1:
+              // routeName = '/reports/wallet'; // Add to AppRoutes if needed
+              Get.snackbar('Info', 'Halaman Laporan Wallet dalam pengembangan');
+              return;
           }
           break;
         case 8: // Referral
-          switch (_selectedSubIndex) {
+          switch (subIndex) {
             case 0:
-              return ReferralScreen();
+              routeName = '/referral';
+              break;
             case 1:
-              return const WithdrawScreen(); // Pencairan
+              routeName = '/referral/withdrawal';
+              break;
           }
           break;
-        case 9: // Points
-          switch (_selectedSubIndex) {
+        case 10: // Points
+          switch (subIndex) {
             case 0:
-              return const Center(
-                  child: Text('Hadiah Page', style: TextStyle(fontSize: 24)));
+              routeName = '/points/gifts';
+              break;
             case 1:
-              return const Center(
-                  child: Text('Riwayat Penukaran Page',
-                      style: TextStyle(fontSize: 24)));
+              routeName = '/points/history';
+              break;
             case 2:
-              return const Center(
-                  child: Text('Konfigurasi Point Page',
-                      style: TextStyle(fontSize: 24)));
+              routeName = '/points/configuration';
+              break;
           }
           break;
-        case 10: // Pengaturan
-          switch (_selectedSubIndex) {
+        case 11: // Pengaturan
+          switch (subIndex) {
             case 0:
-              return const Center(
-                  child: Text('Tema Page', style: TextStyle(fontSize: 24)));
+              routeName = '/settings/theme';
+              break;
             case 1:
-              return ReferralScreen(); // Konfigurasi Pajak
+              routeName = '/settings/tax';
+              break;
             case 2:
-              return const Center(
-                  child: Text('Konfigurasi QRIS Page',
-                      style: TextStyle(fontSize: 24)));
+              routeName = '/settings/qris';
+              break;
             case 3:
-              return const Center(
-                  child: Text('Logs Page', style: TextStyle(fontSize: 24)));
+              routeName = '/settings/logs';
+              break;
           }
+          break;
+      }
+    } else {
+      switch (index) {
+        case 0:
+          routeName = '/dashboard';
+          break;
+        case 1:
+          routeName = '/tables';
+          break;
+        case 3:
+          routeName = '/promo';
+          break;
+        case 4:
+          routeName = '/sales';
+          break;
+        case 5:
+          routeName = '/kitchen';
+          break;
+        case 6:
+          routeName = '/account';
+          break;
+        case 9:
+          routeName = '/customers';
           break;
       }
     }
 
-    switch (_selectedIndex) {
-      case 0:
-        return const DashboardScreen(); // Beranda
-      case 1:
-        return const TableScreen(); // Meja
-      case 3:
-        return const PromoScreen(); // Promo
-      case 4:
-        return const OrderScreen(); // Pesanan
-      case 5:
-        return const Center(
-            child: Text('Dapur Page', style: TextStyle(fontSize: 24)));
-      case 6:
-        return const AkunRoleScreen();
-      case 8:
-        return const CustomersScreen(); // Customer
-      default:
-        return const DashboardScreen();
+    // Use GetX navigation
+    if (routeName != Get.currentRoute) {
+      Get.offAllNamed(routeName);
     }
   }
 
@@ -204,21 +315,12 @@ class _SideBarScreenState extends State<SideBarScreen> {
           onTap: () {
             setState(() {
               if (hasSubItems && showExpanded) {
-                // Jika memiliki submenu dan sidebar expanded, toggle submenu
                 _toggleSubmenu(index);
               } else if (hasSubItems && !showExpanded) {
-                // Jika memiliki submenu tapi sidebar collapsed, expand sidebar dulu
                 _isSidebarExpanded = true;
                 _expandedMenuIndex = index;
               } else {
-                // Jika tidak memiliki submenu, set sebagai selected
-                _selectedIndex = index;
-                _selectedSubIndex = null;
-                _expandedMenuIndex = null;
-                // Close mobile sidebar when item is selected
-                if (isMobile) {
-                  _isMobileSidebarOpen = false;
-                }
+                _navigateToPage(index);
               }
             });
           },
@@ -348,16 +450,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            setState(() {
-              _selectedIndex = mainIndex;
-              _selectedSubIndex = subIndex;
-              // Close mobile sidebar when sub-item is selected
-              if (isMobile) {
-                _isMobileSidebarOpen = false;
-              }
-            });
-          },
+          onTap: () => _navigateToPage(mainIndex, subIndex),
           borderRadius: BorderRadius.circular(8),
           child: Container(
             width: double.infinity,
@@ -557,30 +650,16 @@ class _SideBarScreenState extends State<SideBarScreen> {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Konfirmasi Logout'),
-                          content:
-                              const Text('Apakah Anda yakin ingin keluar?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Batal'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => LoginScreen(),
-                                  ),
-                                );
-                              },
-                              child: const Text('Logout'),
-                            ),
-                          ],
-                        ),
+                      Get.defaultDialog(
+                        title: 'Konfirmasi Logout',
+                        middleText: 'Apakah Anda yakin ingin keluar?',
+                        textConfirm: 'Logout',
+                        textCancel: 'Batal',
+                        confirmTextColor: Colors.white,
+                        onConfirm: () {
+                          Get.back(); // Close dialog
+                          Get.offAllNamed('/login');
+                        },
                       );
                     },
                     borderRadius: BorderRadius.circular(10),
@@ -689,7 +768,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
                         ),
-                        child: _getSelectedPage(),
+                        child: widget.child,
                       ),
                     ),
                   ],

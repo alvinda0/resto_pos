@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/auth/login_screen.dart';
+import 'package:pos/screens/dashboard/sidebar.dart';
 import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
@@ -10,7 +11,7 @@ import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/menu/products_screen.dart';
 import 'package:pos/screens/menu/product_list_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
-import 'package:pos/screens/akun/akun_role_users_screen.dart'; // Import screen baru
+import 'package:pos/screens/akun/akun_role_users_screen.dart';
 
 class AppRoutes {
   // Route Names - Dikelompokkan untuk clarity
@@ -43,7 +44,7 @@ class AppRoutes {
 
   // Account Routes
   static const String account = '/account';
-  static const String accountRoleUsers = '/account/role-users'; // Route baru
+  static const String accountRoleUsers = '/account/role-users';
 
   // Referral Routes
   static const String referral = '/referral';
@@ -62,108 +63,146 @@ class AppRoutes {
   static const String qrisConfiguration = '/settings/qris';
   static const String logs = '/settings/logs';
 
+  // Helper method untuk wrap screen dengan MainLayout
+  static Widget _wrapWithMainLayout(Widget child, [String? routeName]) {
+    return MainLayout(
+      child: child,
+      currentRoute: routeName,
+    );
+  }
+
   // Single source of truth untuk GetX routing
   static List<GetPage> getPages() {
     return [
       // Core App Flow
       GetPage(name: splash, page: () => const SplashScreen()),
 
-      // Authentication
+      // Authentication (tidak perlu MainLayout)
       GetPage(
         name: login,
         page: () => LoginScreen(),
         transition: Transition.rightToLeft,
       ),
 
-      // Main Layout
+      // Main Layout - semua route di bawah ini akan dibungkus MainLayout
 
       // Dashboard Routes
-      GetPage(name: dashboard, page: () => const DashboardScreen()),
-      GetPage(name: tables, page: () => const TableScreen()),
-      GetPage(name: customers, page: () => const CustomersScreen()),
-      GetPage(name: promo, page: () => const PromoScreen()),
-      GetPage(name: sales, page: () => const OrderScreen()),
+      GetPage(
+          name: dashboard,
+          page: () => _wrapWithMainLayout(const DashboardScreen(), dashboard)),
+      GetPage(
+          name: tables,
+          page: () => _wrapWithMainLayout(const TableScreen(), tables)),
+      GetPage(
+          name: customers,
+          page: () => _wrapWithMainLayout(const CustomersScreen(), customers)),
+      GetPage(
+          name: promo,
+          page: () => _wrapWithMainLayout(const PromoScreen(), promo)),
+      GetPage(
+          name: sales,
+          page: () => _wrapWithMainLayout(const OrderScreen(), sales)),
 
       // Product List Route
       GetPage(
         name: productList,
-        page: () => const ProductListScreen(),
+        page: () => _wrapWithMainLayout(const ProductListScreen(), productList),
         transition: Transition.rightToLeft,
       ),
 
       // Menu Routes
-      GetPage(name: products, page: () => const ProductScreen()),
+      GetPage(
+          name: products,
+          page: () => _wrapWithMainLayout(const ProductScreen(), products)),
       GetPage(
         name: ingredients,
-        page: () => const PlaceholderScreen(title: 'Bahan'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Bahan'), ingredients),
       ),
 
       // Kitchen Routes
       GetPage(
         name: kitchen,
-        page: () => const PlaceholderScreen(title: 'Dapur'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Dapur'), kitchen),
       ),
 
       // Account Routes
       GetPage(
         name: account,
-        page: () => const PlaceholderScreen(title: 'Akun'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Akun'), account),
       ),
-      // Route baru untuk menampilkan users berdasarkan role
       GetPage(
         name: accountRoleUsers,
-        page: () => const AkunRoleUsersScreen(),
+        page: () =>
+            _wrapWithMainLayout(const AkunRoleUsersScreen(), accountRoleUsers),
         transition: Transition.rightToLeft,
       ),
 
       // Referral Routes
       GetPage(
         name: referral,
-        page: () => const PlaceholderScreen(title: 'Referral'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Referral'), referral),
       ),
       GetPage(
         name: referralManagement,
-        page: () => const PlaceholderScreen(title: 'Kelola Referral'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Kelola Referral'),
+            referralManagement),
       ),
       GetPage(
         name: referralWithdrawal,
-        page: () => const PlaceholderScreen(title: 'Pencairan'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Pencairan'), referralWithdrawal),
       ),
 
       // Points Routes
       GetPage(
         name: points,
-        page: () => const PlaceholderScreen(title: 'Points'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Points'), points),
       ),
       GetPage(
         name: pointsGifts,
-        page: () => const PlaceholderScreen(title: 'Hadiah'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Hadiah'), pointsGifts),
       ),
       GetPage(
         name: pointsHistory,
-        page: () => const PlaceholderScreen(title: 'Riwayat Penukaran'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Riwayat Penukaran'), pointsHistory),
       ),
       GetPage(
         name: pointsConfiguration,
-        page: () => const PlaceholderScreen(title: 'Konfigurasi Point'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Konfigurasi Point'),
+            pointsConfiguration),
       ),
 
       // Settings Sub-routes
       GetPage(
         name: theme,
-        page: () => const PlaceholderScreen(title: 'Tema'),
+        page: () =>
+            _wrapWithMainLayout(const PlaceholderScreen(title: 'Tema'), theme),
       ),
       GetPage(
         name: taxConfiguration,
-        page: () => const PlaceholderScreen(title: 'Konfigurasi Pajak'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Konfigurasi Pajak'),
+            taxConfiguration),
       ),
       GetPage(
         name: qrisConfiguration,
-        page: () => const PlaceholderScreen(title: 'Konfigurasi QRIS'),
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Konfigurasi QRIS'),
+            qrisConfiguration),
       ),
       GetPage(
         name: logs,
-        page: () => const PlaceholderScreen(title: 'Logs'),
+        page: () =>
+            _wrapWithMainLayout(const PlaceholderScreen(title: 'Logs'), logs),
       ),
     ];
   }

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:pos/screens/auth/login_screen.dart';
+import 'package:pos/screens/dashboard/dashboard_screen.dart'; // Import your dashboard screen
 import 'package:pos/screens/dashboard/sidebar.dart';
 import 'package:pos/services/auth_service.dart';
 
@@ -44,6 +45,12 @@ class SplashController extends GetxController {
 
   /// Navigate to sidebar screen (main app)
   void navigateToSidebar() {
-    Get.offAll(() => const SideBarScreen());
+    Get.offAll(() => const MainLayout(
+          currentRoute: '/dashboard',
+          child: DashboardScreen(), // Provide the required child widget
+        ));
+
+    // Alternative: Use named route if you have it set up
+    // Get.offAllNamed('/dashboard');
   }
 }

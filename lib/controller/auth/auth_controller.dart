@@ -1,6 +1,7 @@
 // lib/controllers/auth_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos/screens/dashboard/dashboard_screen.dart'; // Import your dashboard screen
 import 'package:pos/screens/dashboard/sidebar.dart';
 import 'package:pos/services/auth_service.dart';
 
@@ -76,8 +77,15 @@ class AuthController extends GetxController {
           duration: const Duration(seconds: 2),
         );
 
-        // Navigate to dashboard
-        Get.offAll(() => const SideBarScreen());
+        // Navigate to dashboard with proper MainLayout structure
+        Get.offAll(() => const MainLayout(
+              currentRoute: '/dashboard',
+              child:
+                  DashboardScreen(), // Replace with your actual dashboard screen
+            ));
+
+        // Alternative: Use named route if you have it set up
+        // Get.offAllNamed('/dashboard');
       } else {
         // Show error message
         Get.snackbar(
