@@ -124,7 +124,7 @@ class _SideBarScreenState extends State<SideBarScreen> {
               return const InventoryScreen(); // Bahan
           }
           break;
-        case 7: // Referral
+        case 8: // Referral
           switch (_selectedSubIndex) {
             case 0:
               return ReferralScreen();
