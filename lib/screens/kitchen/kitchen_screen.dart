@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/order/order_controller.dart';
-import 'package:pos/models/order/order_model.dart';
+import 'package:pos/controller/kitchen/kitchen_controller.dart';
+import 'package:pos/models/kitchen/kitchen_model.dart';
+import 'package:pos/widgets/pagination_widget.dart'; // Import your pagination widget
 
-class OrderScreen extends StatefulWidget {
-  const OrderScreen({super.key});
+class KitchenScreen extends StatefulWidget {
+  const KitchenScreen({super.key});
 
   @override
-  State<OrderScreen> createState() => _OrderScreenState();
+  State<KitchenScreen> createState() => _KitchenScreenState();
 }
 
-class _OrderScreenState extends State<OrderScreen> {
-  final OrderController orderController = Get.put(OrderController());
+class _KitchenScreenState extends State<KitchenScreen> {
+  final KitchenController kitchenController = Get.put(KitchenController());
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +26,7 @@ class _OrderScreenState extends State<OrderScreen> {
               _buildHeader(),
               _buildFilters(isDesktop),
               _buildDataTable(isDesktop),
+              _buildPagination(), // Add pagination here
             ],
           );
         },
@@ -39,15 +41,33 @@ class _OrderScreenState extends State<OrderScreen> {
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
+          const Expanded(
             child: Text(
-              'Manajemen Pesanan',
+              'Manajemen Dapur',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
+          // Auto refresh toggle
+          Obx(() => Row(
+                children: [
+                  Text(
+                    'Auto Refresh',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Switch(
+                    value: kitchenController.isAutoRefreshEnabled.value,
+                    onChanged: (_) => kitchenController.toggleAutoRefresh(),
+                    activeColor: Colors.red,
+                  ),
+                ],
+              )),
         ],
       ),
     );
@@ -73,16 +93,16 @@ class _OrderScreenState extends State<OrderScreen> {
           children: [
             Expanded(
                 child: _buildDropdown(
-                    orderController.selectedStatus,
-                    orderController.statusOptions,
-                    orderController.updateStatusFilter,
+                    kitchenController.selectedStatus,
+                    kitchenController.statusOptions,
+                    kitchenController.updateStatusFilter,
                     Icons.filter_list)),
             const SizedBox(width: 8),
             Expanded(
                 child: _buildDropdown(
-                    orderController.selectedMethod,
-                    orderController.methodOptions,
-                    orderController.updateMethodFilter,
+                    kitchenController.selectedMethod,
+                    kitchenController.methodOptions,
+                    kitchenController.updateMethodFilter,
                     Icons.payment)),
           ],
         ),
@@ -98,17 +118,17 @@ class _OrderScreenState extends State<OrderScreen> {
         Expanded(
             flex: 2,
             child: _buildDropdown(
-                orderController.selectedStatus,
-                orderController.statusOptions,
-                orderController.updateStatusFilter,
+                kitchenController.selectedStatus,
+                kitchenController.statusOptions,
+                kitchenController.updateStatusFilter,
                 Icons.filter_list)),
         const SizedBox(width: 16),
         Expanded(
             flex: 2,
             child: _buildDropdown(
-                orderController.selectedMethod,
-                orderController.methodOptions,
-                orderController.updateMethodFilter,
+                kitchenController.selectedMethod,
+                kitchenController.methodOptions,
+                kitchenController.updateMethodFilter,
                 Icons.payment)),
       ],
     );
@@ -116,7 +136,7 @@ class _OrderScreenState extends State<OrderScreen> {
 
   Widget _buildSearchField() {
     return TextField(
-      onChanged: orderController.updateSearchQuery,
+      onChanged: kitchenController.updateSearchQuery,
       decoration: InputDecoration(
         hintText: 'Cari berdasarkan Nama',
         prefixIcon: const Icon(Icons.search),
@@ -150,7 +170,7 @@ class _OrderScreenState extends State<OrderScreen> {
   Widget _buildDataTable(bool isDesktop) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(left: 16, right: 16, top: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -168,20 +188,20 @@ class _OrderScreenState extends State<OrderScreen> {
             _buildTableHeader(isDesktop),
             Expanded(
               child: Obx(() {
-                if (orderController.isLoading.value) {
+                if (kitchenController.isLoading.value) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (orderController.filteredOrders.isEmpty) {
+                if (kitchenController.filteredKitchens.isEmpty) {
                   return const Center(
-                      child: Text('Tidak ada pesanan ditemukan'));
+                      child: Text('Tidak ada pesanan dapur ditemukan'));
                 }
                 return ListView.builder(
-                  itemCount: orderController.filteredOrders.length,
+                  itemCount: kitchenController.filteredKitchens.length,
                   itemBuilder: (context, index) {
-                    final order = orderController.filteredOrders[index];
+                    final kitchen = kitchenController.filteredKitchens[index];
                     return isDesktop
-                        ? _buildDesktopRow(order, index)
-                        : _buildMobileCard(order);
+                        ? _buildDesktopRow(kitchen, index)
+                        : _buildMobileCard(kitchen);
                   },
                 );
               }),
@@ -207,7 +227,7 @@ class _OrderScreenState extends State<OrderScreen> {
               children: [
                 Expanded(
                     flex: 2,
-                    child: Text('Id Order',
+                    child: Text('Id Kitchen',
                         style: TextStyle(fontWeight: FontWeight.bold))),
                 Expanded(
                     flex: 2,
@@ -246,7 +266,7 @@ class _OrderScreenState extends State<OrderScreen> {
           : const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Daftar Pesanan',
+                Text('Daftar Pesanan Dapur',
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ],
@@ -254,7 +274,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _buildMobileCard(OrderModel order) {
+  Widget _buildMobileCard(KitchenModel kitchen) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -268,10 +288,10 @@ class _OrderScreenState extends State<OrderScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(order.displayId,
+              Text(kitchen.displayId,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
-              _buildStatusBadge(order.status),
+              _buildStatusBadge(kitchen.status),
             ],
           ),
           const SizedBox(height: 8),
@@ -281,15 +301,15 @@ class _OrderScreenState extends State<OrderScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(order.customerName,
+                    Text(kitchen.customerName,
                         style: const TextStyle(fontWeight: FontWeight.w500)),
-                    Text('Meja ${order.tableNumber}',
+                    Text('Meja ${kitchen.tableNumber}',
                         style: TextStyle(
                             color: Colors.grey.shade600, fontSize: 12)),
                   ],
                 ),
               ),
-              Text(orderController.formatDate(order.createdAt),
+              Text(kitchenController.formatDate(kitchen.createdAt),
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
             ],
           ),
@@ -297,24 +317,24 @@ class _OrderScreenState extends State<OrderScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${order.totalItems} items',
+              Text('${kitchen.totalItems} items',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-              Text(order.formattedTotal,
+              Text(kitchen.formattedTotal,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
           const SizedBox(height: 8),
-          Text('Metode: ${order.paymentMethod}',
+          Text('Metode: ${kitchen.paymentMethod}',
               style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
           const SizedBox(height: 12),
-          _buildActionButtons(order, true),
+          _buildActionButtons(kitchen, true),
         ],
       ),
     );
   }
 
-  Widget _buildDesktopRow(OrderModel order, int index) {
+  Widget _buildDesktopRow(KitchenModel kitchen, int index) {
     final isEven = index % 2 == 0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -324,21 +344,21 @@ class _OrderScreenState extends State<OrderScreen> {
         children: [
           Expanded(
               flex: 2,
-              child: Text(order.displayId,
+              child: Text(kitchen.displayId,
                   style: const TextStyle(fontWeight: FontWeight.w500))),
           Expanded(
               flex: 2,
-              child: Text(orderController.formatDate(order.createdAt))),
-          Expanded(flex: 2, child: Text(order.customerName)),
-          Expanded(flex: 1, child: Text(order.tableNumber.toString())),
-          Expanded(flex: 1, child: Text('${order.totalItems} items')),
+              child: Text(kitchenController.formatDate(kitchen.createdAt))),
+          Expanded(flex: 2, child: Text(kitchen.customerName)),
+          Expanded(flex: 1, child: Text(kitchen.tableNumber.toString())),
+          Expanded(flex: 1, child: Text('${kitchen.totalItems} items')),
           Expanded(
               flex: 2,
-              child: Text(order.formattedTotal,
+              child: Text(kitchen.formattedTotal,
                   style: const TextStyle(fontWeight: FontWeight.w500))),
-          Expanded(flex: 2, child: _buildStatusBadge(order.status)),
-          Expanded(flex: 2, child: Text(order.paymentMethod)),
-          Expanded(flex: 2, child: _buildActionButtons(order, false)),
+          Expanded(flex: 2, child: _buildStatusBadge(kitchen.status)),
+          Expanded(flex: 2, child: Text(kitchen.paymentMethod)),
+          Expanded(flex: 2, child: _buildActionButtons(kitchen, false)),
         ],
       ),
     );
@@ -377,13 +397,13 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _buildActionButtons(OrderModel order, bool isMobile) {
+  Widget _buildActionButtons(KitchenModel kitchen, bool isMobile) {
     return Row(
       mainAxisAlignment:
           isMobile ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
         IconButton(
-          onPressed: () => _showOrderDetails(order),
+          onPressed: () => _showKitchenDetails(kitchen),
           icon: const Icon(Icons.receipt_long),
           style: IconButton.styleFrom(
               backgroundColor: Colors.grey.shade200,
@@ -393,25 +413,46 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  void _showOrderDetails(OrderModel order) {
+  // Add pagination widget
+  Widget _buildPagination() {
+    return Obx(() {
+      return PaginationWidget(
+        currentPage: kitchenController.currentPage.value,
+        totalItems: kitchenController.totalItems.value,
+        itemsPerPage: kitchenController.itemsPerPage.value,
+        availablePageSizes: kitchenController.itemsPerPageOptions,
+        startIndex: kitchenController.startIndex,
+        endIndex: kitchenController.endIndex,
+        hasPreviousPage: kitchenController.hasPreviousPage,
+        hasNextPage: kitchenController.hasNextPage,
+        pageNumbers: kitchenController.pageNumbers,
+        onPageSizeChanged: kitchenController.updateItemsPerPage,
+        onPreviousPage: kitchenController.previousPage,
+        onNextPage: kitchenController.nextPage,
+        onPageSelected: kitchenController.goToPage,
+      );
+    });
+  }
+
+  void _showKitchenDetails(KitchenModel kitchen) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Detail Pesanan ${order.displayId}'),
+        title: Text('Detail Pesanan Dapur ${kitchen.displayId}'),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Customer: ${order.customerName}'),
-              Text('Phone: ${order.customerPhone}'),
-              Text('Table: ${order.tableNumber}'),
-              Text('Status: ${order.status}'),
-              Text('Total: ${order.formattedTotal}'),
+              Text('Customer: ${kitchen.customerName}'),
+              Text('Phone: ${kitchen.customerPhone}'),
+              Text('Table: ${kitchen.tableNumber}'),
+              Text('Status: ${kitchen.status}'),
+              Text('Total: ${kitchen.formattedTotal}'),
               const SizedBox(height: 16),
               const Text('Items:',
                   style: TextStyle(fontWeight: FontWeight.bold)),
-              ...order.items.map((item) => Padding(
+              ...kitchen.items.map((item) => Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4),
                     child: Text('• ${item.productName} x${item.quantity}'),
                   )),

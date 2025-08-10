@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/sidebar.dart';
+import 'package:pos/screens/kitchen/kitchen_screen.dart';
 import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
@@ -123,8 +124,7 @@ class AppRoutes {
       // Kitchen Routes
       GetPage(
         name: kitchen,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Dapur'), kitchen),
+        page: () => _wrapWithMainLayout(const KitchenScreen(), kitchen),
       ),
 
       // Account Routes

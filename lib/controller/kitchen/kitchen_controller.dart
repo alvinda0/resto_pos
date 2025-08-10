@@ -1,16 +1,16 @@
-// controllers/order_controller.dart
+// controllers/kitchen_controller.dart
 import 'dart:async';
 import 'package:get/get.dart';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/services/order/order_service.dart';
+import 'package:pos/models/kitchen/kitchen_model.dart';
+import 'package:pos/services/kitchen/kitchen_service.dart';
 
-class OrderController extends GetxController {
-  final OrderService _orderService = OrderService();
+class KitchenController extends GetxController {
+  final KitchenService _kitchenService = KitchenService();
   Timer? _autoRefreshTimer;
 
   // Observable variables
-  var orders = <OrderModel>[].obs;
-  var filteredOrders = <OrderModel>[].obs;
+  var kitchens = <KitchenModel>[].obs;
+  var filteredKitchens = <KitchenModel>[].obs;
   var isLoading = false.obs;
   var isRefreshing = false.obs;
   var searchQuery = ''.obs;
@@ -18,6 +18,7 @@ class OrderController extends GetxController {
   var selectedMethod = 'Semua Metode'.obs;
   var currentPage = 1.obs;
   var totalPages = 1.obs;
+  var totalItems = 0.obs;
   var itemsPerPage = 10.obs;
 
   // Auto refresh settings
@@ -44,11 +45,11 @@ class OrderController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchOrders();
+    fetchKitchens();
     startAutoRefresh();
 
     // Listen to search query changes
-    debounce(searchQuery, (_) => filterOrders(),
+    debounce(searchQuery, (_) => filterKitchens(),
         time: Duration(milliseconds: 500));
   }
 
@@ -70,7 +71,7 @@ class OrderController extends GetxController {
         if (isAutoRefreshEnabled.value &&
             !isLoading.value &&
             !isRefreshing.value) {
-          fetchOrders(showLoading: false, isAutoRefresh: true);
+          fetchKitchens(showLoading: false, isAutoRefresh: true);
         }
       },
     );
@@ -92,15 +93,15 @@ class OrderController extends GetxController {
     }
   }
 
-  // Fetch orders from API
-  Future<void> fetchOrders(
+  // Fetch kitchens from API
+  Future<void> fetchKitchens(
       {bool showLoading = true, bool isAutoRefresh = false}) async {
     try {
       if (showLoading) {
         isLoading.value = true;
       }
 
-      final response = await _orderService.getOrders(
+      final response = await _kitchenService.getKitchens(
         status: selectedStatus.value != 'Semua Status'
             ? selectedStatus.value
             : null,
@@ -112,16 +113,24 @@ class OrderController extends GetxController {
       );
 
       // Only update if data actually changed (optional optimization)
-      if (!isAutoRefresh || !_isOrdersEqual(orders, response.data)) {
-        orders.value = response.data;
-        filterOrders();
+      if (!isAutoRefresh || !_isKitchensEqual(kitchens, response.data)) {
+        kitchens.value = response.data;
+
+        // Update pagination info - assuming response has pagination metadata
+        // If your API doesn't provide this, you might need to calculate it
+        // totalItems.value = response.totalItems ?? response.data.length;
+        // totalPages.value = response.totalPages ??
+        //     ((response.totalItems ?? response.data.length) / itemsPerPage.value)
+        //         .ceil();
+
+        filterKitchens();
       }
     } catch (e) {
       // Only show error snackbar if it's not auto refresh
       if (!isAutoRefresh) {
         Get.snackbar(
           'Error',
-          'Gagal memuat data pesanan: ${e.toString()}',
+          'Gagal memuat data dapur: ${e.toString()}',
           snackPosition: SnackPosition.TOP,
         );
       }
@@ -132,37 +141,38 @@ class OrderController extends GetxController {
     }
   }
 
-  // Helper method to check if orders data has changed
-  bool _isOrdersEqual(List<OrderModel> oldOrders, List<OrderModel> newOrders) {
-    if (oldOrders.length != newOrders.length) return false;
+  // Helper method to check if kitchens data has changed
+  bool _isKitchensEqual(
+      List<KitchenModel> oldKitchens, List<KitchenModel> newKitchens) {
+    if (oldKitchens.length != newKitchens.length) return false;
 
-    for (int i = 0; i < oldOrders.length; i++) {
-      if (oldOrders[i].id != newOrders[i].id ||
-          oldOrders[i].status != newOrders[i].status ||
-          oldOrders[i].totalAmount != newOrders[i].totalAmount) {
+    for (int i = 0; i < oldKitchens.length; i++) {
+      if (oldKitchens[i].id != newKitchens[i].id ||
+          oldKitchens[i].status != newKitchens[i].status ||
+          oldKitchens[i].totalAmount != newKitchens[i].totalAmount) {
         return false;
       }
     }
     return true;
   }
 
-  // Refresh orders (manual refresh)
-  Future<void> refreshOrders() async {
+  // Refresh kitchens (manual refresh)
+  Future<void> refreshKitchens() async {
     isRefreshing.value = true;
-    await fetchOrders(showLoading: false);
+    await fetchKitchens(showLoading: false);
     isRefreshing.value = false;
   }
 
-  // Filter orders based on search query
-  void filterOrders() {
+  // Filter kitchens based on search query
+  void filterKitchens() {
     if (searchQuery.value.isEmpty) {
-      filteredOrders.value = orders;
+      filteredKitchens.value = kitchens;
     } else {
-      filteredOrders.value = orders.where((order) {
+      filteredKitchens.value = kitchens.where((kitchen) {
         final query = searchQuery.value.toLowerCase();
-        return order.customerName.toLowerCase().contains(query) ||
-            order.displayId.toLowerCase().contains(query) ||
-            order.customerPhone.contains(query);
+        return kitchen.customerName.toLowerCase().contains(query) ||
+            kitchen.displayId.toLowerCase().contains(query) ||
+            kitchen.customerPhone.contains(query);
       }).toList();
     }
   }
@@ -178,7 +188,7 @@ class OrderController extends GetxController {
     currentPage.value = 1;
     // Stop auto refresh temporarily when user changes filter
     stopAutoRefresh();
-    fetchOrders().then((_) {
+    fetchKitchens().then((_) {
       if (isAutoRefreshEnabled.value) {
         startAutoRefresh();
       }
@@ -191,7 +201,7 @@ class OrderController extends GetxController {
     currentPage.value = 1;
     // Stop auto refresh temporarily when user changes filter
     stopAutoRefresh();
-    fetchOrders().then((_) {
+    fetchKitchens().then((_) {
       if (isAutoRefreshEnabled.value) {
         startAutoRefresh();
       }
@@ -204,7 +214,7 @@ class OrderController extends GetxController {
     currentPage.value = 1;
     // Stop auto refresh temporarily when user changes items per page
     stopAutoRefresh();
-    fetchOrders().then((_) {
+    fetchKitchens().then((_) {
       if (isAutoRefreshEnabled.value) {
         startAutoRefresh();
       }
@@ -217,7 +227,7 @@ class OrderController extends GetxController {
       currentPage.value = page;
       // Stop auto refresh temporarily when user changes page
       stopAutoRefresh();
-      fetchOrders().then((_) {
+      fetchKitchens().then((_) {
         if (isAutoRefreshEnabled.value) {
           startAutoRefresh();
         }
@@ -231,7 +241,7 @@ class OrderController extends GetxController {
       currentPage.value++;
       // Stop auto refresh temporarily when user changes page
       stopAutoRefresh();
-      fetchOrders().then((_) {
+      fetchKitchens().then((_) {
         if (isAutoRefreshEnabled.value) {
           startAutoRefresh();
         }
@@ -245,12 +255,59 @@ class OrderController extends GetxController {
       currentPage.value--;
       // Stop auto refresh temporarily when user changes page
       stopAutoRefresh();
-      fetchOrders().then((_) {
+      fetchKitchens().then((_) {
         if (isAutoRefreshEnabled.value) {
           startAutoRefresh();
         }
       });
     }
+  }
+
+  // Pagination helper methods
+  int get startIndex {
+    if (totalItems.value == 0) return 0;
+    return ((currentPage.value - 1) * itemsPerPage.value) + 1;
+  }
+
+  int get endIndex {
+    final end = currentPage.value * itemsPerPage.value;
+    return end > totalItems.value ? totalItems.value : end;
+  }
+
+  bool get hasPreviousPage {
+    return currentPage.value > 1;
+  }
+
+  bool get hasNextPage {
+    return currentPage.value < totalPages.value;
+  }
+
+  List<int> get pageNumbers {
+    final List<int> pages = [];
+    const int maxVisible = 5; // Maximum visible page numbers
+
+    if (totalPages.value <= maxVisible) {
+      // If total pages is less than max visible, show all pages
+      for (int i = 1; i <= totalPages.value; i++) {
+        pages.add(i);
+      }
+    } else {
+      // Calculate range around current page
+      int start =
+          (currentPage.value - (maxVisible ~/ 2)).clamp(1, totalPages.value);
+      int end = (start + maxVisible - 1).clamp(1, totalPages.value);
+
+      // Adjust start if we're near the end
+      if (end == totalPages.value) {
+        start = (end - maxVisible + 1).clamp(1, totalPages.value);
+      }
+
+      for (int i = start; i <= end; i++) {
+        pages.add(i);
+      }
+    }
+
+    return pages;
   }
 
   // Helper methods
