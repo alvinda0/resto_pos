@@ -1,72 +1,68 @@
-import 'package:equatable/equatable.dart';
-
-class DashboardResponse extends Equatable {
+// models/statistics_model.dart
+class StatisticsModel {
+  final bool success;
   final String message;
   final int status;
-  final DashboardStats data;
+  final String timestamp;
+  final StatisticsData data;
 
-  const DashboardResponse({
+  StatisticsModel({
+    required this.success,
     required this.message,
     required this.status,
+    required this.timestamp,
     required this.data,
   });
 
-  factory DashboardResponse.fromJson(Map<String, dynamic> json) {
-    return DashboardResponse(
+  factory StatisticsModel.fromJson(Map<String, dynamic> json) {
+    return StatisticsModel(
+      success: json['success'] ?? false,
       message: json['message'] ?? '',
       status: json['status'] ?? 0,
-      data: DashboardStats.fromJson(json['data'] ?? {}),
+      timestamp: json['timestamp'] ?? '',
+      data: StatisticsData.fromJson(json['data'] ?? {}),
     );
   }
-
-  @override
-  List<Object> get props => [message, status, data];
 }
 
-class DashboardStats extends Equatable {
-  final DailyStats dailyStats;
-  final WeeklyStats weeklyStats;
+class StatisticsData {
+  final String storeId;
   final int categoryCount;
   final int productCount;
+  final DailyStats dailyStats;
+  final WeeklyStats weeklyStats;
   final List<TrendingItem> trendingItems;
 
-  const DashboardStats({
-    required this.dailyStats,
-    required this.weeklyStats,
+  StatisticsData({
+    required this.storeId,
     required this.categoryCount,
     required this.productCount,
+    required this.dailyStats,
+    required this.weeklyStats,
     required this.trendingItems,
   });
 
-  factory DashboardStats.fromJson(Map<String, dynamic> json) {
-    return DashboardStats(
-      dailyStats: DailyStats.fromJson(json['daily_stats'] ?? {}),
-      weeklyStats: WeeklyStats.fromJson(json['weekly_stats'] ?? {}),
+  factory StatisticsData.fromJson(Map<String, dynamic> json) {
+    return StatisticsData(
+      storeId: json['store_id'] ?? '',
       categoryCount: json['category_count'] ?? 0,
       productCount: json['product_count'] ?? 0,
-      trendingItems: (json['trending_items'] as List<dynamic>?)
+      dailyStats: DailyStats.fromJson(json['daily_stats'] ?? {}),
+      weeklyStats: WeeklyStats.fromJson(json['weekly_stats'] ?? {}),
+      trendingItems: (json['trending_items'] as List?)
               ?.map((item) => TrendingItem.fromJson(item))
               .toList() ??
           [],
     );
   }
-
-  @override
-  List<Object> get props => [
-        dailyStats,
-        weeklyStats,
-        categoryCount,
-        productCount,
-        trendingItems,
-      ];
 }
 
-class DailyStats extends Equatable {
+class DailyStats {
   final int totalEarnings;
   final int totalOrders;
   final String date;
 
-  const DailyStats({
+  DailyStats({
     required this.totalEarnings,
     required this.totalOrders,
     required this.date,
@@ -79,55 +75,43 @@ class DailyStats extends Equatable {
       date: json['date'] ?? '',
     );
   }
-
-  @override
-  List<Object> get props => [totalEarnings, totalOrders, date];
 }
 
-class WeeklyStats extends Equatable {
-  final List<DailyBreakdown> dailyBreakdown;
+class WeeklyStats {
   final int totalEarnings;
   final int totalOrders;
   final String startDate;
   final String endDate;
+  final List<DailyBreakdown> dailyBreakdown;
 
-  const WeeklyStats({
-    required this.dailyBreakdown,
+  WeeklyStats({
     required this.totalEarnings,
     required this.totalOrders,
     required this.startDate,
     required this.endDate,
+    required this.dailyBreakdown,
   });
 
   factory WeeklyStats.fromJson(Map<String, dynamic> json) {
     return WeeklyStats(
-      dailyBreakdown: (json['daily_breakdown'] as List<dynamic>?)
-              ?.map((item) => DailyBreakdown.fromJson(item))
-              .toList() ??
-          [],
       totalEarnings: json['total_earnings'] ?? 0,
       totalOrders: json['total_orders'] ?? 0,
       startDate: json['start_date'] ?? '',
       endDate: json['end_date'] ?? '',
+      dailyBreakdown: (json['daily_breakdown'] as List?)
+              ?.map((item) => DailyBreakdown.fromJson(item))
+              .toList() ??
+          [],
     );
   }
-
-  @override
-  List<Object> get props => [
-        dailyBreakdown,
-        totalEarnings,
-        totalOrders,
-        startDate,
-        endDate,
-      ];
 }
 
-class DailyBreakdown extends Equatable {
+class DailyBreakdown {
   final int totalEarnings;
   final int totalOrders;
   final String date;
 
-  const DailyBreakdown({
+  DailyBreakdown({
     required this.totalEarnings,
     required this.totalOrders,
     required this.date,
@@ -140,25 +124,22 @@ class DailyBreakdown extends Equatable {
       date: json['date'] ?? '',
     );
   }
-
-  @override
-  List<Object> get props => [totalEarnings, totalOrders, date];
 }
 
-class TrendingItem extends Equatable {
+class TrendingItem {
   final String id;
   final String name;
   final int orderCount;
   final int totalRevenue;
-  final String? imageUrl;
+  final String imageUrl;
   final String categoryName;
 
-  const TrendingItem({
+  TrendingItem({
     required this.id,
     required this.name,
     required this.orderCount,
     required this.totalRevenue,
-    this.imageUrl,
+    required this.imageUrl,
     required this.categoryName,
   });
 
@@ -168,18 +149,8 @@ class TrendingItem extends Equatable {
       name: json['name'] ?? '',
       orderCount: json['order_count'] ?? 0,
       totalRevenue: json['total_revenue'] ?? 0,
-      imageUrl: json['image_url'],
+      imageUrl: json['image_url'] ?? '',
       categoryName: json['category_name'] ?? '',
     );
   }
-
-  @override
-  List<Object?> get props => [
-        id,
-        name,
-        orderCount,
-        totalRevenue,
-        imageUrl,
-        categoryName,
-      ];
 }
