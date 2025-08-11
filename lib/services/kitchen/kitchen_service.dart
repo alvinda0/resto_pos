@@ -1,6 +1,7 @@
 // services/kitchen_service.dart
 import 'dart:convert';
 import 'package:pos/http_client.dart';
+import 'package:pos/models/kitchen/complete_order_model.dart';
 import 'package:pos/models/kitchen/kitchen_model.dart';
 
 class KitchenService {
@@ -90,18 +91,25 @@ class KitchenService {
     }
   }
 
-  // Method untuk mendapatkan statistik dapur
-  Future<Map<String, dynamic>> getKitchenStats() async {
+  // Method untuk menyelesaikan pesanan
+  Future<CompleteOrderResponse> completeOrder(String orderId) async {
     try {
-      final response = await _httpClient.get('/orders/kitchen-stats');
+      // Perbaiki: tambahkan body parameter (bisa kosong jika tidak diperlukan data)
+      final response = await _httpClient.post(
+        '/orders/$orderId/complete',
+        {}, // Body kosong atau bisa ditambahkan data jika diperlukan
+      );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body)['data'];
+        final jsonData = jsonDecode(response.body);
+        return CompleteOrderResponse.fromJson(jsonData);
       } else {
-        throw Exception('Gagal memuat statistik dapur: ${response.statusCode}');
+        final jsonData = jsonDecode(response.body);
+        throw Exception(jsonData['message'] ??
+            'Gagal menyelesaikan pesanan: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Kesalahan saat mengambil statistik dapur: $e');
+      throw Exception('Kesalahan saat menyelesaikan pesanan: $e');
     }
   }
 }

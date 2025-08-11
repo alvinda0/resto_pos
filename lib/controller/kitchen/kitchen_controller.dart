@@ -13,6 +13,7 @@ class KitchenController extends GetxController {
   var filteredKitchens = <KitchenModel>[].obs;
   var isLoading = false.obs;
   var isRefreshing = false.obs;
+  var isCompletingOrder = false.obs; // Loading state untuk complete order
   var searchQuery = ''.obs;
   var selectedStatus = 'Semua Status'.obs;
   var selectedMethod = 'Semua Metode'.obs;
@@ -71,7 +72,8 @@ class KitchenController extends GetxController {
       (timer) {
         if (isAutoRefreshEnabled.value &&
             !isLoading.value &&
-            !isRefreshing.value) {
+            !isRefreshing.value &&
+            !isCompletingOrder.value) {
           fetchKitchens(showLoading: false, isAutoRefresh: true);
         }
       },
@@ -160,6 +162,50 @@ class KitchenController extends GetxController {
       }
     }
     return true;
+  }
+
+  // Method untuk menyelesaikan pesanan
+  Future<void> completeOrder(String orderId, String displayId) async {
+    try {
+      isCompletingOrder.value = true;
+
+      // Hentikan auto refresh sementara
+      stopAutoRefresh();
+
+      final response = await _kitchenService.completeOrder(orderId);
+
+      if (response.success) {
+        Get.snackbar(
+          'Berhasil',
+          'Pesanan $displayId berhasil diselesaikan',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Get.theme.primaryColor,
+          colorText: Get.theme.primaryColorLight,
+          duration: Duration(seconds: 3),
+        );
+
+        // Refresh data untuk mendapatkan status terbaru
+        await fetchKitchens(showLoading: false);
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Kesalahan',
+        'Gagal menyelesaikan pesanan: ${e.toString()}',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
+        duration: Duration(seconds: 5),
+      );
+    } finally {
+      isCompletingOrder.value = false;
+
+      // Restart auto refresh jika masih diaktifkan
+      if (isAutoRefreshEnabled.value) {
+        startAutoRefresh();
+      }
+    }
   }
 
   // Refresh kitchens (manual refresh)
@@ -390,5 +436,10 @@ class KitchenController extends GetxController {
       default:
         return '❓';
     }
+  }
+
+  // Method untuk mengecek apakah pesanan bisa diselesaikan
+  bool canCompleteOrder(String dishStatus) {
+    return dishStatus.toLowerCase() == 'processed';
   }
 }

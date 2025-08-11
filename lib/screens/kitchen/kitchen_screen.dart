@@ -317,7 +317,6 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
-
           const SizedBox(height: 12),
           _buildActionButtons(kitchen, true),
         ],
@@ -477,44 +476,111 @@ class _KitchenScreenState extends State<KitchenScreen> {
   }
 
   Widget _buildActionButtons(KitchenModel kitchen, bool isMobile) {
-    return Row(
-      mainAxisAlignment:
-          isMobile ? MainAxisAlignment.end : MainAxisAlignment.start,
-      children: [
-        IconButton(
-          onPressed: () => _showKitchenDetails(kitchen),
-          icon: const Icon(Icons.visibility),
-          style: IconButton.styleFrom(
-              backgroundColor: Colors.grey.shade200,
-              padding: const EdgeInsets.all(8)),
-        ),
-        const SizedBox(width: 8),
-        ElevatedButton(
-          onPressed: () {
-            // TODO: Implement selesai functionality
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            minimumSize: const Size(0, 32),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                'Selesai',
-                style: TextStyle(
-                  fontSize: isMobile ? 12 : 13,
-                  fontWeight: FontWeight.w500,
+    return Obx(() => Row(
+          mainAxisAlignment:
+              isMobile ? MainAxisAlignment.end : MainAxisAlignment.start,
+          children: [
+            IconButton(
+              onPressed: () => _showKitchenDetails(kitchen),
+              icon: const Icon(Icons.visibility),
+              style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey.shade200,
+                  padding: const EdgeInsets.all(8)),
+            ),
+            const SizedBox(width: 8),
+            // Tampilkan button selesai hanya jika status dish adalah 'processed'
+            if (kitchenController.canCompleteOrder(kitchen.dishStatus))
+              kitchenController.isCompletingOrder.value
+                  ? SizedBox(
+                      width: isMobile ? 80 : 90,
+                      height: 32,
+                      child: ElevatedButton(
+                        onPressed: null, // Disable button saat loading
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                        ),
+                        child: const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ),
+                    )
+                  : ElevatedButton(
+                      onPressed: () => _handleCompleteOrder(kitchen),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        minimumSize: const Size(0, 32),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Selesai',
+                            style: TextStyle(
+                              fontSize: isMobile ? 12 : 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+            else
+              // Tampilkan status jika tidak bisa diselesaikan
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  kitchenController.getStatusLabel(kitchen.dishStatus),
+                  style: TextStyle(
+                    fontSize: isMobile ? 12 : 13,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ],
+          ],
+        ));
+  }
+
+  // Handler untuk complete order
+  void _handleCompleteOrder(KitchenModel kitchen) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi'),
+        content: Text(
+            'Apakah Anda yakin ingin menyelesaikan pesanan ${kitchen.displayId}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
           ),
-        ),
-      ],
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              kitchenController.completeOrder(kitchen.id, kitchen.displayId);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Ya, Selesai'),
+          ),
+        ],
+      ),
     );
   }
 
