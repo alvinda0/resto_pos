@@ -2,7 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/inventory/inventory_controller.dart';
+import 'package:pos/models/inventory/inventory_model.dart';
 import 'package:pos/widgets/pagination_widget.dart';
+import 'package:pos/screens/inventory/create_inventory_dialog.dart';
+import 'package:pos/screens/inventory/edit_inventory_dialog.dart';
 
 class InventoryScreen extends StatelessWidget {
   const InventoryScreen({Key? key}) : super(key: key);
@@ -35,7 +38,7 @@ class InventoryScreen extends StatelessWidget {
               }
 
               if (controller.inventories.isEmpty) {
-                return _buildEmptyState();
+                return _buildEmptyState(controller);
               }
 
               return Column(
@@ -86,9 +89,7 @@ class InventoryScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: () {
-              // Navigate to add inventory screen
-            },
+            onPressed: () => CreateInventoryDialog.show(controller),
             icon: const Icon(Icons.add, color: Colors.white),
             label: const Text('Tambah Bahan',
                 style: TextStyle(color: Colors.white)),
@@ -175,6 +176,23 @@ class InventoryScreen extends StatelessWidget {
                   ),
                 )),
           ),
+
+          const SizedBox(width: 16),
+
+          // Refresh Button
+          ElevatedButton.icon(
+            onPressed: controller.refreshInventories,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Refresh'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -197,45 +215,37 @@ class InventoryScreen extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Definisi lebar kolom berdasarkan prioritas konten
           final double availableWidth = constraints.maxWidth;
-          final double padding = 32; // Total horizontal padding
-          final double spacing = 16 * 7; // Column spacing untuk 8 kolom
+          final double padding = 32;
+          final double spacing = 16 * 7;
           final double workingWidth = availableWidth - padding - spacing;
 
-          // Minimum width untuk setiap kolom - nama bahan dikurangi
           const Map<String, double> minWidths = {
-            'name': 150, // Dikurangi dari 180
+            'name': 150,
             'stock': 80,
             'minStock': 100,
             'price': 120,
-            'vendor': 160, // Diperbesar untuk vendor
+            'vendor': 160,
             'paymentStatus': 120,
             'status': 100,
             'actions': 80,
           };
 
-          // Hitung total minimum width
           final double totalMinWidth = minWidths.values.reduce((a, b) => a + b);
           final bool needsHorizontalScroll = workingWidth < totalMinWidth;
 
-          // Alokasi lebar kolom
           late Map<String, double> columnWidths;
 
           if (needsHorizontalScroll) {
-            // Gunakan minimum width jika perlu scroll horizontal
             columnWidths = Map.from(minWidths);
           } else {
-            // Distribusi lebar berdasarkan proporsi - nama bahan dikurangi
             final double extraSpace = workingWidth - totalMinWidth;
             columnWidths = {
-              'name': minWidths['name']! +
-                  (extraSpace * 0.20), // Dikurangi dari 0.35
+              'name': minWidths['name']! + (extraSpace * 0.20),
               'stock': minWidths['stock']! + (extraSpace * 0.08),
               'minStock': minWidths['minStock']! + (extraSpace * 0.10),
               'price': minWidths['price']! + (extraSpace * 0.18),
-              'vendor':
-                  minWidths['vendor']! + (extraSpace * 0.25), // Diperbesar
+              'vendor': minWidths['vendor']! + (extraSpace * 0.25),
               'paymentStatus':
                   minWidths['paymentStatus']! + (extraSpace * 0.12),
               'status': minWidths['status']! + (extraSpace * 0.05),
@@ -243,168 +253,218 @@ class InventoryScreen extends StatelessWidget {
             };
           }
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: needsHorizontalScroll
-                  ? totalMinWidth + padding + spacing
-                  : availableWidth,
-              child: DataTable(
-                columnSpacing: 16,
-                horizontalMargin: 16,
-                headingRowHeight: 56,
-                dataRowHeight: 64,
-                headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
-                dividerThickness: 1,
-                columns: [
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['name'],
-                      child: Text('NAMA BAHAN', style: _headerTextStyle()),
-                    ),
-                  ),
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['stock'],
-                      child: Text('STOK', style: _headerTextStyle()),
-                    ),
-                  ),
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['minStock'],
-                      child: Text('MIN. STOK', style: _headerTextStyle()),
-                    ),
-                  ),
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['price'],
-                      child: Text('HARGA/UNIT', style: _headerTextStyle()),
-                    ),
-                  ),
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['vendor'],
-                      child: Text('VENDOR', style: _headerTextStyle()),
-                    ),
-                  ),
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['paymentStatus'],
-                      child: Text('STATUS BAYAR', style: _headerTextStyle()),
-                    ),
-                  ),
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['status'],
-                      child: Text('STATUS', style: _headerTextStyle()),
-                    ),
-                  ),
-                  DataColumn(
-                    label: SizedBox(
-                      width: columnWidths['actions'],
-                      child: Text('AKSI', style: _headerTextStyle()),
-                    ),
-                  ),
-                ],
-                rows: controller.inventories.map((inventory) {
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        SizedBox(
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: needsHorizontalScroll
+                      ? totalMinWidth + padding + spacing
+                      : availableWidth,
+                  child: DataTable(
+                    columnSpacing: 16,
+                    horizontalMargin: 16,
+                    headingRowHeight: 56,
+                    dataRowHeight: 64,
+                    headingRowColor:
+                        MaterialStateProperty.all(Colors.grey.shade50),
+                    dividerThickness: 1,
+                    columns: [
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['name'],
-                          child: Text(
-                            inventory.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
+                          child: Text('NAMA BAHAN', style: _headerTextStyle()),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['stock'],
-                          child: Text(
-                            inventory.stockDisplay,
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          child: Text('STOK', style: _headerTextStyle()),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['minStock'],
-                          child: Text(
-                            inventory.minimumStockDisplay,
-                            style: const TextStyle(color: Colors.black87),
-                          ),
+                          child: Text('MIN. STOK', style: _headerTextStyle()),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['price'],
-                          child: Text(
-                            inventory.formattedPrice,
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          child: Text('HARGA/UNIT', style: _headerTextStyle()),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['vendor'],
-                          child: Text(
-                            inventory.vendorName.isEmpty
-                                ? '-'
-                                : inventory.vendorName,
-                            style: const TextStyle(color: Colors.black87),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+                          child: Text('VENDOR', style: _headerTextStyle()),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['paymentStatus'],
-                          child: _buildStatusBadge(
-                            inventory.paymentStatusDisplay,
-                            _getPaymentStatusColor(
-                                inventory.paymentStatusDisplay),
-                          ),
+                          child:
+                              Text('STATUS BAYAR', style: _headerTextStyle()),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['status'],
-                          child: _buildStatusBadge(
-                            inventory.statusDisplay,
-                            _getInventoryStatusColor(inventory),
-                          ),
+                          child: Text('STATUS', style: _headerTextStyle()),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
+                      DataColumn(
+                        label: SizedBox(
                           width: columnWidths['actions'],
-                          child: IconButton(
-                            icon:
-                                const Icon(Icons.more_vert, color: Colors.grey),
-                            onPressed: () =>
-                                controller.showInventoryActions(inventory),
-                          ),
+                          child: Text('AKSI', style: _headerTextStyle()),
                         ),
                       ),
                     ],
-                  );
-                }).toList(),
+                    rows: controller.inventories.map((inventory) {
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['name'],
+                              child: Text(
+                                inventory.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['stock'],
+                              child: Text(
+                                inventory.stockDisplay,
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['minStock'],
+                              child: Text(
+                                inventory.minimumStockDisplay,
+                                style: const TextStyle(color: Colors.black87),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['price'],
+                              child: Text(
+                                inventory.formattedPrice,
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['vendor'],
+                              child: Text(
+                                inventory.vendorName.isEmpty
+                                    ? '-'
+                                    : inventory.vendorName,
+                                style: const TextStyle(color: Colors.black87),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['paymentStatus'],
+                              child: _buildStatusBadge(
+                                inventory.paymentStatusDisplay,
+                                _getPaymentStatusColor(
+                                    inventory.paymentStatusDisplay),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['status'],
+                              child: _buildStatusBadge(
+                                inventory.statusDisplay,
+                                _getInventoryStatusColor(inventory),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: columnWidths['actions'],
+                              child: PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert,
+                                    color: Colors.grey),
+                                onSelected: (value) {
+                                  switch (value) {
+                                    case 'edit':
+                                      EditInventoryDialog.show(
+                                          controller, inventory);
+                                      break;
+                                    case 'delete':
+                                      controller.deleteInventory(inventory);
+                                      break;
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.edit, color: Colors.orange),
+                                        SizedBox(width: 8),
+                                        Text('Edit'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete, color: Colors.red),
+                                        SizedBox(width: 8),
+                                        Text('Hapus'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
-            ),
+
+              // Loading overlay for operations
+              Obx(() {
+                if (controller.isOperationLoading.value) {
+                  return Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
+            ],
           );
         },
       ),
@@ -456,7 +516,7 @@ class InventoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(InventoryController controller) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -481,6 +541,20 @@ class InventoryScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => CreateInventoryDialog.show(controller),
+            icon: const Icon(Icons.add),
+            label: const Text('Tambah Bahan'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/account/account_screen.dart';
+import 'package:pos/screens/referral/referral_screen.dart';
+import 'package:pos/screens/rewards/rewards_screen.dart';
 import 'package:pos/screens/role/role_screen.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/sidebar.dart';
@@ -17,6 +19,7 @@ import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 import 'package:pos/screens/transaction/transaction_screen.dart';
+import 'package:pos/screens/withdraw/withdraw_screen.dart';
 
 class AppRoutes {
   // Route Names - Dikelompokkan untuk clarity
@@ -193,20 +196,18 @@ class AppRoutes {
       // Referral Routes
       GetPage(
         name: referral,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Kelola Referral'), referral),
+        page: () => _wrapWithMainLayout(ReferralScreen(), referral),
       ),
       GetPage(
         name: withdraw,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Pencairan Referral'), withdraw),
+        page: () => _wrapWithMainLayout(const WithdrawScreen(), withdraw),
       ),
 
       // Points Routes (Poin)
       GetPage(
         name: pointsRewards,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Hadiah'), pointsRewards),
+        page: () =>
+            _wrapWithMainLayout(const RewardManagementScreen(), pointsRewards),
       ),
       GetPage(
         name: pointsRedemptionsHistory,

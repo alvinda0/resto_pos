@@ -11,6 +11,7 @@ class InventoryController extends GetxController {
   final RxList<InventoryModel> inventories = <InventoryModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isLoadingMore = false.obs;
+  final RxBool isOperationLoading = false.obs; // For CRUD operations
   final RxString errorMessage = ''.obs;
 
   // Pagination variables
@@ -24,6 +25,14 @@ class InventoryController extends GetxController {
   final RxString searchQuery = ''.obs;
   final RxString statusFilter = 'all'.obs;
   final TextEditingController searchController = TextEditingController();
+
+  // Form controllers for create/edit
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
+  final TextEditingController unitController = TextEditingController();
+  final TextEditingController priceController = TextEditingController();
+  final TextEditingController minimumStockController = TextEditingController();
+  final TextEditingController vendorNameController = TextEditingController();
 
   // Computed properties for pagination
   int get startIndex {
@@ -65,6 +74,12 @@ class InventoryController extends GetxController {
   @override
   void onClose() {
     searchController.dispose();
+    nameController.dispose();
+    quantityController.dispose();
+    unitController.dispose();
+    priceController.dispose();
+    minimumStockController.dispose();
+    vendorNameController.dispose();
     super.onClose();
   }
 
@@ -172,6 +187,276 @@ class InventoryController extends GetxController {
     loadInventories();
   }
 
+  void clearFormControllers() {
+    nameController.clear();
+    quantityController.clear();
+    unitController.clear();
+    priceController.clear();
+    minimumStockController.clear();
+    vendorNameController.clear();
+  }
+
+  void populateFormControllers(InventoryModel inventory) {
+    nameController.text = inventory.name;
+    quantityController.text = inventory.quantity.toString();
+    unitController.text = inventory.unit;
+    priceController.text = inventory.price.toString();
+    minimumStockController.text = inventory.minimumStock.toString();
+    vendorNameController.text = inventory.vendorName;
+  }
+
+  Future<bool> createInventory() async {
+    try {
+      // Validate form data
+      if (nameController.text.trim().isEmpty ||
+          quantityController.text.trim().isEmpty ||
+          unitController.text.trim().isEmpty ||
+          priceController.text.trim().isEmpty ||
+          minimumStockController.text.trim().isEmpty ||
+          vendorNameController.text.trim().isEmpty) {
+        Get.snackbar(
+          'Validasi Error',
+          'Semua field harus diisi',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade800,
+          duration: const Duration(seconds: 3),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 8,
+          icon: const Icon(Icons.warning_outlined, color: Colors.orange),
+        );
+        return false;
+      }
+
+      // Parse numeric values
+      final double quantity = double.tryParse(quantityController.text) ?? 0;
+      final double price = double.tryParse(priceController.text) ?? 0;
+      final double minimumStock =
+          double.tryParse(minimumStockController.text) ?? 0;
+
+      if (quantity <= 0 || price <= 0 || minimumStock < 0) {
+        Get.snackbar(
+          'Validasi Error',
+          'Quantity dan price harus lebih dari 0, minimum stock tidak boleh negatif',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade800,
+          duration: const Duration(seconds: 3),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 8,
+          icon: const Icon(Icons.warning_outlined, color: Colors.orange),
+        );
+        return false;
+      }
+
+      isOperationLoading.value = true;
+
+      final newInventory = await _inventoryService.createInventory(
+        name: nameController.text.trim(),
+        quantity: quantity,
+        unit: unitController.text.trim(),
+        price: price,
+        minimumStock: minimumStock,
+        vendorName: vendorNameController.text.trim(),
+      );
+
+      // Show success message
+      Get.snackbar(
+        'Berhasil',
+        'Inventory "${newInventory.name}" berhasil dibuat',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+        icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+      );
+
+      // Clear form and refresh list
+      clearFormControllers();
+      await refreshInventories();
+      return true;
+    } catch (e) {
+      String errorMsg = e.toString().replaceAll('Exception: ', '');
+      Get.snackbar(
+        'Error',
+        'Gagal membuat inventory: $errorMsg',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+        icon: const Icon(Icons.error_outline, color: Colors.red),
+      );
+      return false;
+    } finally {
+      isOperationLoading.value = false;
+    }
+  }
+
+  Future<bool> updateInventory(String id) async {
+    try {
+      // Validate form data
+      if (nameController.text.trim().isEmpty) {
+        Get.snackbar(
+          'Validasi Error',
+          'Nama tidak boleh kosong',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade800,
+          duration: const Duration(seconds: 3),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 8,
+          icon: const Icon(Icons.warning_outlined, color: Colors.orange),
+        );
+        return false;
+      }
+
+      isOperationLoading.value = true;
+
+      // Parse numeric values (allow null for optional fields)
+      double? quantity;
+      double? price;
+      double? minimumStock;
+
+      if (quantityController.text.trim().isNotEmpty) {
+        quantity = double.tryParse(quantityController.text);
+        if (quantity == null || quantity <= 0) {
+          throw Exception('Quantity harus berupa angka positif');
+        }
+      }
+
+      if (priceController.text.trim().isNotEmpty) {
+        price = double.tryParse(priceController.text);
+        if (price == null || price <= 0) {
+          throw Exception('Price harus berupa angka positif');
+        }
+      }
+
+      if (minimumStockController.text.trim().isNotEmpty) {
+        minimumStock = double.tryParse(minimumStockController.text);
+        if (minimumStock == null || minimumStock < 0) {
+          throw Exception('Minimum stock tidak boleh negatif');
+        }
+      }
+
+      final updatedInventory = await _inventoryService.updateInventory(
+        id: id,
+        name: nameController.text.trim().isNotEmpty
+            ? nameController.text.trim()
+            : null,
+        quantity: quantity,
+        unit: unitController.text.trim().isNotEmpty
+            ? unitController.text.trim()
+            : null,
+        price: price,
+        minimumStock: minimumStock,
+        vendorName: vendorNameController.text.trim().isNotEmpty
+            ? vendorNameController.text.trim()
+            : null,
+      );
+
+      // Show success message
+      Get.snackbar(
+        'Berhasil',
+        'Inventory "${updatedInventory.name}" berhasil diperbarui',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+        icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+      );
+
+      // Clear form and refresh list
+      clearFormControllers();
+      await loadInventories(showLoading: false);
+      return true;
+    } catch (e) {
+      String errorMsg = e.toString().replaceAll('Exception: ', '');
+      Get.snackbar(
+        'Error',
+        'Gagal memperbarui inventory: $errorMsg',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+        icon: const Icon(Icons.error_outline, color: Colors.red),
+      );
+      return false;
+    } finally {
+      isOperationLoading.value = false;
+    }
+  }
+
+  Future<void> deleteInventory(InventoryModel inventory) async {
+    // Show confirmation dialog
+    final bool? confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Konfirmasi Hapus'),
+        content: Text(
+            'Apakah Anda yakin ingin menghapus inventory "${inventory.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      isOperationLoading.value = true;
+
+      await _inventoryService.deleteInventory(inventory.id);
+
+      // Show success message
+      Get.snackbar(
+        'Berhasil',
+        'Inventory "${inventory.name}" berhasil dihapus',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+        icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+      );
+
+      // Refresh list
+      await loadInventories(showLoading: false);
+    } catch (e) {
+      String errorMsg = e.toString().replaceAll('Exception: ', '');
+      Get.snackbar(
+        'Error',
+        'Gagal menghapus inventory: $errorMsg',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+        icon: const Icon(Icons.error_outline, color: Colors.red),
+      );
+    } finally {
+      isOperationLoading.value = false;
+    }
+  }
+
   void showInventoryDetails(InventoryModel inventory) {
     // Navigate to inventory details or show dialog
     // This can be implemented based on your navigation requirements
@@ -199,7 +484,10 @@ class InventoryController extends GetxController {
               title: const Text('Edit Bahan'),
               onTap: () {
                 Get.back();
-                // Navigate to edit screen
+                // Populate form with current data for editing
+                populateFormControllers(inventory);
+                // You can navigate to edit screen or show edit dialog here
+                // For example: Get.toNamed('/inventory/edit', arguments: inventory);
               },
             ),
             ListTile(
@@ -216,12 +504,26 @@ class InventoryController extends GetxController {
                   style: TextStyle(color: Colors.red)),
               onTap: () {
                 Get.back();
-                // Show delete confirmation
+                deleteInventory(inventory);
               },
             ),
           ],
         ),
       ),
     );
+  }
+
+  // Helper method to show create inventory form/dialog
+  void showCreateInventoryForm() {
+    clearFormControllers();
+    // You can navigate to create screen or show create dialog here
+    // For example: Get.toNamed('/inventory/create');
+  }
+
+  // Helper method to show edit inventory form/dialog
+  void showEditInventoryForm(InventoryModel inventory) {
+    populateFormControllers(inventory);
+    // You can navigate to edit screen or show edit dialog here
+    // For example: Get.toNamed('/inventory/edit', arguments: inventory);
   }
 }
