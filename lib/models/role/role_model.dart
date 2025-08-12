@@ -1,4 +1,3 @@
-// models/role_model.dart
 class Permission {
   final String id;
   final String name;
@@ -57,7 +56,7 @@ class Role {
       isSystem: json['is_system'] ?? false,
       isStaff: json['is_staff'] ?? false,
       permissions: (json['permissions'] as List<dynamic>?)
-              ?.map((permission) => Permission.fromJson(permission))
+              ?.map((permissionJson) => Permission.fromJson(permissionJson))
               .toList() ??
           [],
       userCount: json['user_count'] ?? 0,
@@ -79,25 +78,77 @@ class Role {
   }
 }
 
-class RoleResponse {
+class RoleListResponse {
+  final bool success;
   final String message;
   final int status;
+  final String timestamp;
   final List<Role> data;
+  final RoleMetadata metadata;
 
-  RoleResponse({
+  RoleListResponse({
+    required this.success,
     required this.message,
     required this.status,
+    required this.timestamp,
     required this.data,
+    required this.metadata,
   });
 
-  factory RoleResponse.fromJson(Map<String, dynamic> json) {
-    return RoleResponse(
+  factory RoleListResponse.fromJson(Map<String, dynamic> json) {
+    return RoleListResponse(
+      success: json['success'] ?? false,
       message: json['message'] ?? '',
       status: json['status'] ?? 0,
+      timestamp: json['timestamp'] ?? '',
       data: (json['data'] as List<dynamic>?)
-              ?.map((role) => Role.fromJson(role))
+              ?.map((roleJson) => Role.fromJson(roleJson))
               .toList() ??
           [],
+      metadata: RoleMetadata.fromJson(json['metadata'] ?? {}),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'success': success,
+      'message': message,
+      'status': status,
+      'timestamp': timestamp,
+      'data': data.map((role) => role.toJson()).toList(),
+      'metadata': metadata.toJson(),
+    };
+  }
+}
+
+class RoleMetadata {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  RoleMetadata({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory RoleMetadata.fromJson(Map<String, dynamic> json) {
+    return RoleMetadata(
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 10,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'page': page,
+      'limit': limit,
+      'total': total,
+      'total_pages': totalPages,
+    };
   }
 }

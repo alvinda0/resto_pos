@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:pos/screens/account/account_screen.dart';
+import 'package:pos/screens/role/role_screen.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/sidebar.dart';
 import 'package:pos/screens/inventory/inventory_screen.dart';
@@ -14,7 +16,6 @@ import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
-import 'package:pos/screens/akun/akun_role_users_screen.dart';
 
 class AppRoutes {
   // Route Names - Dikelompokkan untuk clarity
@@ -144,14 +145,12 @@ class AppRoutes {
       // Account and Role Routes (Akun dan Role)
       GetPage(
         name: manageAccount,
-        page: () =>
-            _wrapWithMainLayout(const AkunRoleUsersScreen(), manageAccount),
+        page: () => _wrapWithMainLayout(const RoleScreen(), manageAccount),
         transition: Transition.rightToLeft,
       ),
       GetPage(
         name: account,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Akun'), account),
+        page: () => _wrapWithMainLayout(const UserManagementScreen(), account),
       ),
 
       // Report Routes (Laporan)

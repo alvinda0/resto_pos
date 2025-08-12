@@ -1,223 +1,228 @@
-// controllers/role_controller.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/role/role_model.dart';
 import 'package:pos/services/role/role_service.dart';
 
 class RoleController extends GetxController {
-  final RoleService _roleService = RoleService.instance;
+  final RoleService _roleService = RoleService();
 
   // Observable variables
-  final _roles = <Role>[].obs;
-  final _filteredRoles = <Role>[].obs;
-  final _availablePermissions = <Permission>[].obs;
-  final _isLoading = false.obs;
-  final _isCreating = false.obs;
-  final _isUpdating = false.obs;
-  final _isDeleting = false.obs;
-  final _searchQuery = ''.obs;
-  final _selectedRole = Rxn<Role>();
-  final _currentPage = 1.obs;
-  final _itemsPerPage = 10.obs;
+  final RxList<Role> roles = <Role>[].obs;
+  final RxBool isLoading = false.obs;
+  final RxBool isLoadingMore = false.obs;
+  final RxString error = ''.obs;
+  final RxString searchQuery = ''.obs;
 
-  // Text controllers
-  final searchController = TextEditingController();
-  final nameController = TextEditingController();
-  final descriptionController = TextEditingController();
+  // Pagination variables
+  final RxInt currentPage = 1.obs;
+  final RxInt itemsPerPage = 10.obs;
+  final RxInt totalItems = 0.obs;
+  final RxInt totalPages = 0.obs;
+  final RxBool hasNextPage = false.obs;
+  final RxBool hasPreviousPage = false.obs;
 
-  // Getters
-  List<Role> get roles => _roles;
-  List<Role> get filteredRoles => _filteredRoles;
-  List<Permission> get availablePermissions => _availablePermissions;
-  bool get isLoading => _isLoading.value;
-  bool get isCreating => _isCreating.value;
-  bool get isUpdating => _isUpdating.value;
-  bool get isDeleting => _isDeleting.value;
-  String get searchQuery => _searchQuery.value;
-  Role? get selectedRole => _selectedRole.value;
-  int get currentPage => _currentPage.value;
-  int get itemsPerPage => _itemsPerPage.value;
+  // Available page sizes
+  final List<int> availablePageSizes = [5, 10, 20, 50, 100];
 
-  // Computed properties
-  int get totalPages => (_filteredRoles.length / _itemsPerPage.value).ceil();
-  List<Role> get paginatedRoles {
-    final startIndex = (_currentPage.value - 1) * _itemsPerPage.value;
-    final endIndex = startIndex + _itemsPerPage.value;
-    return _filteredRoles.sublist(
-      startIndex,
-      endIndex > _filteredRoles.length ? _filteredRoles.length : endIndex,
-    );
-  }
+  // Text controller untuk search
+  final TextEditingController searchController = TextEditingController();
+
+  // Timer untuk debounce search
+  Timer? _debounceTimer;
 
   @override
   void onInit() {
     super.onInit();
     loadRoles();
-    loadAvailablePermissions();
 
-    // Listen to search query changes
-    searchController.addListener(() {
-      _searchQuery.value = searchController.text;
-      filterRoles();
-    });
+    // Setup search listener dengan debounce
+    searchController.addListener(_onSearchChanged);
   }
 
   @override
   void onClose() {
     searchController.dispose();
-    nameController.dispose();
-    descriptionController.dispose();
+    _debounceTimer?.cancel();
     super.onClose();
   }
 
-  // Load all roles
-  Future<void> loadRoles({String? storeId}) async {
-    try {
-      _isLoading.value = true;
-
-      final roles = await _roleService.getRoles(storeId: storeId);
-      _roles.value = roles;
-      filterRoles();
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to load roles: ${e.toString()}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  // Load available permissions
-  Future<void> loadAvailablePermissions({String? storeId}) async {
-    try {
-      final permissions = await _roleService.getPermissions(storeId: storeId);
-      _availablePermissions.value = permissions;
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to load permissions: ${e.toString()}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  // Filter roles based on search query
-  void filterRoles() {
-    if (_searchQuery.value.isEmpty) {
-      _filteredRoles.value = _roles;
-    } else {
-      _filteredRoles.value = _roles.where((role) {
-        return role.name
-                .toLowerCase()
-                .contains(_searchQuery.value.toLowerCase()) ||
-            role.description
-                .toLowerCase()
-                .contains(_searchQuery.value.toLowerCase());
-      }).toList();
-    }
-
-    // Reset to first page when filtering
-    _currentPage.value = 1;
-  }
-
-  // Create new role
-  Future<void> createRole(Map<String, dynamic> roleData,
-      {String? storeId}) async {
-    try {
-      _isCreating.value = true;
-
-      final newRole = await _roleService.createRole(roleData, storeId: storeId);
-      _roles.add(newRole);
-      filterRoles();
-
-      Get.snackbar(
-        'Success',
-        'Role created successfully',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to create role: ${e.toString()}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      _isCreating.value = false;
-    }
-  }
-
-  // Update role
-  Future<void> updateRole(String roleId, Map<String, dynamic> roleData,
-      {String? storeId}) async {
-    try {
-      _isUpdating.value = true;
-
-      final updatedRole =
-          await _roleService.updateRole(roleId, roleData, storeId: storeId);
-
-      final index = _roles.indexWhere((role) => role.id == roleId);
-      if (index != -1) {
-        _roles[index] = updatedRole;
-        filterRoles();
+  void _onSearchChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (searchQuery.value != searchController.text) {
+        searchQuery.value = searchController.text;
+        onSearchChanged(searchController.text);
       }
+    });
+  }
 
-      Get.snackbar(
-        'Success',
-        'Role updated successfully',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+  /// Load roles dengan pagination
+  Future<void> loadRoles({bool showLoading = true}) async {
+    try {
+      if (showLoading) {
+        isLoading.value = true;
+      }
+      error.value = '';
+
+      final response = await _roleService.getRoles(
+        page: currentPage.value,
+        limit: itemsPerPage.value,
+        search: searchQuery.value.isEmpty ? null : searchQuery.value,
       );
+
+      if (response.success) {
+        roles.value = response.data;
+        totalItems.value = response.metadata.total;
+        totalPages.value = response.metadata.totalPages;
+
+        // Update pagination status
+        _updatePaginationStatus();
+      } else {
+        error.value = response.message;
+      }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to update role: ${e.toString()}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      error.value = 'Terjadi kesalahan saat memuat data role: $e';
+      roles.clear();
     } finally {
-      _isUpdating.value = false;
+      isLoading.value = false;
+      isLoadingMore.value = false;
     }
   }
 
-  // Delete role
-  Future<void> deleteRole(String roleId, {String? storeId}) async {
-    try {
-      _isDeleting.value = true;
+  /// Refresh data
+  Future<void> refreshRoles() async {
+    currentPage.value = 1;
+    await loadRoles();
+  }
 
-      await _roleService.deleteRole(roleId, storeId: storeId);
+  /// Search roles
+  void onSearchChanged(String query) {
+    searchQuery.value = query;
+    currentPage.value = 1;
+    loadRoles();
+  }
 
-      _roles.removeWhere((role) => role.id == roleId);
-      filterRoles();
+  /// Clear search
+  void clearSearch() {
+    searchController.clear();
+    searchQuery.value = '';
+    currentPage.value = 1;
+    loadRoles();
+  }
 
-      Get.snackbar(
-        'Success',
-        'Role deleted successfully',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to delete role: ${e.toString()}',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      _isDeleting.value = false;
+  /// Change page size
+  void onPageSizeChanged(int newSize) {
+    if (itemsPerPage.value != newSize) {
+      itemsPerPage.value = newSize;
+      currentPage.value = 1;
+      loadRoles();
     }
+  }
+
+  /// Go to previous page
+  void onPreviousPage() {
+    if (hasPreviousPage.value && currentPage.value > 1) {
+      currentPage.value--;
+      loadRoles();
+    }
+  }
+
+  /// Go to next page
+  void onNextPage() {
+    if (hasNextPage.value && currentPage.value < totalPages.value) {
+      currentPage.value++;
+      loadRoles();
+    }
+  }
+
+  /// Go to specific page
+  void onPageSelected(int page) {
+    if (page != currentPage.value && page >= 1 && page <= totalPages.value) {
+      currentPage.value = page;
+      loadRoles();
+    }
+  }
+
+  /// Update pagination status
+  void _updatePaginationStatus() {
+    hasPreviousPage.value = currentPage.value > 1;
+    hasNextPage.value = currentPage.value < totalPages.value;
+  }
+
+  /// Get page numbers untuk pagination widget
+  List<int> get pageNumbers {
+    List<int> pages = [];
+
+    if (totalPages.value <= 7) {
+      // Jika total halaman <= 7, tampilkan semua
+      for (int i = 1; i <= totalPages.value; i++) {
+        pages.add(i);
+      }
+    } else {
+      // Logic untuk pagination dengan ellipsis
+      if (currentPage.value <= 4) {
+        // Halaman awal
+        pages = [1, 2, 3, 4, 5];
+      } else if (currentPage.value >= totalPages.value - 3) {
+        // Halaman akhir
+        for (int i = totalPages.value - 4; i <= totalPages.value; i++) {
+          pages.add(i);
+        }
+      } else {
+        // Halaman tengah
+        for (int i = currentPage.value - 2; i <= currentPage.value + 2; i++) {
+          pages.add(i);
+        }
+      }
+    }
+
+    return pages;
+  }
+
+  /// Get start index untuk display
+  int get startIndex {
+    if (totalItems.value == 0) return 0;
+    return ((currentPage.value - 1) * itemsPerPage.value) + 1;
+  }
+
+  /// Get end index untuk display
+  int get endIndex {
+    final end = currentPage.value * itemsPerPage.value;
+    return end > totalItems.value ? totalItems.value : end;
+  }
+
+  /// Get role by ID
+  Future<Role?> getRoleById(String roleId) async {
+    try {
+      return await _roleService.getRoleById(roleId);
+    } catch (e) {
+      error.value = 'Terjadi kesalahan saat memuat detail role: $e';
+      return null;
+    }
+  }
+
+  /// Show success message
+  void showSuccessMessage(String message) {
+    Get.snackbar(
+      'Berhasil',
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  /// Show error message
+  void showErrorMessage(String message) {
+    Get.snackbar(
+      'Error',
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 3),
+    );
   }
 }
