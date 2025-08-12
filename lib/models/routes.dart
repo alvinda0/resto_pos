@@ -16,6 +16,7 @@ import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
+import 'package:pos/screens/transaction/transaction_screen.dart';
 
 class AppRoutes {
   // Route Names - Dikelompokkan untuk clarity
@@ -156,8 +157,7 @@ class AppRoutes {
       // Report Routes (Laporan)
       GetPage(
         name: report,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Laporan Transaksi'), report),
+        page: () => _wrapWithMainLayout(const TransactionScreen(), report),
       ),
       GetPage(
         name: wallet,
