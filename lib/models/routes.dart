@@ -3,14 +3,16 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/sidebar.dart';
+import 'package:pos/screens/inventory/inventory_screen.dart';
 import 'package:pos/screens/kitchen/kitchen_screen.dart';
+import 'package:pos/screens/product/product_screen.dart';
+import 'package:pos/screens/recipe/recipe_screen.dart';
 import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/dashboard/order_screen.dart';
-import 'package:pos/screens/menu/products_screen.dart';
-import 'package:pos/screens/menu/product_list_screen.dart';
+import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 import 'package:pos/screens/akun/akun_role_users_screen.dart';
 
@@ -30,39 +32,53 @@ class AppRoutes {
   // Dashboard Routes
   static const String dashboard = '/dashboard';
   static const String tables = '/tables';
-  static const String customers = '/customers';
-  static const String promo = '/promo';
-  static const String sales = '/sales';
-  static const String settings = '/settings';
 
-  // Menu Routes
-  static const String products = '/products';
-  static const String productList = '/product-list';
-  static const String ingredients = '/ingredients';
+  // Product and Material Routes (Produk dan Bahan)
+  static const String product = '/product';
+  static const String categories = '/categories';
+  static const String material = '/material';
+  static const String recipe = '/recipe';
 
-  // Kitchen Routes
+  // Other Main Routes
+  static const String promos = '/promos';
+  static const String orders = '/orders';
   static const String kitchen = '/kitchen';
 
-  // Account Routes
+  // Account and Role Routes (Akun dan Role)
+  static const String manageAccount = '/manage-account';
   static const String account = '/account';
-  static const String accountRoleUsers = '/account/role-users';
+
+  // Report Routes (Laporan)
+  static const String report = '/report';
+  static const String wallet = '/wallet';
+
+  // New Standalone Routes
+  static const String assets = '/assets';
+  static const String income = '/income';
+  static const String disbursement = '/disbursement';
+  static const String password = '/password';
+  static const String customers = '/customers';
 
   // Referral Routes
   static const String referral = '/referral';
-  static const String referralManagement = '/referral/management';
-  static const String referralWithdrawal = '/referral/withdrawal';
+  static const String withdraw = '/withdraw';
 
-  // Points Routes
-  static const String points = '/points';
-  static const String pointsGifts = '/points/gifts';
-  static const String pointsHistory = '/points/history';
+  // Points Routes (Poin)
+  static const String pointsRewards = '/points/rewards';
+  static const String pointsRedemptionsHistory = '/points/redemptions-history';
   static const String pointsConfiguration = '/points/configuration';
 
-  // Settings Routes
-  static const String theme = '/settings/theme';
-  static const String taxConfiguration = '/settings/tax';
-  static const String qrisConfiguration = '/settings/qris';
-  static const String logs = '/settings/logs';
+  // Settings Routes (Pengaturan)
+  static const String settingsThemes = '/settings/themes';
+  static const String settingsTax = '/settings/tax';
+  static const String settingsCredentials = '/settings/credentials';
+  static const String settingsLogsViewer = '/settings/logs-viewer';
+
+  // Legacy routes (for backward compatibility)
+  static const String products = '/products'; // maps to /product
+  static const String ingredients = '/ingredients'; // maps to /material
+  static const String sales = '/sales'; // maps to /orders
+  static const String promo = '/promo'; // maps to /promos
 
   // Helper method untuk wrap screen dengan MainLayout
   static Widget _wrapWithMainLayout(Widget child, [String? routeName]) {
@@ -94,115 +110,168 @@ class AppRoutes {
       GetPage(
           name: tables,
           page: () => _wrapWithMainLayout(const TableScreen(), tables)),
-      GetPage(
-          name: customers,
-          page: () => _wrapWithMainLayout(const CustomersScreen(), customers)),
-      GetPage(
-          name: promo,
-          page: () => _wrapWithMainLayout(const PromoScreen(), promo)),
-      GetPage(
-          name: sales,
-          page: () => _wrapWithMainLayout(const OrderScreen(), sales)),
 
-      // Product List Route
+      // Product and Material Routes (Produk dan Bahan)
       GetPage(
-        name: productList,
-        page: () => _wrapWithMainLayout(const ProductListScreen(), productList),
-        transition: Transition.rightToLeft,
+          name: product,
+          page: () => _wrapWithMainLayout(ProductManagementScreen(), product)),
+      GetPage(
+        name: categories,
+        page: () =>
+            _wrapWithMainLayout(const CategoryManagementScreen(), categories),
+      ),
+      GetPage(
+        name: material,
+        page: () => _wrapWithMainLayout(const InventoryScreen(), material),
+      ),
+      GetPage(
+        name: recipe,
+        page: () => _wrapWithMainLayout(const RecipeManagementScreen(), recipe),
       ),
 
-      // Menu Routes
+      // Other Main Routes
       GetPage(
-          name: products,
-          page: () => _wrapWithMainLayout(const ProductScreen(), products)),
+          name: promos,
+          page: () => _wrapWithMainLayout(const PromoScreen(), promos)),
       GetPage(
-        name: ingredients,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Bahan'), ingredients),
-      ),
-
-      // Kitchen Routes
+          name: orders,
+          page: () => _wrapWithMainLayout(const OrderScreen(), orders)),
       GetPage(
         name: kitchen,
         page: () => _wrapWithMainLayout(const KitchenScreen(), kitchen),
       ),
 
-      // Account Routes
+      // Account and Role Routes (Akun dan Role)
+      GetPage(
+        name: manageAccount,
+        page: () =>
+            _wrapWithMainLayout(const AkunRoleUsersScreen(), manageAccount),
+        transition: Transition.rightToLeft,
+      ),
       GetPage(
         name: account,
         page: () => _wrapWithMainLayout(
             const PlaceholderScreen(title: 'Akun'), account),
       ),
+
+      // Report Routes (Laporan)
       GetPage(
-        name: accountRoleUsers,
-        page: () =>
-            _wrapWithMainLayout(const AkunRoleUsersScreen(), accountRoleUsers),
-        transition: Transition.rightToLeft,
+        name: report,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Laporan Transaksi'), report),
       ),
+      GetPage(
+        name: wallet,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Dompet'), wallet),
+      ),
+
+      // New Standalone Routes
+      GetPage(
+        name: assets,
+        page: () =>
+            _wrapWithMainLayout(const PlaceholderScreen(title: 'Aset'), assets),
+      ),
+      GetPage(
+        name: income,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Pendapatan'), income),
+      ),
+      GetPage(
+        name: disbursement,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Pencairan'), disbursement),
+      ),
+      GetPage(
+        name: password,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Ganti Password'), password),
+      ),
+      GetPage(
+          name: customers,
+          page: () => _wrapWithMainLayout(const CustomersScreen(), customers)),
 
       // Referral Routes
       GetPage(
         name: referral,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Referral'), referral),
+            const PlaceholderScreen(title: 'Kelola Referral'), referral),
       ),
       GetPage(
-        name: referralManagement,
+        name: withdraw,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Kelola Referral'),
-            referralManagement),
-      ),
-      GetPage(
-        name: referralWithdrawal,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Pencairan'), referralWithdrawal),
+            const PlaceholderScreen(title: 'Pencairan Referral'), withdraw),
       ),
 
-      // Points Routes
+      // Points Routes (Poin)
       GetPage(
-        name: points,
+        name: pointsRewards,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Points'), points),
+            const PlaceholderScreen(title: 'Hadiah'), pointsRewards),
       ),
       GetPage(
-        name: pointsGifts,
+        name: pointsRedemptionsHistory,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Hadiah'), pointsGifts),
-      ),
-      GetPage(
-        name: pointsHistory,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Riwayat Penukaran'), pointsHistory),
+            const PlaceholderScreen(title: 'Riwayat Penukaran'),
+            pointsRedemptionsHistory),
       ),
       GetPage(
         name: pointsConfiguration,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Konfigurasi Point'),
+            const PlaceholderScreen(title: 'Konfigurasi Poin'),
             pointsConfiguration),
       ),
 
-      // Settings Sub-routes
+      // Settings Routes (Pengaturan)
       GetPage(
-        name: theme,
-        page: () =>
-            _wrapWithMainLayout(const PlaceholderScreen(title: 'Tema'), theme),
-      ),
-      GetPage(
-        name: taxConfiguration,
+        name: settingsThemes,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Konfigurasi Pajak'),
-            taxConfiguration),
+            const PlaceholderScreen(title: 'Tema'), settingsThemes),
       ),
       GetPage(
-        name: qrisConfiguration,
+        name: settingsTax,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Konfigurasi Pajak'), settingsTax),
+      ),
+      GetPage(
+        name: settingsCredentials,
         page: () => _wrapWithMainLayout(
             const PlaceholderScreen(title: 'Konfigurasi QRIS'),
-            qrisConfiguration),
+            settingsCredentials),
       ),
       GetPage(
-        name: logs,
+        name: settingsLogsViewer,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Logs'), settingsLogsViewer),
+      ),
+
+      // Legacy Routes (for backward compatibility)
+      GetPage(
+        name: products,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Logs'), product),
+      ),
+      GetPage(
+        name: ingredients,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Logs'), material),
+      ),
+      GetPage(
+        name: sales,
         page: () =>
-            _wrapWithMainLayout(const PlaceholderScreen(title: 'Logs'), logs),
+            _wrapWithMainLayout(const PlaceholderScreen(title: 'Logs'), orders),
+      ),
+      GetPage(
+        name: promo,
+        page: () =>
+            _wrapWithMainLayout(const PlaceholderScreen(title: 'Logs'), promos),
+      ),
+
+      // Product List Route (existing functionality)
+      GetPage(
+        name: '/product',
+        page: () => _wrapWithMainLayout(ProductManagementScreen(), '/product'),
+        transition: Transition.rightToLeft,
       ),
     ];
   }
@@ -218,37 +287,62 @@ class AppRoutes {
   static void toHome() => Get.offAllNamed(home);
   static void toDashboard() => Get.toNamed(dashboard);
   static void toTables() => Get.toNamed(tables);
-  static void toCustomers() => Get.toNamed(customers);
-  static void toPromo() => Get.toNamed(promo);
-  static void toSales() => Get.toNamed(sales);
-  static void toSettings() => Get.toNamed(settings);
-  static void toProducts() => Get.toNamed(products);
-  static void toProductList(dynamic category) =>
-      Get.toNamed(productList, arguments: category);
-  static void toIngredients() => Get.toNamed(ingredients);
+
+  // Product and Material navigation helpers (Produk dan Bahan)
+  static void toProduct() => Get.toNamed(product);
+  static void toCategories() => Get.toNamed(categories);
+  static void toMaterial() => Get.toNamed(material);
+  static void toRecipe() => Get.toNamed(recipe);
+
+  // Other main navigation helpers
+  static void toPromos() => Get.toNamed(promos);
+  static void toOrders() => Get.toNamed(orders);
   static void toKitchen() => Get.toNamed(kitchen);
+
+  // Account and Role navigation helpers (Akun dan Role)
+  static void toManageAccount() => Get.toNamed(manageAccount);
   static void toAccount() => Get.toNamed(account);
 
-  // Method baru untuk navigasi ke screen akun role users
-  static void toAccountRoleUsers(dynamic role) =>
-      Get.toNamed(accountRoleUsers, arguments: role);
+  // Report navigation helpers (Laporan)
+  static void toReport() => Get.toNamed(report);
+  static void toWallet() => Get.toNamed(wallet);
+
+  // New standalone navigation helpers
+  static void toAssets() => Get.toNamed(assets);
+  static void toIncome() => Get.toNamed(income);
+  static void toDisbursement() => Get.toNamed(disbursement);
+  static void toPassword() => Get.toNamed(password);
+  static void toCustomers() => Get.toNamed(customers);
 
   // Referral navigation helpers
   static void toReferral() => Get.toNamed(referral);
-  static void toReferralManagement() => Get.toNamed(referralManagement);
-  static void toReferralWithdrawal() => Get.toNamed(referralWithdrawal);
+  static void toWithdraw() => Get.toNamed(withdraw);
 
-  // Points navigation helpers
-  static void toPoints() => Get.toNamed(points);
-  static void toPointsGifts() => Get.toNamed(pointsGifts);
-  static void toPointsHistory() => Get.toNamed(pointsHistory);
+  // Points navigation helpers (Poin)
+  static void toPointsRewards() => Get.toNamed(pointsRewards);
+  static void toPointsRedemptionsHistory() =>
+      Get.toNamed(pointsRedemptionsHistory);
   static void toPointsConfiguration() => Get.toNamed(pointsConfiguration);
 
-  // Settings navigation helpers
-  static void toTheme() => Get.toNamed(theme);
-  static void toTaxConfiguration() => Get.toNamed(taxConfiguration);
-  static void toQrisConfiguration() => Get.toNamed(qrisConfiguration);
-  static void toLogs() => Get.toNamed(logs);
+  // Settings navigation helpers (Pengaturan)
+  static void toSettingsThemes() => Get.toNamed(settingsThemes);
+  static void toSettingsTax() => Get.toNamed(settingsTax);
+  static void toSettingsCredentials() => Get.toNamed(settingsCredentials);
+  static void toSettingsLogsViewer() => Get.toNamed(settingsLogsViewer);
+
+  // Legacy navigation helpers (for backward compatibility)
+  static void toProducts() => Get.toNamed(product); // Redirect to new route
+  static void toIngredients() => Get.toNamed(material); // Redirect to new route
+  static void toSales() => Get.toNamed(orders); // Redirect to new route
+  static void toPromo() => Get.toNamed(promos); // Redirect to new route
+
+  // Product List navigation (existing functionality)
+  static void toProductList(dynamic category) =>
+      Get.toNamed('/product-list', arguments: category);
+
+  // Method untuk navigasi ke screen akun role users dengan arguments
+  static void toAccountRoleUsers(dynamic role) =>
+      Get.toNamed(manageAccount, arguments: role);
 }
 
 // Placeholder Screen untuk screens yang belum dibuat
@@ -384,7 +478,7 @@ class NotFoundScreen extends StatelessWidget {
                 const SizedBox(height: 32),
 
                 ElevatedButton.icon(
-                  onPressed: () => Get.offAllNamed(AppRoutes.home),
+                  onPressed: () => Get.offAllNamed(AppRoutes.dashboard),
                   icon: const Icon(LucideIcons.home, size: 18),
                   label: const Text('Kembali ke Beranda'),
                   style: ElevatedButton.styleFrom(

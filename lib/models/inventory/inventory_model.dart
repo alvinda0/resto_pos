@@ -1,12 +1,18 @@
-// models/inventory/inventory_model.dart
+// models/inventory_model.dart
 class InventoryModel {
   final String id;
   final String storeId;
   final String name;
   final String sku;
-  final double quantity;
+  final int quantity;
   final String unit;
-  final double minimumStock;
+  final double price;
+  final int minimumStock;
+  final bool isAvailable;
+  final String vendorName;
+  final String vendorPaymentStatus;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   InventoryModel({
     required this.id,
@@ -15,7 +21,13 @@ class InventoryModel {
     required this.sku,
     required this.quantity,
     required this.unit,
+    required this.price,
     required this.minimumStock,
+    required this.isAvailable,
+    required this.vendorName,
+    required this.vendorPaymentStatus,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory InventoryModel.fromJson(Map<String, dynamic> json) {
@@ -24,10 +36,33 @@ class InventoryModel {
       storeId: json['store_id'] ?? '',
       name: json['name'] ?? '',
       sku: json['sku'] ?? '',
-      quantity: (json['quantity'] ?? 0).toDouble(),
+      quantity: _parseToInt(json['quantity']),
       unit: json['unit'] ?? '',
-      minimumStock: (json['minimum_stock'] ?? 0).toDouble(),
+      price: _parseToDouble(json['price']),
+      minimumStock: _parseToInt(json['minimum_stock']),
+      isAvailable: json['is_available'] ?? false,
+      vendorName: json['vendor_name'] ?? '',
+      vendorPaymentStatus: json['vendor_payment_status'] ?? 'UNPAID',
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
     );
+  }
+
+  // Helper methods for safe parsing
+  static int _parseToInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static double _parseToDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {
@@ -38,162 +73,58 @@ class InventoryModel {
       'sku': sku,
       'quantity': quantity,
       'unit': unit,
+      'price': price,
       'minimum_stock': minimumStock,
+      'is_available': isAvailable,
+      'vendor_name': vendorName,
+      'vendor_payment_status': vendorPaymentStatus,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
-  // Helper method to check if stock is low
+  // Helper methods
+  String get formattedPrice {
+    if (price >= 1000000) {
+      return 'Rp ${(price / 1000000).toStringAsFixed(1)}M';
+    } else if (price >= 1000) {
+      return 'Rp ${(price / 1000).toStringAsFixed(0)}K';
+    } else {
+      return 'Rp ${price.toStringAsFixed(0)}';
+    }
+  }
+
+  String get stockDisplay => '$quantity $unit';
+  String get minimumStockDisplay => '$minimumStock $unit';
+
   bool get isLowStock => quantity <= minimumStock;
 
-  // Helper method to get status
-  String get status => isLowStock ? 'MENIPIS' : 'CUKUP';
-
-  // Helper method to get formatted quantity with unit
-  String get formattedQuantity => '${quantity.toInt()} $unit';
-
-  // Helper method to get formatted minimum stock with unit
-  String get formattedMinimumStock => '${minimumStock.toInt()} $unit';
-
-  InventoryModel copyWith({
-    String? id,
-    String? storeId,
-    String? name,
-    String? sku,
-    double? quantity,
-    String? unit,
-    double? minimumStock,
-  }) {
-    return InventoryModel(
-      id: id ?? this.id,
-      storeId: storeId ?? this.storeId,
-      name: name ?? this.name,
-      sku: sku ?? this.sku,
-      quantity: quantity ?? this.quantity,
-      unit: unit ?? this.unit,
-      minimumStock: minimumStock ?? this.minimumStock,
-    );
-  }
-}
-
-// Request model for creating inventory
-class CreateInventoryRequest {
-  final String name;
-  final double quantity;
-  final String unit;
-  final double minimumStock;
-
-  CreateInventoryRequest({
-    required this.name,
-    required this.quantity,
-    required this.unit,
-    required this.minimumStock,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'quantity': quantity,
-      'unit': unit,
-      'minimum_stock': minimumStock,
-    };
-  }
-}
-
-// Request model for updating inventory
-class UpdateInventoryRequest {
-  final String name;
-  final double quantity;
-  final String unit;
-  final double minimumStock;
-
-  UpdateInventoryRequest({
-    required this.name,
-    required this.quantity,
-    required this.unit,
-    required this.minimumStock,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'quantity': quantity,
-      'unit': unit,
-      'minimum_stock': minimumStock,
-    };
-  }
-}
-
-// Pagination metadata model
-class PaginationMetadata {
-  final int page;
-  final int limit;
-  final int total;
-  final int totalPages;
-
-  PaginationMetadata({
-    required this.page,
-    required this.limit,
-    required this.total,
-    required this.totalPages,
-  });
-
-  factory PaginationMetadata.fromJson(Map<String, dynamic> json) {
-    return PaginationMetadata(
-      page: json['page'] ?? 1,
-      limit: json['limit'] ?? 10,
-      total: json['total'] ?? 0,
-      totalPages: json['total_pages'] ?? 0,
-    );
+  String get statusDisplay {
+    if (!isAvailable) return 'TIDAK AKTIF';
+    if (isLowStock) return 'STOK HABIS';
+    return 'CUKUP';
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'page': page,
-      'limit': limit,
-      'total': total,
-      'total_pages': totalPages,
-    };
-  }
-
-  // Helper methods for pagination logic
-  bool get hasPreviousPage => page > 1;
-  bool get hasNextPage => page < totalPages;
-
-  int get startIndex => total == 0 ? 0 : ((page - 1) * limit) + 1;
-  int get endIndex {
-    if (total == 0) return 0;
-    final end = page * limit;
-    return end > total ? total : end;
-  }
-
-  // Generate page numbers for pagination UI
-  List<int> getPageNumbers({int maxVisible = 5}) {
-    if (totalPages <= maxVisible) {
-      return List.generate(totalPages, (index) => index + 1);
+  String get paymentStatusDisplay {
+    switch (vendorPaymentStatus.toUpperCase()) {
+      case 'PAID':
+        return 'DIKETAHUI';
+      case 'UNPAID':
+      default:
+        return 'TIDAK DIKETAHUI';
     }
-
-    List<int> pages = [];
-    int start = (page - maxVisible ~/ 2).clamp(1, totalPages - maxVisible + 1);
-    int end = (start + maxVisible - 1).clamp(1, totalPages);
-
-    for (int i = start; i <= end; i++) {
-      pages.add(i);
-    }
-
-    return pages;
   }
 }
 
-// Response model for inventory list with pagination
-class InventoryListResponse {
+class InventoryResponse {
   final bool success;
   final String message;
   final int status;
   final String timestamp;
   final List<InventoryModel> data;
-  final PaginationMetadata metadata;
+  final InventoryMetadata metadata;
 
-  InventoryListResponse({
+  InventoryResponse({
     required this.success,
     required this.message,
     required this.status,
@@ -202,28 +133,39 @@ class InventoryListResponse {
     required this.metadata,
   });
 
-  factory InventoryListResponse.fromJson(Map<String, dynamic> json) {
-    return InventoryListResponse(
+  factory InventoryResponse.fromJson(Map<String, dynamic> json) {
+    return InventoryResponse(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
       status: json['status'] ?? 0,
       timestamp: json['timestamp'] ?? '',
-      data: (json['data'] as List<dynamic>?)
-              ?.map((item) => InventoryModel.fromJson(item))
-              .toList() ??
-          [],
-      metadata: PaginationMetadata.fromJson(json['metadata'] ?? {}),
+      data: (json['data'] as List<dynamic>? ?? [])
+          .map((item) => InventoryModel.fromJson(item))
+          .toList(),
+      metadata: InventoryMetadata.fromJson(json['metadata'] ?? {}),
     );
   }
+}
 
-  Map<String, dynamic> toJson() {
-    return {
-      'success': success,
-      'message': message,
-      'status': status,
-      'timestamp': timestamp,
-      'data': data.map((item) => item.toJson()).toList(),
-      'metadata': metadata.toJson(),
-    };
+class InventoryMetadata {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  InventoryMetadata({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory InventoryMetadata.fromJson(Map<String, dynamic> json) {
+    return InventoryMetadata(
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 10,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 0,
+    );
   }
 }

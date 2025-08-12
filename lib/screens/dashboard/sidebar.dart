@@ -32,43 +32,66 @@ class _MainLayoutState extends State<MainLayout> {
   bool _isSidebarExpanded = false;
   bool _isMobileSidebarOpen = false;
 
+  // Add this controller to manage page content
+  Widget _currentPageWidget = Container();
+
   final List<MenuItem> _menuItems = [
     MenuItem(Icons.home, 'Beranda'),
     MenuItem(Icons.table_restaurant, 'Meja'),
-    MenuItem(Icons.category, 'Menu dan Bahan', subItems: [
-      MenuItem(Icons.category, 'Menu'),
+    MenuItem(Icons.layers, 'Produk dan Bahan', subItems: [
+      MenuItem(Icons.layers, 'Produk'),
+      MenuItem(Icons.category, 'Kategori'),
       MenuItem(Icons.kitchen, 'Bahan'),
+      MenuItem(Icons.restaurant_menu, 'Resep'),
     ]),
-    MenuItem(Icons.local_offer, 'Promo'),
+    MenuItem(Icons.percent, 'Promo'),
     MenuItem(Icons.shopping_cart, 'Pesanan'),
     MenuItem(Icons.restaurant, 'Dapur'),
-    MenuItem(Icons.person, 'Akun'),
-    MenuItem(Icons.bar_chart, 'Laporan', subItems: [
-      MenuItem(Icons.receipt_long, 'Transaksi'),
-      MenuItem(Icons.account_balance_wallet, 'Wallet'),
+    MenuItem(Icons.description, 'Akun dan Role', subItems: [
+      MenuItem(Icons.person_add, 'Role'),
+      MenuItem(Icons.person, 'Akun'),
     ]),
+    MenuItem(Icons.description, 'Laporan', subItems: [
+      MenuItem(Icons.receipt_long, 'Transaksi'),
+      MenuItem(Icons.account_balance_wallet, 'Dompet'),
+    ]),
+    MenuItem(Icons.inventory, 'Aset'),
     MenuItem(Icons.person_add, 'Referral', subItems: [
       MenuItem(Icons.person_add, 'Kelola Referral'),
       MenuItem(Icons.attach_money, 'Pencairan'),
     ]),
-    MenuItem(Icons.people, 'Customer'),
-    MenuItem(Icons.stars, 'Points', subItems: [
+    MenuItem(Icons.trending_up, 'Pendapatan'),
+    MenuItem(Icons.account_balance_wallet, 'Pencairan'),
+    MenuItem(Icons.key, 'Ganti Password'),
+    MenuItem(Icons.people, 'Pelanggan'),
+    MenuItem(Icons.card_giftcard, 'Poin', subItems: [
       MenuItem(Icons.card_giftcard, 'Hadiah'),
       MenuItem(Icons.history, 'Riwayat Penukaran'),
-      MenuItem(Icons.scale, 'Konfigurasi Point'),
+      MenuItem(Icons.tune, 'Konfigurasi Poin'),
     ]),
     MenuItem(Icons.settings, 'Pengaturan', subItems: [
       MenuItem(Icons.palette, 'Tema'),
-      MenuItem(Icons.calculate, 'Konfigurasi Pajak'),
+      MenuItem(Icons.account_balance, 'Konfigurasi Pajak'),
       MenuItem(Icons.qr_code, 'Konfigurasi QRIS'),
-      MenuItem(Icons.article, 'Logs'),
+      MenuItem(Icons.description, 'Logs'),
     ]),
   ];
 
   @override
   void initState() {
     super.initState();
+    _currentPageWidget = widget.child;
     _setInitialRoute();
+  }
+
+  @override
+  void didUpdateWidget(MainLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.child != widget.child) {
+      setState(() {
+        _currentPageWidget = widget.child;
+      });
+    }
   }
 
   void _setInitialRoute() {
@@ -82,75 +105,114 @@ class _MainLayoutState extends State<MainLayout> {
       case '/tables':
         _selectedIndex = 1;
         break;
-      case '/products':
+      case '/product':
         _selectedIndex = 2;
         _selectedSubIndex = 0;
         _expandedMenuIndex = 2;
         break;
-      case '/ingredients':
+      case '/categories':
         _selectedIndex = 2;
         _selectedSubIndex = 1;
         _expandedMenuIndex = 2;
         break;
-      case '/promo':
+      case '/material':
+        _selectedIndex = 2;
+        _selectedSubIndex = 2;
+        _expandedMenuIndex = 2;
+        break;
+      case '/recipe':
+        _selectedIndex = 2;
+        _selectedSubIndex = 3;
+        _expandedMenuIndex = 2;
+        break;
+      case '/promos':
         _selectedIndex = 3;
         break;
-      case '/sales':
+      case '/orders':
         _selectedIndex = 4;
         break;
       case '/kitchen':
         _selectedIndex = 5;
         break;
+      case '/manage-account':
+        _selectedIndex = 6;
+        _selectedSubIndex = 0;
+        _expandedMenuIndex = 6;
+        break;
       case '/account':
         _selectedIndex = 6;
+        _selectedSubIndex = 1;
+        _expandedMenuIndex = 6;
+        break;
+      case '/report':
+        _selectedIndex = 7;
+        _selectedSubIndex = 0;
+        _expandedMenuIndex = 7;
+        break;
+      case '/wallet':
+        _selectedIndex = 7;
+        _selectedSubIndex = 1;
+        _expandedMenuIndex = 7;
+        break;
+      case '/assets':
+        _selectedIndex = 8;
         break;
       case '/referral':
-        _selectedIndex = 8;
+        _selectedIndex = 9;
         _selectedSubIndex = 0;
-        _expandedMenuIndex = 8;
+        _expandedMenuIndex = 9;
         break;
-      case '/referral/withdrawal':
-        _selectedIndex = 8;
+      case '/withdraw':
+        _selectedIndex = 9;
         _selectedSubIndex = 1;
-        _expandedMenuIndex = 8;
+        _expandedMenuIndex = 9;
+        break;
+      case '/income':
+        _selectedIndex = 10;
+        break;
+      case '/disbursement':
+        _selectedIndex = 11;
+        break;
+      case '/password':
+        _selectedIndex = 12;
         break;
       case '/customers':
-        _selectedIndex = 9;
+        _selectedIndex = 13;
         break;
-      case '/points/gifts':
-        _selectedIndex = 10;
+      case '/points/rewards':
+        _selectedIndex = 14;
         _selectedSubIndex = 0;
-        _expandedMenuIndex = 10;
+        _expandedMenuIndex = 14;
         break;
-      case '/points/history':
-        _selectedIndex = 10;
+      case '/points/redemptions-history':
+        _selectedIndex = 14;
         _selectedSubIndex = 1;
-        _expandedMenuIndex = 10;
+        _expandedMenuIndex = 14;
         break;
       case '/points/configuration':
-        _selectedIndex = 10;
+        _selectedIndex = 14;
         _selectedSubIndex = 2;
-        _expandedMenuIndex = 10;
+        _expandedMenuIndex = 14;
         break;
-      case '/settings/theme':
-        _selectedIndex = 11;
+      case '/settings/themes':
+        _selectedIndex = 15;
         _selectedSubIndex = 0;
-        _expandedMenuIndex = 11;
+        _expandedMenuIndex = 15;
         break;
       case '/settings/tax':
-        _selectedIndex = 11;
+        _selectedIndex = 15;
         _selectedSubIndex = 1;
-        _expandedMenuIndex = 11;
+        _expandedMenuIndex = 15;
         break;
-      case '/settings/qris':
-        _selectedIndex = 11;
+      case '/settings/credentials':
+        _selectedIndex = 15;
         _selectedSubIndex = 2;
-        _expandedMenuIndex = 11;
+        _expandedMenuIndex = 15;
         break;
-      case '/settings/logs':
-        _selectedIndex = 11;
+      case '/settings/logs-viewer':
+        _selectedIndex = 15;
         _selectedSubIndex = 3;
-        _expandedMenuIndex = 11;
+        _expandedMenuIndex = 15;
         break;
     }
   }
@@ -188,6 +250,7 @@ class _MainLayoutState extends State<MainLayout> {
     });
   }
 
+  // Modified navigation method - menggunakan Get.toNamed() alih-alih Get.offAllNamed()
   void _navigateToPage(int index, [int? subIndex]) {
     setState(() {
       _selectedIndex = index;
@@ -203,65 +266,78 @@ class _MainLayoutState extends State<MainLayout> {
 
     if (subIndex != null) {
       switch (index) {
-        case 2: // Menu dan Bahan
+        case 2: // Produk dan Bahan
           switch (subIndex) {
             case 0:
-              routeName = '/products';
+              routeName = '/product';
               break;
             case 1:
-              routeName = '/ingredients';
+              routeName = '/categories';
+              break;
+            case 2:
+              routeName = '/material';
+              break;
+            case 3:
+              routeName = '/recipe';
               break;
           }
           break;
-        case 7: // Laporan - Note: These routes don't exist in AppRoutes yet
+        case 6: // Akun dan Role
           switch (subIndex) {
             case 0:
-              // routeName = '/reports/transactions'; // Add to AppRoutes if needed
-              Get.snackbar(
-                  'Info', 'Halaman Laporan Transaksi dalam pengembangan');
-              return;
+              routeName = '/manage-account';
+              break;
             case 1:
-              // routeName = '/reports/wallet'; // Add to AppRoutes if needed
-              Get.snackbar('Info', 'Halaman Laporan Wallet dalam pengembangan');
-              return;
+              routeName = '/account';
+              break;
           }
           break;
-        case 8: // Referral
+        case 7: // Laporan
+          switch (subIndex) {
+            case 0:
+              routeName = '/report';
+              break;
+            case 1:
+              routeName = '/wallet';
+              break;
+          }
+          break;
+        case 9: // Referral
           switch (subIndex) {
             case 0:
               routeName = '/referral';
               break;
             case 1:
-              routeName = '/referral/withdrawal';
+              routeName = '/withdraw';
               break;
           }
           break;
-        case 10: // Points
+        case 14: // Poin
           switch (subIndex) {
             case 0:
-              routeName = '/points/gifts';
+              routeName = '/points/rewards';
               break;
             case 1:
-              routeName = '/points/history';
+              routeName = '/points/redemptions-history';
               break;
             case 2:
               routeName = '/points/configuration';
               break;
           }
           break;
-        case 11: // Pengaturan
+        case 15: // Pengaturan
           switch (subIndex) {
             case 0:
-              routeName = '/settings/theme';
+              routeName = '/settings/themes';
               break;
             case 1:
               routeName = '/settings/tax';
               break;
             case 2:
-              routeName = '/settings/qris';
+              routeName = '/settings/credentials';
               break;
             case 3:
-              routeName = '/settings/logs';
+              routeName = '/settings/logs-viewer';
               break;
           }
           break;
@@ -275,26 +351,35 @@ class _MainLayoutState extends State<MainLayout> {
           routeName = '/tables';
           break;
         case 3:
-          routeName = '/promo';
+          routeName = '/promos';
           break;
         case 4:
-          routeName = '/sales';
+          routeName = '/orders';
           break;
         case 5:
           routeName = '/kitchen';
           break;
-        case 6:
-          routeName = '/account';
+        case 8:
+          routeName = '/assets';
           break;
-        case 9:
+        case 10:
+          routeName = '/income';
+          break;
+        case 11:
+          routeName = '/disbursement';
+          break;
+        case 12:
+          routeName = '/password';
+          break;
+        case 13:
           routeName = '/customers';
           break;
       }
     }
 
-    // Use GetX navigation
+    // Use Get.toNamed() instead of Get.offAllNamed() to preserve the layout
     if (routeName != Get.currentRoute) {
-      Get.offAllNamed(routeName);
+      Get.toNamed(routeName);
     }
   }
 
@@ -762,13 +847,14 @@ class _MainLayoutState extends State<MainLayout> {
                         ),
                       ),
 
-                    // Main content area
+                    // Main content area - menggunakan widget child langsung
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
                         ),
-                        child: widget.child,
+                        child:
+                            widget.child, // Langsung menggunakan widget.child
                       ),
                     ),
                   ],

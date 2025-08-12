@@ -1,490 +1,537 @@
+// screens/inventory_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/inventory/inventory_controller.dart';
 import 'package:pos/widgets/pagination_widget.dart';
 
 class InventoryScreen extends StatelessWidget {
-  const InventoryScreen({super.key});
+  const InventoryScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final InventoryController controller = Get.put(InventoryController());
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title
-            const Text(
-              'Manajemen Inventori',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 24),
+      backgroundColor: Colors.grey.shade50,
+      body: Column(
+        children: [
+          // Header
+          _buildHeader(controller),
 
-            // Search and Filter Row
-            Row(
-              children: [
-                // Search Field
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: TextField(
-                      controller: controller.searchController,
-                      onChanged: controller.updateSearchQuery,
-                      decoration: const InputDecoration(
-                        hintText: 'Cari Bahan',
-                        prefixIcon: Icon(Icons.search, color: Colors.grey),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
+          // Search and Filter Section
+          _buildSearchAndFilter(controller),
+
+          // Content
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value &&
+                  controller.inventories.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.errorMessage.isNotEmpty &&
+                  controller.inventories.isEmpty) {
+                return _buildErrorState(controller);
+              }
+
+              if (controller.inventories.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              return Column(
+                children: [
+                  // Data Table
+                  Expanded(
+                    child: _buildDataTable(controller),
                   ),
-                ),
-                const SizedBox(width: 16),
 
-                // Add Item Button
-                ElevatedButton.icon(
-                  onPressed: () => _showAddItemDialog(context, controller),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE91E63),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  // Pagination
+                  PaginationWidget(
+                    currentPage: controller.currentPage.value,
+                    totalItems: controller.totalItems.value,
+                    itemsPerPage: controller.itemsPerPage.value,
+                    availablePageSizes: controller.availablePageSizes,
+                    startIndex: controller.startIndex,
+                    endIndex: controller.endIndex,
+                    hasPreviousPage: controller.hasPreviousPage,
+                    hasNextPage: controller.hasNextPage,
+                    pageNumbers: controller.pageNumbers,
+                    onPageSizeChanged: controller.onPageSizeChanged,
+                    onPreviousPage: controller.onPreviousPage,
+                    onNextPage: controller.onNextPage,
+                    onPageSelected: controller.onPageSelected,
                   ),
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    'Tambah Bahan',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Data Table Container
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Table Header and Content
-                    Expanded(
-                      child: Obx(() {
-                        if (controller.isLoading.value) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-
-                        if (controller.inventories.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.inventory_2_outlined,
-                                  size: 64,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Tidak ada data inventori',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Mulai tambah bahan ke inventori Anda',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        return RefreshIndicator(
-                          onRefresh: controller.refreshData,
-                          child: SingleChildScrollView(
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: DataTable(
-                                columnSpacing: 30,
-                                horizontalMargin: 20,
-                                headingRowHeight: 60,
-                                dataRowHeight: 70,
-                                headingTextStyle: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                  fontSize: 14,
-                                ),
-                                columns: const [
-                                  DataColumn(
-                                    label: Expanded(
-                                      child: Text('NAMA'),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Expanded(
-                                      child: Text('STOK'),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Expanded(
-                                      child: Text('MIN. STOK'),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Expanded(
-                                      child: Text('STATUS'),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Expanded(
-                                      child: Text('AKSI'),
-                                    ),
-                                  ),
-                                ],
-                                rows: controller.inventories.map((item) {
-                                  return DataRow(
-                                    cells: [
-                                      // Name and SKU
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              item.name,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'SKU: ${item.sku.isNotEmpty ? item.sku : item.id}',
-                                              style: TextStyle(
-                                                color: Colors.grey[600],
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      // Stock
-                                      DataCell(
-                                        Text(
-                                          '${item.quantity.toInt()} ${item.unit}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Minimum Stock
-                                      DataCell(
-                                        Text(
-                                          '${item.minimumStock.toInt()} ${item.unit}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Status Badge
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: item.isLowStock
-                                                ? Colors.orange
-                                                : Colors.green,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            item.isLowStock
-                                                ? 'MENIPIS'
-                                                : 'CUKUP',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Action Menu
-                                      DataCell(
-                                        PopupMenuButton<String>(
-                                          icon: const Icon(Icons.more_vert),
-                                          onSelected: (value) {
-                                            switch (value) {
-                                              case 'edit':
-                                                controller
-                                                    .loadInventoryForEdit(item);
-                                                _showEditItemDialog(
-                                                    context, controller, item);
-                                                break;
-                                              case 'delete':
-                                                controller.deleteInventory(
-                                                    item.id, item.name);
-                                                break;
-                                            }
-                                          },
-                                          itemBuilder: (context) => [
-                                            const PopupMenuItem(
-                                              value: 'edit',
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.edit, size: 16),
-                                                  SizedBox(width: 8),
-                                                  Text('Edit'),
-                                                ],
-                                              ),
-                                            ),
-                                            const PopupMenuItem(
-                                              value: 'delete',
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.delete,
-                                                      size: 16,
-                                                      color: Colors.red),
-                                                  SizedBox(width: 8),
-                                                  Text('Hapus',
-                                                      style: TextStyle(
-                                                          color: Colors.red)),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-
-                    // Pagination Widget
-                    Obx(() {
-                      final paginationData = controller.paginationData;
-
-                      // Only show pagination if there's data
-                      if (controller.totalItems.value == 0) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return PaginationWidget(
-                        currentPage: paginationData['currentPage'],
-                        totalItems: paginationData['totalItems'],
-                        itemsPerPage: paginationData['itemsPerPage'],
-                        availablePageSizes:
-                            paginationData['availablePageSizes'],
-                        startIndex: paginationData['startIndex'],
-                        endIndex: paginationData['endIndex'],
-                        hasPreviousPage: paginationData['hasPreviousPage'],
-                        hasNextPage: paginationData['hasNextPage'],
-                        pageNumbers: paginationData['pageNumbers'],
-                        onPageSizeChanged: controller.changeItemsPerPage,
-                        onPreviousPage: controller.goToPreviousPage,
-                        onNextPage: controller.goToNextPage,
-                        onPageSelected: controller.goToPage,
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+                ],
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
 
-  void _showAddItemDialog(
-      BuildContext context, InventoryController controller) {
-    controller.clearForm();
-    _showItemDialog(context, controller, 'Tambah Bahan Baru', null);
-  }
-
-  void _showEditItemDialog(
-      BuildContext context, InventoryController controller, item) {
-    _showItemDialog(context, controller, 'Edit Bahan', item);
-  }
-
-  void _showItemDialog(
-    BuildContext context,
-    InventoryController controller,
-    String title,
-    dynamic item,
-  ) {
-    // Create a local unit selection variable
-    String selectedUnit = controller.unitController.text.isEmpty
-        ? controller.unitOptions.first
-        : controller.unitController.text;
-
-    // Set initial unit value
-    controller.unitController.text = selectedUnit;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(title),
-          content: SizedBox(
-            width: 400,
-            child: Form(
-              key: controller.formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Name Field
-                  TextFormField(
-                    controller: controller.nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama Bahan',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: controller.validateName,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Quantity Field
-                  TextFormField(
-                    controller: controller.quantityController,
-                    decoration: const InputDecoration(
-                      labelText: 'Jumlah Stok',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: controller.validateQuantity,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Unit Dropdown
-                  DropdownButtonFormField<String>(
-                    value: selectedUnit,
-                    decoration: const InputDecoration(
-                      labelText: 'Satuan',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: controller.unitOptions.map((unit) {
-                      return DropdownMenuItem<String>(
-                        value: unit,
-                        child: Text(unit),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          selectedUnit = value;
-                        });
-                        controller.unitController.text = value;
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Minimum Stock Field
-                  TextFormField(
-                    controller: controller.minimumStockController,
-                    decoration: const InputDecoration(
-                      labelText: 'Stok Minimum',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: controller.validateMinimumStock,
-                  ),
-                ],
+  Widget _buildHeader(InventoryController controller) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Manajemen Bahan',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              // Navigate to add inventory screen
+            },
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text('Tambah Bahan',
+                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Batal'),
-            ),
-            Obx(() => ElevatedButton(
-                  onPressed: controller.isLoading.value
-                      ? null
-                      : () async {
-                          if (item == null) {
-                            // Add new item
-                            await controller.createInventory();
-                          } else {
-                            // Update existing item
-                            await controller.updateInventory(item.id);
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE91E63),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: controller.isLoading.value
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text('Simpan'),
-                )),
-          ],
-        ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildSearchAndFilter(InventoryController controller) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      color: Colors.white,
+      child: Row(
+        children: [
+          // Search Field
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: controller.searchController,
+              onChanged: controller.onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Cari Bahan',
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: controller.clearSearch,
+                      )
+                    : const SizedBox.shrink()),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.blue.shade600),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Status Filter
+          Expanded(
+            flex: 1,
+            child: Obx(() => Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: controller.statusFilter.value,
+                      hint: const Text('Filter Status'),
+                      isExpanded: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'all', child: Text('Semua Status')),
+                        DropdownMenuItem(
+                            value: 'available', child: Text('Tersedia')),
+                        DropdownMenuItem(
+                            value: 'low_stock', child: Text('Stok Rendah')),
+                        DropdownMenuItem(
+                            value: 'out_of_stock', child: Text('Stok Habis')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          controller.onStatusFilterChanged(value);
+                        }
+                      },
+                    ),
+                  ),
+                )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataTable(InventoryController controller) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Definisi lebar kolom berdasarkan prioritas konten
+          final double availableWidth = constraints.maxWidth;
+          final double padding = 32; // Total horizontal padding
+          final double spacing = 16 * 7; // Column spacing untuk 8 kolom
+          final double workingWidth = availableWidth - padding - spacing;
+
+          // Minimum width untuk setiap kolom - nama bahan dikurangi
+          const Map<String, double> minWidths = {
+            'name': 150, // Dikurangi dari 180
+            'stock': 80,
+            'minStock': 100,
+            'price': 120,
+            'vendor': 160, // Diperbesar untuk vendor
+            'paymentStatus': 120,
+            'status': 100,
+            'actions': 80,
+          };
+
+          // Hitung total minimum width
+          final double totalMinWidth = minWidths.values.reduce((a, b) => a + b);
+          final bool needsHorizontalScroll = workingWidth < totalMinWidth;
+
+          // Alokasi lebar kolom
+          late Map<String, double> columnWidths;
+
+          if (needsHorizontalScroll) {
+            // Gunakan minimum width jika perlu scroll horizontal
+            columnWidths = Map.from(minWidths);
+          } else {
+            // Distribusi lebar berdasarkan proporsi - nama bahan dikurangi
+            final double extraSpace = workingWidth - totalMinWidth;
+            columnWidths = {
+              'name': minWidths['name']! +
+                  (extraSpace * 0.20), // Dikurangi dari 0.35
+              'stock': minWidths['stock']! + (extraSpace * 0.08),
+              'minStock': minWidths['minStock']! + (extraSpace * 0.10),
+              'price': minWidths['price']! + (extraSpace * 0.18),
+              'vendor':
+                  minWidths['vendor']! + (extraSpace * 0.25), // Diperbesar
+              'paymentStatus':
+                  minWidths['paymentStatus']! + (extraSpace * 0.12),
+              'status': minWidths['status']! + (extraSpace * 0.05),
+              'actions': minWidths['actions']! + (extraSpace * 0.02),
+            };
+          }
+
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: needsHorizontalScroll
+                  ? totalMinWidth + padding + spacing
+                  : availableWidth,
+              child: DataTable(
+                columnSpacing: 16,
+                horizontalMargin: 16,
+                headingRowHeight: 56,
+                dataRowHeight: 64,
+                headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
+                dividerThickness: 1,
+                columns: [
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['name'],
+                      child: Text('NAMA BAHAN', style: _headerTextStyle()),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['stock'],
+                      child: Text('STOK', style: _headerTextStyle()),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['minStock'],
+                      child: Text('MIN. STOK', style: _headerTextStyle()),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['price'],
+                      child: Text('HARGA/UNIT', style: _headerTextStyle()),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['vendor'],
+                      child: Text('VENDOR', style: _headerTextStyle()),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['paymentStatus'],
+                      child: Text('STATUS BAYAR', style: _headerTextStyle()),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['status'],
+                      child: Text('STATUS', style: _headerTextStyle()),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: columnWidths['actions'],
+                      child: Text('AKSI', style: _headerTextStyle()),
+                    ),
+                  ),
+                ],
+                rows: controller.inventories.map((inventory) {
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['name'],
+                          child: Text(
+                            inventory.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['stock'],
+                          child: Text(
+                            inventory.stockDisplay,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['minStock'],
+                          child: Text(
+                            inventory.minimumStockDisplay,
+                            style: const TextStyle(color: Colors.black87),
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['price'],
+                          child: Text(
+                            inventory.formattedPrice,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['vendor'],
+                          child: Text(
+                            inventory.vendorName.isEmpty
+                                ? '-'
+                                : inventory.vendorName,
+                            style: const TextStyle(color: Colors.black87),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['paymentStatus'],
+                          child: _buildStatusBadge(
+                            inventory.paymentStatusDisplay,
+                            _getPaymentStatusColor(
+                                inventory.paymentStatusDisplay),
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['status'],
+                          child: _buildStatusBadge(
+                            inventory.statusDisplay,
+                            _getInventoryStatusColor(inventory),
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: columnWidths['actions'],
+                          child: IconButton(
+                            icon:
+                                const Icon(Icons.more_vert, color: Colors.grey),
+                            onPressed: () =>
+                                controller.showInventoryActions(inventory),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Color _getPaymentStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'paid':
+      case 'lunas':
+        return Colors.green;
+      case 'pending':
+      case 'tertunda':
+        return Colors.orange;
+      case 'unpaid':
+      case 'belum bayar':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getInventoryStatusColor(dynamic inventory) {
+    if (inventory.isAvailable) {
+      return Colors.green;
+    } else {
+      return Colors.red;
+    }
+  }
+
+  Widget _buildStatusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Belum ada data bahan',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tambahkan bahan pertama Anda',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(InventoryController controller) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Terjadi kesalahan',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.red.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            controller.errorMessage.value,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: controller.refreshInventories,
+            child: const Text('Coba Lagi'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  TextStyle _headerTextStyle() {
+    return TextStyle(
+      fontWeight: FontWeight.w700,
+      fontSize: 11,
+      color: Colors.grey.shade700,
+      letterSpacing: 0.8,
     );
   }
 }
