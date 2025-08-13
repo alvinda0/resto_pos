@@ -7,6 +7,7 @@ class RecipeItem {
   final String requiredUnit;
   final double costPerUnit;
   final double totalCost;
+  final String notes; // Ensure notes is defined here
   final double hpp;
 
   RecipeItem({
@@ -18,6 +19,7 @@ class RecipeItem {
     required this.requiredUnit,
     required this.costPerUnit,
     required this.totalCost,
+    required this.notes, // Include notes in the constructor
     required this.hpp,
   });
 
@@ -31,6 +33,7 @@ class RecipeItem {
       requiredUnit: json['required_unit'] ?? '',
       costPerUnit: (json['cost_per_unit'] ?? 0).toDouble(),
       totalCost: (json['total_cost'] ?? 0).toDouble(),
+      notes: json['notes'] ?? '', // Ensure notes is included here
       hpp: (json['hpp'] ?? 0).toDouble(),
     );
   }
@@ -45,6 +48,7 @@ class RecipeItem {
       'required_unit': requiredUnit,
       'cost_per_unit': costPerUnit,
       'total_cost': totalCost,
+      'notes': notes, // Ensure notes is included here
       'hpp': hpp,
     };
   }

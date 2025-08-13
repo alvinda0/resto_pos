@@ -65,13 +65,31 @@ class CategoryService {
     }
   }
 
-  // For future implementation
-  Future<Category> createCategory(Map<String, dynamic> data,
-      {String? storeId}) async {
+  /// Creates a new category
+  ///
+  /// [name] - Category name (required)
+  /// [isActive] - Whether the category is active (default: true)
+  /// [position] - Category position/order (optional)
+  /// [storeId] - Store ID for multi-store setup (optional)
+  Future<Category> createCategory({
+    required String name,
+    bool isActive = true,
+    int? position,
+    String? storeId,
+  }) async {
     try {
+      final Map<String, dynamic> requestData = {
+        'name': name,
+        'is_active': isActive,
+      };
+
+      if (position != null) {
+        requestData['position'] = position;
+      }
+
       final response = await _httpClient.post(
         '/categories',
-        data,
+        requestData,
         requireAuth: true,
         storeId: storeId,
       );
@@ -87,13 +105,42 @@ class CategoryService {
     }
   }
 
-  // For future implementation
-  Future<Category> updateCategory(String id, Map<String, dynamic> data,
-      {String? storeId}) async {
+  /// Updates an existing category
+  ///
+  /// [id] - Category ID to update
+  /// [name] - New category name (optional)
+  /// [isActive] - Whether the category is active (optional)
+  /// [position] - New category position/order (optional)
+  /// [storeId] - Store ID for multi-store setup (optional)
+  Future<Category> updateCategory(
+    String id, {
+    String? name,
+    bool? isActive,
+    int? position,
+    String? storeId,
+  }) async {
     try {
+      final Map<String, dynamic> requestData = {};
+
+      if (name != null) {
+        requestData['name'] = name;
+      }
+
+      if (isActive != null) {
+        requestData['is_active'] = isActive;
+      }
+
+      if (position != null) {
+        requestData['position'] = position;
+      }
+
+      if (requestData.isEmpty) {
+        throw Exception('At least one field must be provided for update');
+      }
+
       final response = await _httpClient.put(
         '/categories/$id',
-        data,
+        requestData,
         requireAuth: true,
         storeId: storeId,
       );
@@ -109,7 +156,12 @@ class CategoryService {
     }
   }
 
-  // For future implementation
+  /// Deletes a category by ID
+  ///
+  /// [id] - Category ID to delete
+  /// [storeId] - Store ID for multi-store setup (optional)
+  ///
+  /// Returns true if deletion was successful
   Future<bool> deleteCategory(String id, {String? storeId}) async {
     try {
       final response = await _httpClient.delete(
@@ -122,5 +174,30 @@ class CategoryService {
     } catch (e) {
       throw Exception('Error deleting category: $e');
     }
+  }
+
+  // Legacy method for backward compatibility
+  @deprecated
+  Future<Category> createCategoryLegacy(Map<String, dynamic> data,
+      {String? storeId}) async {
+    return createCategory(
+      name: data['name'],
+      isActive: data['is_active'] ?? true,
+      position: data['position'],
+      storeId: storeId,
+    );
+  }
+
+  // Legacy method for backward compatibility
+  @deprecated
+  Future<Category> updateCategoryLegacy(String id, Map<String, dynamic> data,
+      {String? storeId}) async {
+    return updateCategory(
+      id,
+      name: data['name'],
+      isActive: data['is_active'],
+      position: data['position'],
+      storeId: storeId,
+    );
   }
 }
