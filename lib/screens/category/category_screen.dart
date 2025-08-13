@@ -127,9 +127,7 @@ class CategoryManagementScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Implement add category
-            },
+            onPressed: () => _showCreateCategoryDialog(controller),
             icon: const Icon(Icons.add, color: Colors.white, size: 20),
             label: const Text(
               'Tambah Kategori',
@@ -452,11 +450,7 @@ class CategoryManagementScreen extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              controller.getProductCount(category) == 1
-                                  ? '${controller.getProductCount(category)}'
-                                  : controller
-                                      .getProductCount(category)
-                                      .toString(),
+                              controller.getProductCount(category).toString(),
                               style: TextStyle(
                                 color: controller.getProductCount(category) > 0
                                     ? Colors.green.shade700
@@ -530,13 +524,12 @@ class CategoryManagementScreen extends StatelessWidget {
                               ),
                             ],
                             onSelected: (value) {
-                              // TODO: Implement edit and delete actions
                               switch (value) {
                                 case 'edit':
-                                  // Navigate to edit screen
+                                  _showEditCategoryDialog(controller, category);
                                   break;
                                 case 'delete':
-                                  // Show delete confirmation dialog
+                                  _showDeleteConfirmation(controller, category);
                                   break;
                               }
                             },
@@ -550,5 +543,465 @@ class CategoryManagementScreen extends StatelessWidget {
             ),
           ),
         ));
+  }
+
+  // Create Category Dialog
+  void _showCreateCategoryDialog(CategoryController controller) {
+    controller.prepareCreateForm();
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Tambah Kategori Baru',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Name Field
+              _buildFormField(
+                label: 'Nama Kategori *',
+                controller: controller.nameController,
+                hintText: 'Masukkan nama kategori',
+              ),
+
+              const SizedBox(height: 16),
+
+              // Position Field
+              _buildFormField(
+                label: 'Posisi (Opsional)',
+                controller: controller.positionController,
+                hintText: 'Masukkan urutan posisi',
+                keyboardType: TextInputType.number,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Status Toggle
+              Row(
+                children: [
+                  const Text(
+                    'Status',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Obx(() => Switch(
+                        value: controller.isActiveForm.value,
+                        onChanged: (value) =>
+                            controller.isActiveForm.value = value,
+                        activeColor: Colors.green,
+                      )),
+                  const SizedBox(width: 8),
+                  Obx(() => Text(
+                        controller.isActiveForm.value ? 'Aktif' : 'Tidak Aktif',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: controller.isActiveForm.value
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      )),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Obx(() => ElevatedButton(
+                        onPressed: controller.isCreating.value
+                            ? null
+                            : controller.submitCreateForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: controller.isCreating.value
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Simpan',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      )),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Edit Category Dialog
+  void _showEditCategoryDialog(CategoryController controller, category) {
+    controller.prepareEditForm(category);
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Edit Kategori',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Name Field
+              _buildFormField(
+                label: 'Nama Kategori *',
+                controller: controller.nameController,
+                hintText: 'Masukkan nama kategori',
+              ),
+
+              const SizedBox(height: 16),
+
+              // Position Field
+              _buildFormField(
+                label: 'Posisi (Opsional)',
+                controller: controller.positionController,
+                hintText: 'Masukkan urutan posisi',
+                keyboardType: TextInputType.number,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Status Toggle
+              Row(
+                children: [
+                  const Text(
+                    'Status',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Obx(() => Switch(
+                        value: controller.isActiveForm.value,
+                        onChanged: (value) =>
+                            controller.isActiveForm.value = value,
+                        activeColor: Colors.green,
+                      )),
+                  const SizedBox(width: 8),
+                  Obx(() => Text(
+                        controller.isActiveForm.value ? 'Aktif' : 'Tidak Aktif',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: controller.isActiveForm.value
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      )),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Obx(() => ElevatedButton(
+                        onPressed: controller.isUpdating.value
+                            ? null
+                            : () => controller.submitEditForm(category.id),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: controller.isUpdating.value
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Update',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      )),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Delete Confirmation Dialog
+  void _showDeleteConfirmation(CategoryController controller, category) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.orange.shade600,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Konfirmasi Hapus',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin ingin menghapus kategori "${category.name}"?',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tindakan ini tidak dapat dibatalkan.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text(
+              'Batal',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Obx(() => ElevatedButton(
+                onPressed: controller.isDeleting.value
+                    ? null
+                    : () async {
+                        final success =
+                            await controller.deleteCategory(category.id);
+                        if (success) {
+                          Get.back(); // Close dialog
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: controller.isDeleting.value
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Hapus',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build form fields
+  Widget _buildFormField({
+    required String label,
+    required TextEditingController controller,
+    required String hintText,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: TextStyle(
+              color: Colors.grey.shade500,
+              fontWeight: FontWeight.normal,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+          ),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
   }
 }
