@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/order/order_controller.dart';
 import 'package:pos/models/order/order_model.dart';
+import 'package:pos/screens/order/invoice_screen.dart';
+import 'package:pos/screens/order/order_detail_screen.dart';
 
 class OrderScreen extends StatefulWidget {
   const OrderScreen({super.key});
@@ -382,48 +384,71 @@ class _OrderScreenState extends State<OrderScreen> {
       mainAxisAlignment:
           isMobile ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
-        IconButton(
-          onPressed: () => _showOrderDetails(order),
-          icon: const Icon(Icons.receipt_long),
-          style: IconButton.styleFrom(
-              backgroundColor: Colors.grey.shade200,
-              padding: const EdgeInsets.all(8)),
+        // Menu titik tiga (PopupMenuButton)
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            switch (value) {
+              case 'invoice':
+                _showInvoice(order);
+                break;
+            }
+          },
+          icon: const Icon(Icons.more_vert, size: 20),
+          iconSize: 20,
+          padding: EdgeInsets.zero,
+          itemBuilder: (BuildContext context) => [
+            const PopupMenuItem<String>(
+              value: 'detail',
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16),
+                  SizedBox(width: 8),
+                  Text('Detail Order'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'invoice',
+              child: Row(
+                children: [
+                  Icon(Icons.receipt, size: 16),
+                  SizedBox(width: 8),
+                  Text('Lihat Invoice'),
+                ],
+              ),
+            ),
+          ],
         ),
+        const SizedBox(width: 8),
+        // Button Bayar (hanya tampil jika status pending)
+        if (order.status.toLowerCase() == 'pending')
+          ElevatedButton(
+            onPressed: () => _processPayment(order),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: const Size(60, 32),
+            ),
+            child: Text(
+              'Bayar',
+              style: TextStyle(fontSize: isMobile ? 12 : 14),
+            ),
+          ),
       ],
     );
   }
 
-  void _showOrderDetails(OrderModel order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Detail Pesanan ${order.displayId}'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Customer: ${order.customerName}'),
-              Text('Phone: ${order.customerPhone}'),
-              Text('Table: ${order.tableNumber}'),
-              Text('Status: ${order.status}'),
-              Text('Total: ${order.formattedTotal}'),
-              const SizedBox(height: 16),
-              const Text('Items:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              ...order.items.map((item) => Padding(
-                    padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text('• ${item.productName} x${item.quantity}'),
-                  )),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Tutup'))
-        ],
-      ),
+  void _showInvoice(OrderModel order) {
+    InvoiceDialog.show(context, order, orderController);
+  }
+
+  void _processPayment(OrderModel order) {
+    // Show the order detail as a popup instead of navigating
+    OrderDetailDialog.show(
+      context,
+      order,
+      showPaymentDialog: true,
     );
   }
 }

@@ -15,7 +15,7 @@ import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
 import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
-import 'package:pos/screens/dashboard/order_screen.dart';
+import 'package:pos/screens/order/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 import 'package:pos/screens/transaction/transaction_screen.dart';
