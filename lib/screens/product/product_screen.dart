@@ -12,6 +12,8 @@ class ProductManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 400;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -20,25 +22,16 @@ class ProductManagementScreen extends StatelessWidget {
         title: const Text(
           'Manajemen Produk',
           style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
+              color: Colors.black, fontWeight: FontWeight.w600, fontSize: 20),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: Colors.grey.shade200,
-          ),
+          child: Container(height: 1, color: Colors.grey.shade200),
         ),
       ),
       body: Column(
         children: [
-          // Search and Filter Section
-          _buildSearchAndFilter(),
-
-          // Products Grid
+          _buildSearchAndFilter(isMobile),
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value && controller.products.isEmpty) {
@@ -47,233 +40,223 @@ class ProductManagementScreen extends StatelessWidget {
 
               if (controller.error.value.isNotEmpty &&
                   controller.products.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        controller.error.value,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => controller.refreshProducts(),
-                        child: const Text('Coba Lagi'),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildErrorView();
               }
 
               if (controller.products.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 48,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Tidak ada produk ditemukan',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildEmptyView();
               }
 
               return RefreshIndicator(
                 onRefresh: controller.refreshProducts,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      crossAxisSpacing: 24,
-                      mainAxisSpacing: 24,
-                      childAspectRatio: 0.85, // Increased height for buttons
-                    ),
-                    itemCount: controller.products.length,
-                    itemBuilder: (context, index) {
-                      final product = controller.products[index];
-                      return _buildProductCard(product);
-                    },
-                  ),
+                  padding: EdgeInsets.all(isMobile ? 12 : 24),
+                  child: _buildProductGrid(context),
                 ),
               );
             }),
           ),
-
-          // Pagination Section
-          Obx(() {
-            if (controller.totalItems.value > 0) {
-              return PaginationWidget(
-                currentPage: controller.currentPage.value,
-                totalItems: controller.totalItems.value,
-                itemsPerPage: controller.itemsPerPage.value,
-                availablePageSizes: controller.availablePageSizes,
-                startIndex: controller.startIndex,
-                endIndex: controller.endIndex,
-                hasPreviousPage: controller.hasPreviousPage,
-                hasNextPage: controller.hasNextPage,
-                pageNumbers: controller.pageNumbers,
-                onPageSizeChanged: controller.changePageSize,
-                onPreviousPage: controller.previousPage,
-                onNextPage: controller.nextPage,
-                onPageSelected: controller.goToPage,
-              );
-            }
-            return const SizedBox.shrink();
-          }),
+          _buildPagination(),
         ],
       ),
     );
   }
 
-  Widget _buildSearchAndFilter() {
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            controller.error.value,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => controller.refreshProducts(),
+            child: const Text('Coba Lagi'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inventory_2_outlined,
+              size: 48, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'Tidak ada produk ditemukan',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilter(bool isMobile) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          // Search Field
-          Expanded(
-            flex: 3,
-            child: Container(
-              height: 40,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: TextField(
-                controller: controller.searchController,
-                onChanged: (value) {
-                  // Debounce search
-                  if (controller.searchQuery.value != value) {
-                    Future.delayed(const Duration(milliseconds: 500), () {
-                      if (controller.searchController.text == value) {
-                        controller.searchProducts(value);
-                      }
-                    });
-                  }
-                },
-                decoration: InputDecoration(
-                  hintText: 'Cari Menu Makanan',
-                  hintStyle: TextStyle(color: Colors.grey.shade500),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Colors.grey.shade500,
-                    size: 20,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
-              ),
-            ),
-          ),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
+      child: isMobile ? _buildMobileSearch() : _buildDesktopSearch(),
+    );
+  }
 
-          const SizedBox(width: 16),
+  Widget _buildMobileSearch() {
+    return Column(
+      children: [
+        _buildSearchField(),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(flex: 2, child: _buildCategoryFilter(true)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildAddButton(true)),
+          ],
+        ),
+      ],
+    );
+  }
 
-          // Category Filter
-          Expanded(
-            flex: 2,
-            child: Container(
-              height: 40,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: controller.selectedCategory.value.isEmpty
-                      ? null
-                      : controller.selectedCategory.value,
-                  hint: Text(
-                    'Semua Kategori',
-                    style: TextStyle(color: Colors.grey.shade500),
-                  ),
-                  isExpanded: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  icon: Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.grey.shade500,
-                  ),
-                  items: [
-                    const DropdownMenuItem<String>(
-                      value: null,
-                      child: Text('Semua Kategori'),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: 'Makanan',
-                      child: Text('Makanan'),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: 'Minuman',
-                      child: Text('Minuman'),
-                    ),
-                  ],
-                  onChanged: (String? value) {
-                    controller.filterByCategory(value ?? '');
-                  },
-                ),
-              ),
-            ),
-          ),
+  Widget _buildDesktopSearch() {
+    return Row(
+      children: [
+        Expanded(flex: 3, child: _buildSearchField()),
+        const SizedBox(width: 16),
+        Expanded(flex: 2, child: _buildCategoryFilter(false)),
+        const SizedBox(width: 16),
+        _buildAddButton(false),
+      ],
+    );
+  }
 
-          const SizedBox(width: 16),
-
-          // Add Menu Button
-          ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Navigate to add product screen
-              Get.snackbar(
-                'Info',
-                'Fitur tambah menu akan segera tersedia',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text(
-              'Tambah Menu',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
+  Widget _buildSearchField() {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TextField(
+        controller: controller.searchController,
+        onChanged: (value) {
+          if (controller.searchQuery.value != value) {
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (controller.searchController.text == value) {
+                controller.searchProducts(value);
+              }
+            });
+          }
+        },
+        decoration: InputDecoration(
+          hintText: 'Cari Menu Makanan',
+          hintStyle: TextStyle(color: Colors.grey.shade500),
+          prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 20),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        ),
       ),
     );
   }
 
-  Widget _buildProductCard(Product product) {
+  Widget _buildCategoryFilter(bool isMobile) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: controller.selectedCategory.value.isEmpty
+              ? null
+              : controller.selectedCategory.value,
+          hint: Text('Semua Kategori',
+              style: TextStyle(
+                  color: Colors.grey.shade500, fontSize: isMobile ? 14 : 16)),
+          isExpanded: true,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade500),
+          items: const [
+            DropdownMenuItem<String>(
+                value: null, child: Text('Semua Kategori')),
+            DropdownMenuItem<String>(value: 'Makanan', child: Text('Makanan')),
+            DropdownMenuItem<String>(value: 'Minuman', child: Text('Minuman')),
+          ],
+          onChanged: (String? value) =>
+              controller.filterByCategory(value ?? ''),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(bool isMobile) {
+    if (isMobile) {
+      return ElevatedButton(
+        onPressed: () => _showAddMenuSnackbar(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue.shade600,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          minimumSize: const Size(0, 40),
+        ),
+        child: const Icon(Icons.add, size: 18),
+      );
+    }
+
+    return ElevatedButton.icon(
+      onPressed: () => _showAddMenuSnackbar(),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue.shade600,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      icon: const Icon(Icons.add, size: 18),
+      label: const Text('Tambah Menu',
+          style: TextStyle(fontWeight: FontWeight.w500)),
+    );
+  }
+
+  Widget _buildProductGrid(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    int crossAxisCount = screenWidth < 400
+        ? 1
+        : screenWidth < 800
+            ? 2
+            : screenWidth < 1200
+                ? 3
+                : 4;
+    double spacing = screenWidth < 400 ? 12 : 24;
+    double aspectRatio = screenWidth < 400 ? 1.2 : 0.85;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: spacing,
+        mainAxisSpacing: spacing,
+        childAspectRatio: aspectRatio,
+      ),
+      itemCount: controller.products.length,
+      itemBuilder: (context, index) =>
+          _buildProductCard(controller.products[index], context),
+    );
+  }
+
+  Widget _buildProductCard(Product product, BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 400;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -286,209 +269,59 @@ class ProductManagementScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: isMobile ? _buildMobileCard(product) : _buildDesktopCard(product),
+    );
+  }
+
+  Widget _buildMobileCard(Product product) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
         children: [
-          // Product Image
-          Container(
-            width: double.infinity,
-            height: 120, // Fixed height for image
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              color: Colors.grey.shade100,
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      product.imageUrl!,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    (loadingProgress.expectedTotalBytes ?? 1)
-                                : null,
-                            strokeWidth: 2,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        print(
-                            'Image loading error for ${product.name}: $error');
-                        print('Image URL: ${product.imageUrl}');
-                        return _buildPlaceholderImage();
-                      },
-                    )
-                  : () {
-                      print('No image URL for ${product.name}');
-                      return _buildPlaceholderImage();
-                    }(),
-            ),
-          ),
-
-          // Product Info
+          _buildProductImage(product, 80, 80, BorderRadius.circular(8)),
+          const SizedBox(width: 12),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Status Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: product.isAvailable
-                          ? Colors.green.shade100
-                          : Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      product.isAvailable ? 'AKTIF' : 'NONAKTIF',
-                      style: TextStyle(
-                        color: product.isAvailable
-                            ? Colors.green.shade700
-                            : Colors.red.shade700,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // Product Name
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 2),
-
-                  // Product Description
-                  if (product.description.isNotEmpty &&
-                      product.description != '-')
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _buildStatusBadge(product, 9),
+                    const Spacer(),
                     Text(
-                      product.description,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      controller.formatCurrency(product.basePrice),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red),
                     ),
-
-                  const SizedBox(height: 4),
-
-                  // HPP and Position in single line
-                  Text(
-                    'HPP: ${controller.formatCurrency(product.hpp)} • Posisi: ${product.position}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // Price
-                  Text(
-                    controller.formatCurrency(product.basePrice),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(product.name,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
+                        fontSize: 13, fontWeight: FontWeight.w600),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 28,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // TODO: Navigate to edit product screen
-                              Get.snackbar(
-                                'Info',
-                                'Edit ${product.name}',
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade600,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              minimumSize: Size.zero,
-                            ),
-                            child: const Text(
-                              'Edit',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: SizedBox(
-                          height: 28,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // TODO: Show delete confirmation dialog
-                              _showDeleteConfirmation(product);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red.shade600,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              minimumSize: Size.zero,
-                            ),
-                            child: const Text(
-                              'Hapus',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    overflow: TextOverflow.ellipsis),
+                if (product.description.isNotEmpty &&
+                    product.description != '-') ...[
+                  const SizedBox(height: 2),
+                  Text(product.description,
+                      style:
+                          TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 ],
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  'HPP: ${controller.formatCurrency(product.hpp)} • Pos: ${product.position}',
+                  style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                _buildActionButtons(product, 24, 10, 4),
+              ],
             ),
           ),
         ],
@@ -496,30 +329,200 @@ class ProductManagementScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildDesktopCard(Product product) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildProductImage(product, double.infinity, 120,
+            const BorderRadius.vertical(top: Radius.circular(12))),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusBadge(product, 10),
+                const SizedBox(height: 6),
+                Text(product.name,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                if (product.description.isNotEmpty &&
+                    product.description != '-') ...[
+                  const SizedBox(height: 2),
+                  Text(product.description,
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  'HPP: ${controller.formatCurrency(product.hpp)} • Posisi: ${product.position}',
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  controller.formatCurrency(product.basePrice),
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                _buildActionButtons(product, 28, 11, 6),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductImage(
+      Product product, double width, double height, BorderRadius borderRadius) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+          borderRadius: borderRadius, color: Colors.grey.shade100),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+            ? Image.network(
+                product.imageUrl!,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2));
+                },
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildPlaceholderImage(),
+              )
+            : _buildPlaceholderImage(),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(Product product, double fontSize) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color:
+            product.isAvailable ? Colors.green.shade100 : Colors.red.shade100,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        product.isAvailable ? 'AKTIF' : 'NONAKTIF',
+        style: TextStyle(
+          color:
+              product.isAvailable ? Colors.green.shade700 : Colors.red.shade700,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(
+      Product product, double height, double fontSize, double borderRadius) {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: height,
+            child: ElevatedButton(
+              onPressed: () => _showEditSnackbar(product.name),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(borderRadius)),
+                minimumSize: Size.zero,
+              ),
+              child: Text('Edit',
+                  style: TextStyle(
+                      fontSize: fontSize, fontWeight: FontWeight.w500)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: SizedBox(
+            height: height,
+            child: ElevatedButton(
+              onPressed: () => _showDeleteConfirmation(product),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(borderRadius)),
+                minimumSize: Size.zero,
+              ),
+              child: Text('Hapus',
+                  style: TextStyle(
+                      fontSize: fontSize, fontWeight: FontWeight.w500)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPlaceholderImage() {
     return Container(
-      width: double.infinity,
-      height: double.infinity,
       color: Colors.grey.shade200,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.image_outlined,
-            size: 32,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.image_outlined, size: 32, color: Colors.grey.shade400),
           const SizedBox(height: 4),
-          Text(
-            'No Image',
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey.shade500,
-            ),
-          ),
+          Text('No Image',
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
         ],
       ),
     );
+  }
+
+  Widget _buildPagination() {
+    return Obx(() {
+      if (controller.totalItems.value > 0) {
+        return PaginationWidget(
+          currentPage: controller.currentPage.value,
+          totalItems: controller.totalItems.value,
+          itemsPerPage: controller.itemsPerPage.value,
+          availablePageSizes: controller.availablePageSizes,
+          startIndex: controller.startIndex,
+          endIndex: controller.endIndex,
+          hasPreviousPage: controller.hasPreviousPage,
+          hasNextPage: controller.hasNextPage,
+          pageNumbers: controller.pageNumbers,
+          onPageSizeChanged: controller.changePageSize,
+          onPreviousPage: controller.previousPage,
+          onNextPage: controller.nextPage,
+          onPageSelected: controller.goToPage,
+        );
+      }
+      return const SizedBox.shrink();
+    });
+  }
+
+  void _showAddMenuSnackbar() {
+    Get.snackbar('Info', 'Fitur tambah menu akan segera tersedia',
+        snackPosition: SnackPosition.BOTTOM);
+  }
+
+  void _showEditSnackbar(String productName) {
+    Get.snackbar('Info', 'Edit $productName',
+        snackPosition: SnackPosition.BOTTOM);
   }
 
   void _showDeleteConfirmation(Product product) {
@@ -528,24 +531,16 @@ class ProductManagementScreen extends StatelessWidget {
         title: const Text('Konfirmasi Hapus'),
         content: Text('Apakah Anda yakin ingin menghapus "${product.name}"?'),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () {
               Get.back();
-              // TODO: Implement delete functionality
-              Get.snackbar(
-                'Info',
-                'Fitur hapus akan segera tersedia',
-                snackPosition: SnackPosition.BOTTOM,
-              );
+              Get.snackbar('Info', 'Fitur hapus akan segera tersedia',
+                  snackPosition: SnackPosition.BOTTOM);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white),
             child: const Text('Hapus'),
           ),
         ],
