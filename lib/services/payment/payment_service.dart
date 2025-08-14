@@ -18,11 +18,15 @@ class PaymentService {
     required String paymentMethod,
     String? promoCode,
   }) async {
+    OrderModel? updatedOrder;
+    PaymentModel? payment;
+
     try {
       print('Starting payment process for order: $orderId');
 
       // Step 1: Update order with items AND customer info in single call
-      final updatedOrder = await updateOrderComplete(
+      print('Step 1: Updating order...');
+      updatedOrder = await updateOrderComplete(
         orderId: orderId,
         customerName: customerName,
         customerPhone: customerPhone,
@@ -31,27 +35,43 @@ class PaymentService {
         orderItems: orderItems,
         promoCode: promoCode,
       );
-
-      print('Order updated successfully, now processing payment...');
+      print('Order updated successfully');
 
       // Step 2: Process payment
-      final payment = await processPayment(
+      print('Step 2: Processing payment...');
+      payment = await processPayment(
         orderId: orderId,
         paymentMethod: paymentMethod,
       );
-
       print('Payment processed successfully');
 
+      // PERBAIKAN: Return success result
       return PaymentProcessResult(
         success: true,
         order: updatedOrder,
         payment: payment,
       );
-    } catch (e) {
-      print('Error in payment process: $e');
+    } catch (e, stackTrace) {
+      print('Error in processOrderPayment: $e');
+      print('StackTrace: $stackTrace');
+
+      // PERBAIKAN: Handle different types of errors
+      String errorMessage = e.toString();
+
+      // If order update succeeded but payment failed
+      if (updatedOrder != null && payment == null) {
+        errorMessage =
+            'Order berhasil diperbarui, tetapi pembayaran gagal: $errorMessage';
+      }
+      // If both failed
+      else if (updatedOrder == null) {
+        errorMessage = 'Gagal memperbarui order: $errorMessage';
+      }
+
       return PaymentProcessResult(
         success: false,
-        error: e.toString(),
+        order: updatedOrder, // Include partial success
+        error: errorMessage,
       );
     }
   }
@@ -64,39 +84,17 @@ class PaymentService {
   }) async {
     try {
       // Convert order items to the expected format
-      List<Map<String, dynamic>> orderDetails = orderItems.map((item) {
-        String productId;
-        int quantity;
-        String? note;
-
-        if (item is Map) {
-          productId =
-              item['productId']?.toString() ?? item['id']?.toString() ?? '';
-          quantity = item['quantity'] ?? 1;
-          note = item['note']?.toString();
-        } else {
-          productId = item.productId?.toString() ?? item.id?.toString() ?? '';
-          quantity = item.quantity ?? 1;
-          note = item.note?.toString();
-        }
-
-        Map<String, dynamic> orderDetail = {
-          'product_id': productId,
-          'quantity': quantity,
-        };
-
-        // Only add note if it's not null or empty
-        if (note != null && note.isNotEmpty) {
-          orderDetail['note'] = note;
-        }
-
-        return orderDetail;
-      }).toList();
+      List<Map<String, dynamic>> orderDetails = _convertOrderItems(orderItems);
 
       // Create the request matching your API format
       final request = {
         'order_details': orderDetails,
       };
+
+      // Add promo code if provided
+      if (promoCode != null && promoCode.isNotEmpty) {
+        request['promo_code'] = promoCode as List<Map<String, dynamic>>;
+      }
 
       print('Updating order items for order: $orderId');
       print('Request: ${jsonEncode(request)}');
@@ -106,19 +104,7 @@ class PaymentService {
         request,
       );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success'] == true) {
-          print('Order items updated successfully');
-          return OrderModel.fromJson(responseData['data']);
-        } else {
-          throw Exception(
-              responseData['message'] ?? 'Failed to update order items');
-        }
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
-      }
+      return _handleOrderResponse(response, 'update order items');
     } catch (e) {
       print('Error updating order items: $e');
       rethrow;
@@ -137,34 +123,7 @@ class PaymentService {
   }) async {
     try {
       // Convert order items to the expected format
-      List<Map<String, dynamic>> orderDetails = orderItems.map((item) {
-        String productId;
-        int quantity;
-        String? note;
-
-        if (item is Map) {
-          productId =
-              item['productId']?.toString() ?? item['id']?.toString() ?? '';
-          quantity = item['quantity'] ?? 1;
-          note = item['note']?.toString();
-        } else {
-          productId = item.productId?.toString() ?? item.id?.toString() ?? '';
-          quantity = item.quantity ?? 1;
-          note = item.note?.toString();
-        }
-
-        Map<String, dynamic> orderDetail = {
-          'product_id': productId,
-          'quantity': quantity,
-        };
-
-        // Only add note if it's not null or empty
-        if (note != null && note.isNotEmpty) {
-          orderDetail['note'] = note;
-        }
-
-        return orderDetail;
-      }).toList();
+      List<Map<String, dynamic>> orderDetails = _convertOrderItems(orderItems);
 
       // Create complete request with both order items and customer info
       final request = {
@@ -190,18 +149,7 @@ class PaymentService {
         request,
       );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success'] == true) {
-          print('Order updated successfully');
-          return OrderModel.fromJson(responseData['data']);
-        } else {
-          throw Exception(responseData['message'] ?? 'Failed to update order');
-        }
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
-      }
+      return _handleOrderResponse(response, 'update order');
     } catch (e) {
       print('Error updating order: $e');
       rethrow;
@@ -218,9 +166,9 @@ class PaymentService {
         'method': paymentMethod,
       };
 
-      print('Processing payment for order: $orderId');
-      print('Payment method: $paymentMethod');
-      print('Request: ${jsonEncode(request)}');
+      print(
+          'Processing payment for order: $orderId with method: $paymentMethod');
+      print('Payment request: ${jsonEncode(request)}');
 
       final response = await _httpClient.post(
         '/orders/$orderId/payments',
@@ -230,18 +178,23 @@ class PaymentService {
       print('Payment response status: ${response.statusCode}');
       print('Payment response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
+
         if (responseData['success'] == true) {
           print('Payment processed successfully');
           return PaymentModel.fromJson(responseData['data']);
         } else {
-          throw Exception(
-              responseData['message'] ?? 'Failed to process payment');
+          final errorMsg =
+              responseData['message'] ?? 'Failed to process payment';
+          print('Payment API returned success=false: $errorMsg');
+          throw Exception(errorMsg);
         }
       } else {
         final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+        final errorMsg = errorData['message'] ?? 'HTTP ${response.statusCode}';
+        print('Payment HTTP error: $errorMsg');
+        throw Exception(errorMsg);
       }
     } catch (e) {
       print('Error processing payment: $e');
@@ -252,8 +205,6 @@ class PaymentService {
   // Get payment history for an order
   Future<List<PaymentModel>> getOrderPayments(String orderId) async {
     try {
-      print('Getting payments for order: $orderId');
-
       final response = await _httpClient.get('/orders/$orderId/payments');
 
       if (response.statusCode == 200) {
@@ -271,7 +222,6 @@ class PaymentService {
         throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
       }
     } catch (e) {
-      print('Error getting order payments: $e');
       rethrow;
     }
   }
@@ -295,31 +245,67 @@ class PaymentService {
         request['notes'] = notes;
       }
 
-      print('Updating customer info for order: $orderId');
-      print('Request: ${jsonEncode(request)}');
-
       // Try using the same endpoint with just customer data
       final response = await _httpClient.put(
         '/orders/$orderId',
         request,
       );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success'] == true) {
-          print('Customer info updated successfully');
-          return OrderModel.fromJson(responseData['data']);
-        } else {
-          throw Exception(
-              responseData['message'] ?? 'Failed to update customer info');
-        }
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
-      }
+      return _handleOrderResponse(response, 'update customer info');
     } catch (e) {
-      print('Error updating customer info: $e');
       rethrow;
+    }
+  }
+
+  // PERBAIKAN: Helper method untuk convert order items
+  List<Map<String, dynamic>> _convertOrderItems(List<dynamic> orderItems) {
+    return orderItems.map((item) {
+      String productId;
+      int quantity;
+      String? note;
+
+      if (item is Map) {
+        productId =
+            item['productId']?.toString() ?? item['id']?.toString() ?? '';
+        quantity = item['quantity'] ?? 1;
+        note = item['note']?.toString();
+      } else {
+        productId = item.productId?.toString() ?? item.id?.toString() ?? '';
+        quantity = item.quantity ?? 1;
+        note = item.note?.toString();
+      }
+
+      Map<String, dynamic> orderDetail = {
+        'product_id': productId,
+        'quantity': quantity,
+      };
+
+      // Only add note if it's not null or empty
+      if (note != null && note.isNotEmpty) {
+        orderDetail['note'] = note;
+      }
+
+      return orderDetail;
+    }).toList();
+  }
+
+  // PERBAIKAN: Helper method untuk handle order response
+  OrderModel _handleOrderResponse(response, String operation) {
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      if (responseData['success'] == true) {
+        print('$operation completed successfully');
+        return OrderModel.fromJson(responseData['data']);
+      } else {
+        final errorMsg = responseData['message'] ?? 'Failed to $operation';
+        print('$operation API returned success=false: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } else {
+      final errorData = jsonDecode(response.body);
+      final errorMsg = errorData['message'] ?? 'HTTP ${response.statusCode}';
+      print('$operation HTTP error: $errorMsg');
+      throw Exception(errorMsg);
     }
   }
 }

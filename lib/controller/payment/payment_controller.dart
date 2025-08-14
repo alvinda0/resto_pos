@@ -23,9 +23,14 @@ class PaymentController extends GetxController {
     required String paymentMethod,
     String? promoCode,
   }) async {
+    PaymentProcessResult? result;
+
     try {
       isProcessingPayment.value = true;
       orderUpdateProgress.value = 'Memulai proses pembayaran...';
+
+      // Clear previous result
+      paymentResult.value = null;
 
       // Validate input
       if (customerName.trim().isEmpty) {
@@ -42,8 +47,10 @@ class PaymentController extends GetxController {
 
       orderUpdateProgress.value = 'Memperbarui pesanan...';
 
+      print('Processing payment for order: $orderId'); // Debug log
+
       // Call the service to process order payment
-      final result = await _paymentService.processOrderPayment(
+      result = await _paymentService.processOrderPayment(
         orderId: orderId,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
@@ -54,35 +61,64 @@ class PaymentController extends GetxController {
         promoCode: promoCode?.trim(),
       );
 
+      // PERBAIKAN: Set result dan check success SEBELUM try lainnya
       paymentResult.value = result;
       orderUpdateProgress.value = 'Proses selesai';
 
+      print('Payment result success: ${result.isSuccess}'); // Debug log
+      print('Payment result error: ${result.error}'); // Debug log
+
+      // PERBAIKAN: Handle success case dengan lebih robust
       if (result.isSuccess) {
-        // Calculate total for display
+        // Calculate total for display - wrapped in try-catch
         double total = 0.0;
-        for (var item in orderItems) {
-          if (item is Map) {
-            total += (item['totalPrice'] ?? 0).toDouble();
-          } else {
-            total += (item.totalPrice ?? 0).toDouble();
+        try {
+          for (var item in orderItems) {
+            if (item is Map) {
+              total += (item['totalPrice'] ?? 0).toDouble();
+            } else {
+              total += (item.totalPrice ?? 0).toDouble();
+            }
           }
+        } catch (e) {
+          print('Error calculating total for display: $e');
+          total = 0.0; // fallback
         }
 
-        Get.snackbar(
-          'Pembayaran Berhasil! 🎉',
-          'Customer: ${customerName.trim()}\n'
-              'Total: Rp${_formatPrice(total.round())}\n'
-              'Metode: $paymentMethod',
-          backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-          colorText: Get.theme.colorScheme.primary,
-          duration: const Duration(seconds: 5),
-          snackPosition: SnackPosition.TOP,
-        );
+        try {
+          Get.snackbar(
+            'Pembayaran Berhasil! 🎉',
+            'Customer: ${customerName.trim()}\n'
+                'Total: ${total > 0 ? 'Rp${_formatPrice(total.round())}' : 'Berhasil'}\n'
+                'Metode: $paymentMethod',
+            backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
+            colorText: Get.theme.colorScheme.primary,
+            duration: const Duration(seconds: 5),
+            snackPosition: SnackPosition.TOP,
+          );
+        } catch (e) {
+          print('Error showing success snackbar: $e');
+          // Fallback success notification
+          Get.snackbar(
+            'Pembayaran Berhasil! 🎉',
+            'Pembayaran telah diproses dengan sukses',
+            backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
+            colorText: Get.theme.colorScheme.primary,
+            duration: const Duration(seconds: 5),
+            snackPosition: SnackPosition.TOP,
+          );
+        }
+
         return true;
       } else {
+        // Handle failure case
+        String errorMsg = result.errorMessage.isEmpty
+            ? 'Pembayaran gagal - tidak ada informasi error'
+            : result.errorMessage;
+
         Get.snackbar(
           'Pembayaran Gagal ❌',
-          result.errorMessage,
+          errorMsg,
           backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
           colorText: Get.theme.colorScheme.error,
           duration: const Duration(seconds: 6),
@@ -91,23 +127,27 @@ class PaymentController extends GetxController {
         return false;
       }
     } catch (e) {
+      print('Payment exception: $e'); // Debug log
+
+      // PERBAIKAN: Set failed result hanya jika belum ada result atau result sukses
+      if (result == null || result.isSuccess) {
+        paymentResult.value = PaymentProcessResult(
+          success: false,
+          error: e.toString(),
+        );
+      }
+
       orderUpdateProgress.value = 'Error: $e';
 
-      String errorMessage = 'Terjadi kesalahan';
-      if (e.toString().contains('customer_name')) {
-        errorMessage = 'Nama customer tidak boleh kosong';
-      } else if (e.toString().contains('table_number')) {
-        errorMessage = 'Nomor meja tidak valid';
-      } else if (e.toString().contains('order_details')) {
-        errorMessage = 'Data pesanan tidak valid';
-      } else if (e.toString().contains('payment')) {
-        errorMessage = 'Gagal memproses pembayaran';
-      } else if (e.toString().contains('network') ||
-          e.toString().contains('connection')) {
-        errorMessage = 'Koneksi internet bermasalah';
-      } else {
-        errorMessage = e.toString().replaceAll('Exception: ', '');
+      // PERBAIKAN: Jangan tampilkan error jika sebenarnya sukses
+      if (result != null && result.isSuccess) {
+        print(
+            'Payment was successful but exception occurred in UI handling: $e');
+        return true; // Return true karena payment sebenarnya berhasil
       }
+
+      // Format error message untuk user
+      String errorMessage = _formatErrorMessage(e.toString());
 
       Get.snackbar(
         'Error ⚠️',
@@ -125,6 +165,29 @@ class PaymentController extends GetxController {
         orderUpdateProgress.value = '';
       });
     }
+  }
+
+  // PERBAIKAN: Helper method untuk format error message
+  String _formatErrorMessage(String error) {
+    String errorMessage = 'Terjadi kesalahan';
+
+    if (error.contains('customer_name')) {
+      errorMessage = 'Nama customer tidak boleh kosong';
+    } else if (error.contains('table_number')) {
+      errorMessage = 'Nomor meja tidak valid';
+    } else if (error.contains('order_details')) {
+      errorMessage = 'Data pesanan tidak valid';
+    } else if (error.contains('payment')) {
+      errorMessage = 'Gagal memproses pembayaran';
+    } else if (error.contains('network') || error.contains('connection')) {
+      errorMessage = 'Koneksi internet bermasalah';
+    } else if (error.contains('Exception: ')) {
+      errorMessage = error.replaceAll('Exception: ', '');
+    } else {
+      errorMessage = error;
+    }
+
+    return errorMessage;
   }
 
   // Update only order items

@@ -868,6 +868,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   void _completePayment() async {
+    print('=== Starting _completePayment ==='); // Debug log
+
     try {
       // Validasi table number
       int tableNumber = int.tryParse(tableController.text) ?? 0;
@@ -890,6 +892,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         return;
       }
 
+      print('Calling processOrderPayment...'); // Debug log
+
       // Process payment menggunakan PaymentController
       final success = await paymentController.processOrderPayment(
         orderId: widget.order.id,
@@ -901,37 +905,58 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         paymentMethod: selectedPaymentMethod,
       );
 
+      print('Payment process completed, success: $success'); // Debug log
+
+      // PERBAIKAN: Check result dari payment controller
+      final result = paymentController.paymentResult.value;
+      print(
+          'Payment result from controller: ${result?.isSuccess}'); // Debug log
+
       if (success) {
-        // Ambil result dari payment controller
-        final result = paymentController.paymentResult.value;
+        print('Payment successful, closing dialog'); // Debug log
 
-        if (result != null && result.isSuccess) {
-          // Tutup dialog
+        // PERBAIKAN: Tutup dialog terlebih dahulu
+        if (mounted && Navigator.canPop(context)) {
           Navigator.pop(context);
+        }
 
-          // Show success message dengan detail
+        // PERBAIKAN: Show success message hanya jika belum ada dari controller
+        // Controller sudah menangani success message, jadi kita tidak perlu duplikat
+        print('Success message already handled by controller');
+      } else {
+        print('Payment failed'); // Debug log
+
+        // PERBAIKAN: Error message sudah ditangani oleh PaymentController
+        // Jadi kita tidak perlu menampilkan lagi di sini kecuali ada kasus khusus
+
+        // Hanya tampilkan jika benar-benar tidak ada error message dari controller
+        final errorFromController = result?.errorMessage;
+        if (errorFromController == null || errorFromController.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Pembayaran ${widget.order.displayId} berhasil!\n'
-                  'Total: Rp${_formatPrice(_calculateOrderTotal().round())}\n'
-                  'Metode: $selectedPaymentMethod'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        } else {
-          // Jika ada error dari result
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result?.errorMessage ?? 'Pembayaran gagal'),
+            const SnackBar(
+              content: Text('Pembayaran gagal - silakan coba lagi'),
               backgroundColor: Colors.red,
             ),
           );
         }
       }
-      // Error handling sudah dilakukan di PaymentController melalui Get.snackbar
     } catch (e) {
-      // Fallback error handling
+      print('Exception in _completePayment: $e'); // Debug log
+
+      // PERBAIKAN: Check apakah payment sebenarnya berhasil meskipun ada exception di UI
+      final result = paymentController.paymentResult.value;
+      if (result != null && result.isSuccess) {
+        print(
+            'Payment was successful despite UI exception, closing dialog'); // Debug log
+
+        // Tutup dialog karena payment berhasil
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        return; // Return early, jangan tampilkan error
+      }
+
+      // Fallback error handling hanya jika payment benar-benar gagal
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Terjadi kesalahan: $e'),
