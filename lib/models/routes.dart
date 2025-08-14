@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/account/account_screen.dart';
+import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
 import 'package:pos/screens/role/role_screen.dart';
@@ -47,6 +48,7 @@ class AppRoutes {
   // Other Main Routes
   static const String promos = '/promos';
   static const String orders = '/orders';
+  static const String neworders = '/neworders';
   static const String kitchen = '/kitchen';
 
   // Account and Role Routes (Akun dan Role)
@@ -141,6 +143,9 @@ class AppRoutes {
       GetPage(
           name: orders,
           page: () => _wrapWithMainLayout(const OrderScreen(), orders)),
+      GetPage(
+          name: neworders,
+          page: () => _wrapWithMainLayout(const NewOrderScreen(), neworders)),
       GetPage(
         name: kitchen,
         page: () => _wrapWithMainLayout(const KitchenScreen(), kitchen),
@@ -297,6 +302,7 @@ class AppRoutes {
   // Other main navigation helpers
   static void toPromos() => Get.toNamed(promos);
   static void toOrders() => Get.toNamed(orders);
+  static void toNewOrders() => Get.toNamed(neworders);
   static void toKitchen() => Get.toNamed(kitchen);
 
   // Account and Role navigation helpers (Akun dan Role)

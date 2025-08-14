@@ -86,6 +86,20 @@ class _OrderScreenState extends State<OrderScreen> {
                     orderController.methodOptions,
                     orderController.updateMethodFilter,
                     Icons.payment)),
+            const SizedBox(width: 8),
+            // Tambahkan button New Order
+            ElevatedButton.icon(
+              onPressed: () =>
+                  Get.toNamed('/neworders'), // atau AppRoutes.toNewOrders()
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Order'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
           ],
         ),
       ],
@@ -112,6 +126,19 @@ class _OrderScreenState extends State<OrderScreen> {
                 orderController.methodOptions,
                 orderController.updateMethodFilter,
                 Icons.payment)),
+        const SizedBox(width: 16),
+        // Tambahkan button New Order
+        ElevatedButton.icon(
+          onPressed: () =>
+              Get.toNamed('/neworders'), // atau AppRoutes.toNewOrders()
+          icon: const Icon(Icons.add),
+          label: const Text('New Order'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
       ],
     );
   }
