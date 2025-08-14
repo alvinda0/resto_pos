@@ -4,6 +4,7 @@ import 'package:pos/controller/order/order_controller.dart';
 import 'package:pos/controller/product/product_controller.dart';
 import 'package:pos/models/order/order_model.dart';
 import 'package:pos/models/product/product_model.dart';
+import 'package:pos/controller/payment/payment_controller.dart';
 
 class OrderDetailDialog extends StatefulWidget {
   final OrderModel order;
@@ -34,6 +35,7 @@ class OrderDetailDialog extends StatefulWidget {
 class _OrderDetailDialogState extends State<OrderDetailDialog> {
   final OrderController orderController = Get.find<OrderController>();
   final ProductController productController = Get.put(ProductController());
+  final PaymentController paymentController = Get.put(PaymentController());
 
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
@@ -65,6 +67,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   @override
   void dispose() {
+    paymentController.clearPaymentResult(); // Clear result saat dialog ditutup
     customerNameController.dispose();
     phoneController.dispose();
     tableController.dispose();
@@ -603,19 +606,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             ),
             const SizedBox(height: 12),
           ],
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _processPayment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-              child: const Text('Proses Pembayaran',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
-          ),
+          _buildPaymentButton(), // Gunakan button baru dengan loading state
         ],
       ),
     );
@@ -851,25 +842,140 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _completePayment();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Konfirmasi'),
-          ),
+          Obx(() => ElevatedButton(
+                onPressed: paymentController.isProcessingPayment.value
+                    ? null
+                    : () {
+                        Navigator.pop(context);
+                        _completePayment();
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: paymentController.isProcessingPayment.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Konfirmasi'),
+              )),
         ],
       ),
     );
   }
 
-  void _completePayment() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('Pembayaran ${widget.order.displayId} berhasil'),
-          backgroundColor: Colors.green),
+  void _completePayment() async {
+    try {
+      // Validasi table number
+      int tableNumber = int.tryParse(tableController.text) ?? 0;
+      if (tableNumber <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Nomor meja tidak valid'),
+              backgroundColor: Colors.red),
+        );
+        return;
+      }
+
+      // Validasi order items
+      if (currentOrderItems.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Pesanan tidak boleh kosong'),
+              backgroundColor: Colors.red),
+        );
+        return;
+      }
+
+      // Process payment menggunakan PaymentController
+      final success = await paymentController.processOrderPayment(
+        orderId: widget.order.id,
+        customerName: customerNameController.text,
+        customerPhone: phoneController.text,
+        tableNumber: tableNumber,
+        notes: notesController.text.isEmpty ? null : notesController.text,
+        orderItems: currentOrderItems,
+        paymentMethod: selectedPaymentMethod,
+      );
+
+      if (success) {
+        // Ambil result dari payment controller
+        final result = paymentController.paymentResult.value;
+
+        if (result != null && result.isSuccess) {
+          // Tutup dialog
+          Navigator.pop(context);
+
+          // Show success message dengan detail
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Pembayaran ${widget.order.displayId} berhasil!\n'
+                  'Total: Rp${_formatPrice(_calculateOrderTotal().round())}\n'
+                  'Metode: $selectedPaymentMethod'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        } else {
+          // Jika ada error dari result
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result?.errorMessage ?? 'Pembayaran gagal'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+      // Error handling sudah dilakukan di PaymentController melalui Get.snackbar
+    } catch (e) {
+      // Fallback error handling
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildPaymentButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: Obx(() => ElevatedButton(
+            onPressed: paymentController.isProcessingPayment.value
+                ? null
+                : _processPayment,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            child: paymentController.isProcessingPayment.value
+                ? const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text('Memproses...',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  )
+                : const Text('Proses Pembayaran',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          )),
     );
-    Navigator.pop(context);
   }
 }
