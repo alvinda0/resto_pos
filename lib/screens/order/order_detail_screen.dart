@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/order/order_controller.dart';
+import 'package:pos/controller/product/product_controller.dart';
 import 'package:pos/models/order/order_model.dart';
+import 'package:pos/models/product/product_model.dart';
 
 class OrderDetailDialog extends StatefulWidget {
   final OrderModel order;
@@ -31,6 +33,8 @@ class OrderDetailDialog extends StatefulWidget {
 
 class _OrderDetailDialogState extends State<OrderDetailDialog> {
   final OrderController orderController = Get.find<OrderController>();
+  final ProductController productController = Get.put(ProductController());
+
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController tableController = TextEditingController();
@@ -38,20 +42,25 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   final TextEditingController promoController = TextEditingController();
   final TextEditingController cashAmountController = TextEditingController();
   final TextEditingController changeController = TextEditingController();
+  final TextEditingController productSearchController = TextEditingController();
 
   String selectedPaymentMethod = 'Tunai';
   List<String> paymentMethods = ['Tunai', 'QRIS', 'Debit'];
+  List<dynamic> currentOrderItems = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize form with order data
     customerNameController.text = widget.order.customerName;
     phoneController.text = widget.order.customerPhone ?? '';
     tableController.text = widget.order.tableNumber.toString();
-
-    // Calculate change when cash amount changes
     cashAmountController.addListener(_calculateChange);
+    currentOrderItems = List.from(widget.order.items);
+
+    // Setup product search listener
+    productSearchController.addListener(() {
+      productController.searchProducts(productSearchController.text);
+    });
   }
 
   @override
@@ -63,7 +72,42 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     promoController.dispose();
     cashAmountController.dispose();
     changeController.dispose();
+    productSearchController.dispose();
     super.dispose();
+  }
+
+  void _addProductToOrder(Product product) {
+    setState(() {
+      // Check if product already exists in order
+      int existingIndex = currentOrderItems.indexWhere((item) {
+        if (item is Map) {
+          return (item['productId'] ?? item['id']) == product.id;
+        }
+        return (item.productId ?? item.id) == product.id;
+      });
+
+      if (existingIndex >= 0) {
+        // Increase quantity if product exists
+        currentOrderItems[existingIndex] = _createOrderItem(
+            product, _getItemQuantity(currentOrderItems[existingIndex]) + 1);
+      } else {
+        // Add new product to order
+        currentOrderItems.add(_createOrderItem(product, 1));
+      }
+    });
+    _calculateChange();
+  }
+
+  dynamic _createOrderItem(Product product, int quantity) {
+    return {
+      'id': product.id,
+      'productId': product.id,
+      'name': product.name,
+      'productName': product.name,
+      'quantity': quantity,
+      'price': product.basePrice.toDouble(),
+      'totalPrice': (product.basePrice * quantity).toDouble(),
+    };
   }
 
   void _calculateChange() {
@@ -71,27 +115,18 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         cashAmountController.text.isNotEmpty) {
       double cashAmount =
           double.tryParse(cashAmountController.text.replaceAll(',', '')) ?? 0;
-
-      // Safe conversion to double - handle both int and double types
-      double total = 0.0;
-      if (widget.order.totalItems is int) {
-        total = (widget.order.totalItems as int).toDouble();
-      } else if (widget.order.totalItems is double) {
-        total = widget.order.totalItems as double;
-      } else {
-        try {
-          total = double.tryParse(widget.order.totalItems.toString()) ?? 0.0;
-        } catch (e) {
-          total = 0.0;
-        }
-      }
-
+      double total = _calculateOrderTotal();
       double change = cashAmount - total;
       changeController.text =
-          change >= 0 ? 'Rp${change.toStringAsFixed(0)}' : 'Rp0';
+          change >= 0 ? 'Rp${_formatPrice(change.round())}' : 'Rp0';
     } else {
       changeController.text = 'Rp0';
     }
+  }
+
+  double _calculateOrderTotal() {
+    return currentOrderItems.fold(
+        0.0, (sum, item) => sum + _getItemTotalPriceDouble(item));
   }
 
   @override
@@ -100,28 +135,20 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
       child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 1200,
-          maxHeight: 800,
-        ),
+        constraints: const BoxConstraints(maxWidth: 1400, maxHeight: 800),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
-            // Header
             _buildHeader(),
-            // Body
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final isDesktop = constraints.maxWidth >= 768;
-                  if (isDesktop) {
-                    return _buildDesktopLayout();
-                  } else {
-                    return _buildMobileLayout();
-                  }
+                  return constraints.maxWidth >= 1000
+                      ? _buildThreeColumnLayout()
+                      : _buildMobileLayout();
                 },
               ),
             ),
@@ -147,10 +174,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           const Expanded(
             child: Text(
               'BAYAR PESANAN',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
           IconButton(
@@ -166,24 +190,14 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
-  Widget _buildDesktopLayout() {
+  Widget _buildThreeColumnLayout() {
     return Row(
       children: [
-        // Left Side - Order Items
-        Expanded(
-          flex: 1,
-          child: _buildOrderSection(),
-        ),
-        // Divider
-        Container(
-          width: 1,
-          color: Colors.grey.shade300,
-        ),
-        // Right Side - Customer & Payment Details
-        Expanded(
-          flex: 1,
-          child: _buildCustomerPaymentSection(),
-        ),
+        Expanded(flex: 1, child: _buildAddProductSection()),
+        Container(width: 1, color: Colors.grey.shade300),
+        Expanded(flex: 1, child: _buildOrderSection()),
+        Container(width: 1, color: Colors.grey.shade300),
+        Expanded(flex: 1, child: _buildCustomerPaymentSection()),
       ],
     );
   }
@@ -192,96 +206,131 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     return SingleChildScrollView(
       child: Column(
         children: [
+          _buildAddProductSection(),
+          Container(height: 1, color: Colors.grey.shade300),
           _buildOrderSection(),
-          Container(
-            height: 1,
-            color: Colors.grey.shade300,
-          ),
+          Container(height: 1, color: Colors.grey.shade300),
           _buildCustomerPaymentSection(),
         ],
       ),
     );
   }
 
-  Widget _buildOrderSection() {
-    return Container(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Daftar Pesanan',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Total: ${widget.order.totalItems} items',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildAddProductSection() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
           ),
-
-          // Order Items List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: widget.order.items.length,
-              itemBuilder: (context, index) {
-                final item = widget.order.items[index];
-                return _buildOrderItem(item);
-              },
-            ),
+          child: const Text(
+            'Tambah Produk',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-
-          // Add Product Section (Optional - can be removed if not needed in popup)
-          Container(
+        ),
+        Expanded(
+          child: Padding(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(
-                top: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Tambah Produk',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 TextField(
+                  controller: productSearchController,
                   decoration: InputDecoration(
                     hintText: 'Cari produk...',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+                        borderRadius: BorderRadius.circular(8)),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: Obx(() {
+                    if (productController.isLoading.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (productController.products.isEmpty) {
+                      return const Center(child: Text('Tidak ada produk'));
+                    }
+
+                    return GridView.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: 0.75,
+                      ),
+                      itemCount: productController.products.length,
+                      itemBuilder: (context, index) =>
+                          _buildProductCard(productController.products[index]),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductCard(Product product) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(8)),
+              ),
+              child: product.imageUrl != null
+                  ? Image.network(product.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Center(child: Icon(Icons.fastfood, size: 30)))
+                  : const Center(child: Icon(Icons.fastfood, size: 30)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              children: [
+                Text(product.name,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                Text('Rp${_formatPrice(product.basePrice)}',
+                    style:
+                        TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: product.isAvailable
+                        ? () => _addProductToOrder(product)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          product.isAvailable ? Colors.blue : Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      minimumSize: const Size(0, 24),
+                    ),
+                    child: Text(product.isAvailable ? 'Tambah' : 'Habis',
+                        style: const TextStyle(fontSize: 10)),
                   ),
                 ),
               ],
@@ -292,98 +341,103 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
-  Widget _buildOrderItem(dynamic item) {
+  Widget _buildOrderSection() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Daftar Pesanan',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('Total: ${currentOrderItems.length} items',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: currentOrderItems.length,
+            itemBuilder: (context, index) =>
+                _buildOrderItem(currentOrderItems[index], index),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrderItem(dynamic item, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          // Product Image
           Container(
-            width: 40,
-            height: 40,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: _getItemImage(item),
+            child: const Icon(Icons.fastfood, size: 16),
           ),
-          const SizedBox(width: 12),
-
-          // Product Info
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _getItemName(item),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Tampilkan harga per unit dan total seperti di InvoiceDialog
+                Text(_getItemName(item),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w500, fontSize: 12)),
                 Row(
                   children: [
                     Text(
-                      '${_getItemQuantity(item)} x ${_getItemUnitPrice(item)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
+                        '${_getItemQuantity(item)} x ${_getItemUnitPrice(item)}',
+                        style: TextStyle(
+                            fontSize: 10, color: Colors.grey.shade600)),
                     const Spacer(),
-                    Text(
-                      _getItemTotalPrice(item),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black,
-                      ),
-                    ),
+                    Text(_getItemTotalPrice(item),
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ],
             ),
           ),
-
-          const SizedBox(width: 12),
-
-          // Quantity Controls
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                onPressed: () => _decreaseQuantity(item),
-                icon: const Icon(Icons.remove, size: 16),
+                onPressed: () => _decreaseQuantity(index),
+                icon: const Icon(Icons.remove, size: 12),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.grey.shade200,
-                  minimumSize: const Size(28, 28),
-                  padding: EdgeInsets.zero,
-                ),
+                    backgroundColor: Colors.grey.shade200,
+                    minimumSize: const Size(24, 24),
+                    padding: EdgeInsets.zero),
               ),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  _getItemQuantity(item).toString(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(_getItemQuantity(item).toString(),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.bold)),
               ),
               IconButton(
-                onPressed: () => _increaseQuantity(item),
-                icon: const Icon(Icons.add, size: 16),
+                onPressed: () => _increaseQuantity(index),
+                icon: const Icon(Icons.add, size: 12),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.grey.shade200,
-                  minimumSize: const Size(28, 28),
-                  padding: EdgeInsets.zero,
-                ),
+                    backgroundColor: Colors.grey.shade200,
+                    minimumSize: const Size(24, 24),
+                    padding: EdgeInsets.zero),
               ),
             ],
           ),
@@ -392,94 +446,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
-  // Helper methods to safely access item properties
-  Widget _getItemImage(dynamic item) {
-    return const Icon(Icons.fastfood, size: 20);
-  }
-
-  String _getItemName(dynamic item) {
-    try {
-      return item.name?.toString() ??
-          item.productName?.toString() ??
-          item.title?.toString() ??
-          'Unknown Product';
-    } catch (e) {
-      return 'Unknown Product';
-    }
-  }
-
-  // Helper method untuk mendapatkan harga per unit
-  String _getItemUnitPrice(dynamic item) {
-    try {
-      double unitPrice = 0.0;
-      int quantity = _getItemQuantity(item);
-
-      if (item.totalPrice != null && quantity > 0) {
-        double totalPrice = item.totalPrice is double
-            ? item.totalPrice
-            : double.parse(item.totalPrice.toString());
-        unitPrice = totalPrice / quantity;
-      } else if (item.price != null) {
-        unitPrice = item.price is double
-            ? item.price
-            : double.parse(item.price.toString());
-      }
-
-      return 'Rp${_formatPrice(unitPrice.round())}';
-    } catch (e) {
-      return 'Rp0';
-    }
-  }
-
-  // Helper method untuk mendapatkan total harga item
-  String _getItemTotalPrice(dynamic item) {
-    try {
-      double totalPrice = 0.0;
-
-      if (item.totalPrice != null) {
-        totalPrice = item.totalPrice is double
-            ? item.totalPrice
-            : double.parse(item.totalPrice.toString());
-      } else if (item.price != null) {
-        double unitPrice = item.price is double
-            ? item.price
-            : double.parse(item.price.toString());
-        totalPrice = unitPrice * _getItemQuantity(item);
-      }
-
-      return 'Rp${_formatPrice(totalPrice.round())}';
-    } catch (e) {
-      return 'Rp0';
-    }
-  }
-
-  int _getItemQuantity(dynamic item) {
-    try {
-      return item.quantity ?? 1;
-    } catch (e) {
-      return 1;
-    }
-  }
-
-  // Helper method untuk format harga
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        );
-  }
-
   Widget _buildCustomerPaymentSection() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Customer Details Section
           _buildCustomerDetailsCard(),
-          const SizedBox(height: 16),
-
-          // Payment Section
           _buildPaymentCard(),
         ],
       ),
@@ -491,328 +462,147 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Detail Customer',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const Text('Detail Customer',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Nama Customer',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: customerNameController,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        isDense: true,
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Nomor WA',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: phoneController,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        isDense: true,
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
+                  child:
+                      _buildTextField('Nama Customer', customerNameController)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildTextField('Nomor WA', phoneController)),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
+              Expanded(child: _buildTextField('Nomor Meja', tableController)),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Nomor Meja',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: tableController,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        isDense: true,
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Catatan Order',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: notesController,
-                      decoration: InputDecoration(
-                        hintText: 'Catatan tambahan',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        isDense: true,
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
+                  child: _buildTextField('Catatan', notesController,
+                      hintText: 'Catatan')),
             ],
           ),
-          const SizedBox(height: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Kode Promo',
-                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-              ),
-              const SizedBox(height: 4),
-              TextField(
-                controller: promoController,
-                decoration: InputDecoration(
-                  hintText: 'Masukkan kode promo',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  isDense: true,
-                ),
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
-          ),
+          const SizedBox(height: 8),
+          _buildTextField('Kode Promo', promoController,
+              hintText: 'Masukkan kode promo'),
         ],
       ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller,
+      {String? hintText}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: hintText,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            isDense: true,
+          ),
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
     );
   }
 
   Widget _buildPaymentCard() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pembayaran',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const Text('Pembayaran',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-
-          // Payment Method Buttons
           Row(
             children: paymentMethods.map((method) {
               final isSelected = selectedPaymentMethod == method;
-              IconData icon;
-              Color color;
-
-              switch (method) {
-                case 'Tunai':
-                  icon = Icons.payments;
-                  color = Colors.green;
-                  break;
-                case 'QRIS':
-                  icon = Icons.qr_code;
-                  color = Colors.blue;
-                  break;
-                case 'Debit':
-                  icon = Icons.credit_card;
-                  color = Colors.orange;
-                  break;
-                default:
-                  icon = Icons.payment;
-                  color = Colors.grey;
-              }
-
               return Expanded(
                 child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  child: ElevatedButton.icon(
+                  margin: const EdgeInsets.only(right: 4),
+                  child: ElevatedButton(
                     onPressed: () {
                       setState(() {
                         selectedPaymentMethod = method;
                         _calculateChange();
                       });
                     },
-                    icon: Icon(icon, size: 16),
-                    label: Text(method, style: const TextStyle(fontSize: 12)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          isSelected ? color : Colors.grey.shade200,
+                          isSelected ? Colors.blue : Colors.grey.shade200,
                       foregroundColor: isSelected ? Colors.white : Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      minimumSize: const Size(0, 30),
                     ),
+                    child: Text(method, style: const TextStyle(fontSize: 10)),
                   ),
                 ),
               );
             }).toList(),
           ),
-
-          const SizedBox(height: 16),
-
-          // Order Summary
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(6),
-            ),
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(6)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Total',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  widget.order.formattedTotal,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('Total',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                Text('Rp${_formatPrice(_calculateOrderTotal().round())}',
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
-
-          const SizedBox(height: 12),
-
-          // Cash Payment Fields (only show for Tunai)
+          const SizedBox(height: 8),
           if (selectedPaymentMethod == 'Tunai') ...[
+            _buildTextField('Jumlah Pembayaran', cashAmountController,
+                hintText: 'Jumlah uang cash'),
+            const SizedBox(height: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Jumlah Pembayaran',
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-                ),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: cashAmountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan jumlah uang cash',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    isDense: true,
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Kembalian',
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-                ),
+                const Text('Kembalian',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
                 const SizedBox(height: 4),
                 TextField(
                   controller: changeController,
                   readOnly: true,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
+                        borderRadius: BorderRadius.circular(6)),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     fillColor: Colors.grey.shade100,
                     filled: true,
                     isDense: true,
                   ),
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
-
-          // Process Payment Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -820,18 +610,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
               ),
-              child: const Text(
-                'Proses Pembayaran',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Text('Proses Pembayaran',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -839,30 +621,201 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
-  void _increaseQuantity(dynamic item) {
-    // Implement increase quantity logic
-    setState(() {
-      // Update item quantity
-      // You'll need to access your order controller or update the order model
-    });
+  // Helper methods - FIXED VERSION
+  String _getItemName(dynamic item) {
+    if (item is Map) {
+      return item['name']?.toString() ??
+          item['productName']?.toString() ??
+          'Unknown Product';
+    }
+    // For OrderItem objects, you need to access the correct property
+    // Assuming OrderItem has productName or similar property
+    try {
+      return item.productName?.toString() ??
+          item.product?.name?.toString() ??
+          'Unknown Product';
+    } catch (e) {
+      return 'Unknown Product';
+    }
   }
 
-  void _decreaseQuantity(dynamic item) {
-    // Implement decrease quantity logic
+  int _getItemQuantity(dynamic item) {
+    if (item is Map) {
+      return item['quantity'] ?? 1;
+    }
+    try {
+      return item.quantity ?? 1;
+    } catch (e) {
+      return 1;
+    }
+  }
+
+  double _getItemTotalPriceDouble(dynamic item) {
+    try {
+      if (item is Map) {
+        if (item['totalPrice'] != null) {
+          return item['totalPrice'] is double
+              ? item['totalPrice']
+              : double.parse(item['totalPrice'].toString());
+        }
+        double unitPrice = item['price'] is double
+            ? item['price']
+            : double.parse(item['price'].toString());
+        int quantity = item['quantity'] ?? 1;
+        return unitPrice * quantity;
+      } else {
+        // For OrderItem objects
+        if (item.totalPrice != null) {
+          return item.totalPrice is double
+              ? item.totalPrice
+              : double.parse(item.totalPrice.toString());
+        }
+
+        // Try different possible price property names
+        double unitPrice = 0.0;
+        try {
+          unitPrice = item.price?.toDouble() ??
+              item.unitPrice?.toDouble() ??
+              item.product?.basePrice?.toDouble() ??
+              0.0;
+        } catch (e) {
+          unitPrice = 0.0;
+        }
+
+        return unitPrice * _getItemQuantity(item);
+      }
+    } catch (e) {
+      print('Error getting total price: $e');
+      return 0.0;
+    }
+  }
+
+  String _getItemUnitPrice(dynamic item) {
+    try {
+      if (item is Map) {
+        double price = item['price'] is double
+            ? item['price']
+            : double.parse((item['price'] ?? 0).toString());
+        return 'Rp${_formatPrice(price.round())}';
+      } else {
+        // For OrderItem objects
+        double price = 0.0;
+        try {
+          price = item.price?.toDouble() ??
+              item.unitPrice?.toDouble() ??
+              item.product?.basePrice?.toDouble() ??
+              0.0;
+        } catch (e) {
+          price = 0.0;
+        }
+        return 'Rp${_formatPrice(price.round())}';
+      }
+    } catch (e) {
+      print('Error getting unit price: $e');
+      return 'Rp0';
+    }
+  }
+
+  String _getItemTotalPrice(dynamic item) =>
+      'Rp${_formatPrice(_getItemTotalPriceDouble(item).round())}';
+
+  String _formatPrice(int price) {
+    return price.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
+  void _increaseQuantity(int index) {
     setState(() {
-      // Update item quantity
-      // You'll need to access your order controller or update the order model
+      var item = currentOrderItems[index];
+      int newQuantity = _getItemQuantity(item) + 1;
+      double unitPrice = 0.0;
+
+      if (item is Map) {
+        unitPrice = item['price'] is double
+            ? item['price']
+            : double.parse(item['price'].toString());
+        currentOrderItems[index] = {
+          ...item,
+          'quantity': newQuantity,
+          'totalPrice': unitPrice * newQuantity,
+        };
+      } else {
+        // For OrderItem objects, convert to Map format
+        try {
+          unitPrice = item.price?.toDouble() ??
+              item.unitPrice?.toDouble() ??
+              item.product?.basePrice?.toDouble() ??
+              0.0;
+        } catch (e) {
+          unitPrice = 0.0;
+        }
+
+        currentOrderItems[index] = {
+          'id': item.id,
+          'productId': item.productId ?? item.id,
+          'name': _getItemName(item),
+          'productName': _getItemName(item),
+          'quantity': newQuantity,
+          'price': unitPrice,
+          'totalPrice': unitPrice * newQuantity,
+        };
+      }
     });
+    _calculateChange();
+  }
+
+  void _decreaseQuantity(int index) {
+    setState(() {
+      var item = currentOrderItems[index];
+      int currentQuantity = _getItemQuantity(item);
+
+      if (currentQuantity > 1) {
+        int newQuantity = currentQuantity - 1;
+        double unitPrice = 0.0;
+
+        if (item is Map) {
+          unitPrice = item['price'] is double
+              ? item['price']
+              : double.parse(item['price'].toString());
+          currentOrderItems[index] = {
+            ...item,
+            'quantity': newQuantity,
+            'totalPrice': unitPrice * newQuantity,
+          };
+        } else {
+          // For OrderItem objects, convert to Map format
+          try {
+            unitPrice = item.price?.toDouble() ??
+                item.unitPrice?.toDouble() ??
+                item.product?.basePrice?.toDouble() ??
+                0.0;
+          } catch (e) {
+            unitPrice = 0.0;
+          }
+
+          currentOrderItems[index] = {
+            'id': item.id,
+            'productId': item.productId ?? item.id,
+            'name': _getItemName(item),
+            'productName': _getItemName(item),
+            'quantity': newQuantity,
+            'price': unitPrice,
+            'totalPrice': unitPrice * newQuantity,
+          };
+        }
+      } else {
+        currentOrderItems.removeAt(index);
+      }
+    });
+    _calculateChange();
   }
 
   void _processPayment() {
-    // Validate form
     if (customerNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nama customer tidak boleh kosong'),
-          backgroundColor: Colors.red,
-        ),
+            content: Text('Nama customer tidak boleh kosong'),
+            backgroundColor: Colors.red),
       );
       return;
     }
@@ -870,33 +823,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     if (selectedPaymentMethod == 'Tunai') {
       double cashAmount =
           double.tryParse(cashAmountController.text.replaceAll(',', '')) ?? 0;
-
-      // Safe conversion to double for comparison
-      double total = 0.0;
-      if (widget.order.totalItems is int) {
-        total = (widget.order.totalItems as int).toDouble();
-      } else if (widget.order.totalItems is double) {
-        total = widget.order.totalItems as double;
-      } else {
-        try {
-          total = double.tryParse(widget.order.totalItems.toString()) ?? 0.0;
-        } catch (e) {
-          total = 0.0;
-        }
-      }
-
+      double total = _calculateOrderTotal();
       if (cashAmount < total) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Jumlah pembayaran kurang dari total'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('Jumlah pembayaran kurang'),
+              backgroundColor: Colors.red),
         );
         return;
       }
     }
 
-    // Process payment
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -906,20 +843,14 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Customer: ${customerNameController.text}'),
-            Text('Meja: ${tableController.text}'),
-            Text('Total: ${widget.order.formattedTotal}'),
+            Text('Total: Rp${_formatPrice(_calculateOrderTotal().round())}'),
             Text('Metode: $selectedPaymentMethod'),
-            if (selectedPaymentMethod == 'Tunai') ...[
-              Text('Bayar: Rp${cashAmountController.text}'),
-              Text('Kembalian: ${changeController.text}'),
-            ],
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -934,14 +865,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   void _completePayment() {
-    // Implement payment completion logic
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Pembayaran ${widget.order.displayId} berhasil diproses'),
-        backgroundColor: Colors.green,
-      ),
+          content: Text('Pembayaran ${widget.order.displayId} berhasil'),
+          backgroundColor: Colors.green),
     );
-
-    Navigator.pop(context); // Close the main dialog
+    Navigator.pop(context);
   }
 }
