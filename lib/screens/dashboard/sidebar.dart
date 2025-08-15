@@ -26,14 +26,13 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int _selectedIndex = 0;
-  int? _selectedSubIndex;
-  int? _expandedMenuIndex;
-  bool _isSidebarExpanded = false;
-  bool _isMobileSidebarOpen = false;
-
-  // Add this controller to manage page content
-  Widget _currentPageWidget = Container();
+  // Static variables untuk menyimpan state sidebar
+  static int _selectedIndex = 0;
+  static int? _selectedSubIndex;
+  static int? _expandedMenuIndex;
+  static bool _isSidebarExpanded = false;
+  static bool _isMobileSidebarOpen = false;
+  static bool _hasInitializedRoute = false;
 
   final List<MenuItem> _menuItems = [
     MenuItem(Icons.home, 'Beranda'),
@@ -80,30 +79,26 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
-    _currentPageWidget = widget.child;
-    _setInitialRoute();
-  }
-
-  @override
-  void didUpdateWidget(MainLayout oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.child != widget.child) {
-      setState(() {
-        _currentPageWidget = widget.child;
-      });
+    // Hanya set initial route sekali saja
+    if (!_hasInitializedRoute) {
+      _setInitialRoute();
+      _hasInitializedRoute = true;
     }
   }
 
   void _setInitialRoute() {
-    // Set selected index based on current route using GetX route names
     final currentRoute = Get.currentRoute;
 
     switch (currentRoute) {
       case '/dashboard':
         _selectedIndex = 0;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/tables':
         _selectedIndex = 1;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/product':
         _selectedIndex = 2;
@@ -127,12 +122,18 @@ class _MainLayoutState extends State<MainLayout> {
         break;
       case '/promos':
         _selectedIndex = 3;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/orders':
         _selectedIndex = 4;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/kitchen':
         _selectedIndex = 5;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/manage-account':
         _selectedIndex = 6;
@@ -156,6 +157,8 @@ class _MainLayoutState extends State<MainLayout> {
         break;
       case '/assets':
         _selectedIndex = 8;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/referral':
         _selectedIndex = 9;
@@ -169,15 +172,23 @@ class _MainLayoutState extends State<MainLayout> {
         break;
       case '/income':
         _selectedIndex = 10;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/disbursement':
         _selectedIndex = 11;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/password':
         _selectedIndex = 12;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/customers':
         _selectedIndex = 13;
+        _selectedSubIndex = null;
+        _expandedMenuIndex = null;
         break;
       case '/points/rewards':
         _selectedIndex = 14;
@@ -250,7 +261,6 @@ class _MainLayoutState extends State<MainLayout> {
     });
   }
 
-  // Modified navigation method - menggunakan Get.toNamed() alih-alih Get.offAllNamed()
   void _navigateToPage(int index, [int? subIndex]) {
     setState(() {
       _selectedIndex = index;
@@ -377,7 +387,7 @@ class _MainLayoutState extends State<MainLayout> {
       }
     }
 
-    // Use Get.toNamed() instead of Get.offAllNamed() to preserve the layout
+    // Use Get.toNamed() untuk navigasi
     if (routeName != Get.currentRoute) {
       Get.toNamed(routeName);
     }
@@ -398,16 +408,16 @@ class _MainLayoutState extends State<MainLayout> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            setState(() {
-              if (hasSubItems && showExpanded) {
-                _toggleSubmenu(index);
-              } else if (hasSubItems && !showExpanded) {
+            if (hasSubItems && showExpanded) {
+              _toggleSubmenu(index);
+            } else if (hasSubItems && !showExpanded) {
+              setState(() {
                 _isSidebarExpanded = true;
                 _expandedMenuIndex = index;
-              } else {
-                _navigateToPage(index);
-              }
-            });
+              });
+            } else {
+              _navigateToPage(index);
+            }
           },
           borderRadius: BorderRadius.circular(12),
           child: Container(
@@ -847,14 +857,13 @@ class _MainLayoutState extends State<MainLayout> {
                         ),
                       ),
 
-                    // Main content area - menggunakan widget child langsung
+                    // Main content area
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
                         ),
-                        child:
-                            widget.child, // Langsung menggunakan widget.child
+                        child: widget.child,
                       ),
                     ),
                   ],
