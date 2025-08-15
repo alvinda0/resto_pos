@@ -1,11 +1,12 @@
-// controller/order/order_controller.dart
+// controller/order/new_order_controller.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/order/new_order_model.dart';
+import 'package:pos/models/product/product_model.dart';
 import 'package:pos/services/order/new_order_service.dart';
 
-class OrderController extends GetxController {
+class NewOrderController extends GetxController {
   final OrderService _orderService = OrderService.instance;
 
   // Observable variables
@@ -31,10 +32,55 @@ class OrderController extends GetxController {
   final RxDouble cashAmount = 0.0.obs;
   final RxDouble changeAmount = 0.0.obs;
 
+  // Form controllers
+  final TextEditingController customerNameController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController tableController = TextEditingController();
+  final TextEditingController notesController = TextEditingController();
+  final TextEditingController promoController = TextEditingController();
+  final TextEditingController cashAmountController = TextEditingController();
+  final TextEditingController changeController = TextEditingController();
+
+  @override
+  void onInit() {
+    super.onInit();
+    _initializeListeners();
+  }
+
   @override
   void onClose() {
     _qrisStatusTimer?.cancel();
+    _disposeControllers();
     super.onClose();
+  }
+
+  void _initializeListeners() {
+    // Listen to text controller changes
+    customerNameController
+        .addListener(() => customerName.value = customerNameController.text);
+    phoneController
+        .addListener(() => customerPhone.value = phoneController.text);
+    tableController.addListener(
+        () => tableNumber.value = int.tryParse(tableController.text) ?? 0);
+    notesController.addListener(() => notes.value = notesController.text);
+    promoController.addListener(() => promoCode.value = promoController.text);
+    cashAmountController.addListener(() {
+      cashAmount.value = double.tryParse(cashAmountController.text
+              .replaceAll(',', '')
+              .replaceAll('Rp', '')) ??
+          0.0;
+      calculateChange();
+    });
+  }
+
+  void _disposeControllers() {
+    customerNameController.dispose();
+    phoneController.dispose();
+    tableController.dispose();
+    notesController.dispose();
+    promoController.dispose();
+    cashAmountController.dispose();
+    changeController.dispose();
   }
 
   // Calculate order total
@@ -48,31 +94,39 @@ class OrderController extends GetxController {
     if (selectedPaymentMethod.value == 'Tunai' && cashAmount.value > 0) {
       double change = cashAmount.value - orderTotal;
       changeAmount.value = change >= 0 ? change : 0.0;
+      changeController.text = 'Rp${formatPrice(changeAmount.value.round())}';
     } else {
       changeAmount.value = 0.0;
+      changeController.text = 'Rp0';
     }
   }
 
+  // Format price helper
+  String formatPrice(int price) {
+    return price.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
   // Add product to order
-  void addProductToOrder(Map<String, dynamic> product) {
+  void addProductToOrder(Product product) {
     try {
       int existingIndex =
-          orderItems.indexWhere((item) => item['productId'] == product['id']);
+          orderItems.indexWhere((item) => item['productId'] == product.id);
 
       if (existingIndex >= 0) {
         orderItems[existingIndex]['quantity']++;
         orderItems[existingIndex]['totalPrice'] = orderItems[existingIndex]
                 ['quantity'] *
-            (product['basePrice']?.toDouble() ?? 0.0);
+            product.basePrice.toDouble();
       } else {
         orderItems.add({
-          'id': product['id'],
-          'productId': product['id'],
-          'name': product['name'],
-          'productName': product['name'],
+          'id': product.id,
+          'productId': product.id,
+          'name': product.name,
+          'productName': product.name,
           'quantity': 1,
-          'price': product['basePrice']?.toDouble() ?? 0.0,
-          'totalPrice': product['basePrice']?.toDouble() ?? 0.0,
+          'price': product.basePrice.toDouble(),
+          'totalPrice': product.basePrice.toDouble(),
           'note': '',
         });
       }
@@ -81,6 +135,7 @@ class OrderController extends GetxController {
       calculateChange();
     } catch (e) {
       error.value = 'Failed to add product: $e';
+      _showErrorSnackbar(error.value);
     }
   }
 
@@ -121,6 +176,12 @@ class OrderController extends GetxController {
     }
   }
 
+  // Update payment method
+  void updatePaymentMethod(String method) {
+    selectedPaymentMethod.value = method;
+    calculateChange();
+  }
+
   // Validate order data
   bool validateOrder() {
     error.value = '';
@@ -144,9 +205,12 @@ class OrderController extends GetxController {
     return true;
   }
 
-  // Create order
-  Future<void> createOrder() async {
-    if (!validateOrder()) return;
+  // Create order and process payment
+  Future<void> processOrder() async {
+    if (!validateOrder()) {
+      _showErrorSnackbar(error.value);
+      return;
+    }
 
     try {
       isLoading.value = true;
@@ -179,29 +243,23 @@ class OrderController extends GetxController {
       currentOrder.value = order;
 
       // Process payment based on method
-      await processPayment(order.id);
+      await _processPayment(order.id);
     } catch (e) {
       error.value = e.toString();
-      Get.snackbar(
-        'Error',
-        error.value,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      _showErrorSnackbar('Gagal membuat pesanan: ${error.value}');
     } finally {
       isLoading.value = false;
     }
   }
 
   // Process payment
-  Future<void> processPayment(String orderId) async {
+  Future<void> _processPayment(String orderId) async {
     try {
       isProcessingPayment.value = true;
 
       if (selectedPaymentMethod.value == 'QRIS') {
         // Handle QRIS payment
-        await initiateQrisPayment(orderId);
+        await _initiateQrisPayment(orderId);
       } else {
         // Handle Cash/Debit payment
         final paymentResponse = await _orderService.processPayment(
@@ -219,34 +277,28 @@ class OrderController extends GetxController {
       }
     } catch (e) {
       error.value = e.toString();
-      Get.snackbar(
-        'Error',
-        'Pembayaran gagal: ${error.value}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      _showErrorSnackbar('Pembayaran gagal: ${error.value}');
     } finally {
       isProcessingPayment.value = false;
     }
   }
 
   // Initiate QRIS payment
-  Future<void> initiateQrisPayment(String orderId) async {
+  Future<void> _initiateQrisPayment(String orderId) async {
     try {
       final qrisResponse = await _orderService.initiateQrisPayment(orderId);
       qrisPayment.value = qrisResponse;
       isQrisPaymentActive.value = true;
 
       // Start checking payment status
-      startQrisStatusCheck(orderId);
+      _startQrisStatusCheck(orderId);
     } catch (e) {
       throw Exception('Failed to initiate QRIS payment: $e');
     }
   }
 
   // Start QRIS status checking
-  void startQrisStatusCheck(String orderId) {
+  void _startQrisStatusCheck(String orderId) {
     _qrisStatusTimer?.cancel();
 
     _qrisStatusTimer =
@@ -267,13 +319,7 @@ class OrderController extends GetxController {
           timer.cancel();
           isQrisPaymentActive.value = false;
           error.value = 'Pembayaran QRIS gagal atau expired';
-          Get.snackbar(
-            'Error',
-            error.value,
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
-            snackPosition: SnackPosition.TOP,
-          );
+          _showErrorSnackbar(error.value);
         }
       } catch (e) {
         print('Error checking QRIS status: $e');
@@ -291,13 +337,7 @@ class OrderController extends GetxController {
         if (isQrisPaymentActive.value) {
           isQrisPaymentActive.value = false;
           error.value = 'QRIS payment expired';
-          Get.snackbar(
-            'Timeout',
-            'QRIS payment expired',
-            backgroundColor: Colors.orange,
-            colorText: Colors.white,
-            snackPosition: SnackPosition.TOP,
-          );
+          _showErrorSnackbar('QRIS payment expired');
         }
       });
     }
@@ -308,17 +348,6 @@ class OrderController extends GetxController {
     _qrisStatusTimer?.cancel();
     isQrisPaymentActive.value = false;
     qrisPayment.value = null;
-  }
-
-  // Show success message
-  void _showSuccessMessage(String message) {
-    Get.snackbar(
-      'Success',
-      message,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-    );
   }
 
   // Reset form
@@ -337,42 +366,40 @@ class OrderController extends GetxController {
     qrisPayment.value = null;
     isQrisPaymentActive.value = false;
     error.value = '';
+
+    // Clear controllers
+    customerNameController.clear();
+    phoneController.clear();
+    tableController.clear();
+    notesController.clear();
+    promoController.clear();
+    cashAmountController.clear();
+    changeController.clear();
+
     _qrisStatusTimer?.cancel();
   }
 
-  // Update form fields
-  void updateCustomerName(String value) {
-    customerName.value = value;
+  // Show success message
+  void _showSuccessMessage(String message) {
+    Get.snackbar(
+      'Berhasil',
+      message,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+    );
   }
 
-  void updateCustomerPhone(String value) {
-    customerPhone.value = value;
-  }
-
-  void updateTableNumber(String value) {
-    tableNumber.value = int.tryParse(value) ?? 0;
-  }
-
-  void updateNotes(String value) {
-    notes.value = value;
-  }
-
-  void updatePromoCode(String value) {
-    promoCode.value = value;
-  }
-
-  void updateReferralCode(String value) {
-    referralCode.value = value;
-  }
-
-  void updatePaymentMethod(String method) {
-    selectedPaymentMethod.value = method;
-    calculateChange();
-  }
-
-  void updateCashAmount(String value) {
-    cashAmount.value =
-        double.tryParse(value.replaceAll(',', '').replaceAll('Rp', '')) ?? 0.0;
-    calculateChange();
+  // Show error message
+  void _showErrorSnackbar(String message) {
+    Get.snackbar(
+      'Error',
+      message,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+    );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/product/product_controller.dart';
+import 'package:pos/controller/order/new_order_controller.dart';
 import 'package:pos/models/product/product_model.dart';
 
 class NewOrderScreen extends StatefulWidget {
@@ -12,24 +13,12 @@ class NewOrderScreen extends StatefulWidget {
 
 class _NewOrderScreenState extends State<NewOrderScreen> {
   final ProductController productController = Get.put(ProductController());
-  final TextEditingController customerNameController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController tableController = TextEditingController();
-  final TextEditingController notesController = TextEditingController();
-  final TextEditingController promoController = TextEditingController();
-  final TextEditingController cashAmountController = TextEditingController();
-  final TextEditingController changeController = TextEditingController();
+  final NewOrderController orderController = Get.put(NewOrderController());
   final TextEditingController productSearchController = TextEditingController();
-
-  String selectedPaymentMethod = 'Tunai';
-  List<String> paymentMethods = ['Tunai', 'QRIS', 'Debit'];
-  List<Map<String, dynamic>> currentOrderItems = [];
 
   @override
   void initState() {
     super.initState();
-    cashAmountController.addListener(_calculateChange);
-
     // Setup product search listener
     productSearchController.addListener(() {
       productController.searchProducts(productSearchController.text);
@@ -38,87 +27,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   @override
   void dispose() {
-    customerNameController.dispose();
-    phoneController.dispose();
-    tableController.dispose();
-    notesController.dispose();
-    promoController.dispose();
-    cashAmountController.dispose();
-    changeController.dispose();
     productSearchController.dispose();
     super.dispose();
-  }
-
-  void _addProductToOrder(Product product) {
-    setState(() {
-      int existingIndex = currentOrderItems
-          .indexWhere((item) => item['productId'] == product.id);
-
-      if (existingIndex >= 0) {
-        currentOrderItems[existingIndex]['quantity']++;
-        currentOrderItems[existingIndex]['totalPrice'] =
-            currentOrderItems[existingIndex]['quantity'] * product.basePrice;
-      } else {
-        currentOrderItems.add({
-          'id': product.id,
-          'productId': product.id,
-          'name': product.name,
-          'productName': product.name,
-          'quantity': 1,
-          'price': product.basePrice.toDouble(),
-          'totalPrice': product.basePrice.toDouble(),
-        });
-      }
-    });
-    _calculateChange();
-  }
-
-  void _calculateChange() {
-    if (selectedPaymentMethod == 'Tunai' &&
-        cashAmountController.text.isNotEmpty) {
-      double cashAmount =
-          double.tryParse(cashAmountController.text.replaceAll(',', '')) ?? 0;
-      double total = _calculateOrderTotal();
-      double change = cashAmount - total;
-      changeController.text =
-          change >= 0 ? 'Rp${_formatPrice(change.round())}' : 'Rp0';
-    } else {
-      changeController.text = 'Rp0';
-    }
-  }
-
-  double _calculateOrderTotal() {
-    return currentOrderItems.fold(
-        0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
-  }
-
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
-  }
-
-  void _increaseQuantity(int index) {
-    setState(() {
-      currentOrderItems[index]['quantity']++;
-      double unitPrice = currentOrderItems[index]['price']?.toDouble() ?? 0.0;
-      currentOrderItems[index]['totalPrice'] =
-          currentOrderItems[index]['quantity'] * unitPrice;
-    });
-    _calculateChange();
-  }
-
-  void _decreaseQuantity(int index) {
-    setState(() {
-      if (currentOrderItems[index]['quantity'] > 1) {
-        currentOrderItems[index]['quantity']--;
-        double unitPrice = currentOrderItems[index]['price']?.toDouble() ?? 0.0;
-        currentOrderItems[index]['totalPrice'] =
-            currentOrderItems[index]['quantity'] * unitPrice;
-      } else {
-        currentOrderItems.removeAt(index);
-      }
-    });
-    _calculateChange();
   }
 
   @override
@@ -156,6 +66,20 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
+          // Show QRIS cancel button if active
+          Obx(() {
+            return orderController.isQrisPaymentActive.value
+                ? ElevatedButton.icon(
+                    onPressed: orderController.cancelQrisPayment,
+                    icon: const Icon(Icons.close),
+                    label: const Text('Batalkan QRIS'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  )
+                : const SizedBox.shrink();
+          }),
         ],
       ),
     );
@@ -283,7 +207,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                         fontSize: 12, fontWeight: FontWeight.bold),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
-                Text('Rp${_formatPrice(product.basePrice)}',
+                Text('Rp${orderController.formatPrice(product.basePrice)}',
                     style:
                         TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                 const SizedBox(height: 4),
@@ -291,7 +215,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: product.isAvailable
-                        ? () => _addProductToOrder(product)
+                        ? () => orderController.addProductToOrder(product)
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
@@ -321,31 +245,37 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             color: Colors.grey.shade50,
             border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Daftar Pesanan',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Text('Total: ${currentOrderItems.length} items',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-            ],
-          ),
+          child: Obx(() {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Daftar Pesanan',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('Total: ${orderController.orderItems.length} items',
+                    style:
+                        TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              ],
+            );
+          }),
         ),
         Expanded(
-          child: currentOrderItems.isEmpty
-              ? const Center(
-                  child: Text(
-                    'Belum ada pesanan\nTambahkan produk untuk memulai',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: currentOrderItems.length,
-                  itemBuilder: (context, index) =>
-                      _buildOrderItem(currentOrderItems[index], index),
-                ),
+          child: Obx(() {
+            return orderController.orderItems.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Belum ada pesanan\nTambahkan produk untuk memulai',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orderController.orderItems.length,
+                    itemBuilder: (context, index) => _buildOrderItem(
+                        orderController.orderItems[index], index),
+                  );
+          }),
         ),
       ],
     );
@@ -381,12 +311,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 Row(
                   children: [
                     Text(
-                        '${item['quantity']} x Rp${_formatPrice((item['price']?.toDouble() ?? 0.0).round())}',
+                        '${item['quantity']} x Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())}',
                         style: TextStyle(
                             fontSize: 10, color: Colors.grey.shade600)),
                     const Spacer(),
                     Text(
-                        'Rp${_formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
+                        'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
                         style: const TextStyle(
                             fontSize: 12, fontWeight: FontWeight.w500)),
                   ],
@@ -398,7 +328,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                onPressed: () => _decreaseQuantity(index),
+                onPressed: () => orderController.decreaseQuantity(index),
                 icon: const Icon(Icons.remove, size: 12),
                 style: IconButton.styleFrom(
                     backgroundColor: Colors.grey.shade200,
@@ -412,7 +342,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                         fontSize: 12, fontWeight: FontWeight.bold)),
               ),
               IconButton(
-                onPressed: () => _increaseQuantity(index),
+                onPressed: () => orderController.increaseQuantity(index),
                 icon: const Icon(Icons.add, size: 12),
                 style: IconButton.styleFrom(
                     backgroundColor: Colors.grey.shade200,
@@ -427,11 +357,149 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   }
 
   Widget _buildCustomerPaymentSection() {
-    return SingleChildScrollView(
+    return Obx(() {
+      // Show QRIS payment interface if QRIS payment is active
+      if (orderController.isQrisPaymentActive.value) {
+        return _buildQrisPaymentInterface();
+      }
+
+      // Show normal customer and payment form
+      return SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildCustomerDetailsCard(),
+            _buildPaymentCard(),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildQrisPaymentInterface() {
+    return Container(
+      padding: const EdgeInsets.all(16),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildCustomerDetailsCard(),
-          _buildPaymentCard(),
+          const Text(
+            'Pembayaran QRIS',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                Text(
+                    'Total: Rp${orderController.formatPrice(orderController.orderTotal.round())}',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                Obx(() {
+                  final qrisPayment = orderController.qrisPayment.value;
+                  if (qrisPayment != null && qrisPayment.qrisData != null) {
+                    return Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Image.network(
+                        qrisPayment.qrisData!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Text('QR Code tidak dapat dimuat'),
+                            ),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        },
+                      ),
+                    );
+                  }
+                  return const CircularProgressIndicator();
+                }),
+                const SizedBox(height: 16),
+                const Text(
+                  'Scan QR Code dengan aplikasi pembayaran Anda',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                Obx(() {
+                  final qrisPayment = orderController.qrisPayment.value;
+                  if (qrisPayment != null) {
+                    final remaining =
+                        qrisPayment.expiresAt.difference(DateTime.now());
+                    if (remaining.isNegative) {
+                      return const Text(
+                        'QR Code telah expired',
+                        style: TextStyle(
+                            color: Colors.red, fontWeight: FontWeight.bold),
+                      );
+                    }
+                    return Text(
+                      'Berakhir dalam ${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}',
+                      style: TextStyle(color: Colors.orange.shade700),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: orderController.cancelQrisPayment,
+                        child: const Text('Batalkan'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Show info that auto checking is running
+                          Get.snackbar(
+                            'Info',
+                            'Status pembayaran sedang dicek otomatis setiap 5 detik',
+                            backgroundColor: Colors.blue,
+                            colorText: Colors.white,
+                            duration: const Duration(seconds: 2),
+                          );
+                        },
+                        child: const Text('Status Auto'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue, size: 16),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Status pembayaran akan diperbarui otomatis setiap 5 detik',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -453,24 +521,29 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           Row(
             children: [
               Expanded(
-                  child:
-                      _buildTextField('Nama Customer', customerNameController)),
+                  child: _buildTextField(
+                      'Nama Customer', orderController.customerNameController)),
               const SizedBox(width: 8),
-              Expanded(child: _buildTextField('Nomor WA', phoneController)),
+              Expanded(
+                  child: _buildTextField(
+                      'Nomor WA', orderController.phoneController)),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildTextField('Nomor Meja', tableController)),
+              Expanded(
+                  child: _buildTextField(
+                      'Nomor Meja', orderController.tableController)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildTextField('Catatan', notesController,
+                  child: _buildTextField(
+                      'Catatan', orderController.notesController,
                       hintText: 'Catatan')),
             ],
           ),
           const SizedBox(height: 8),
-          _buildTextField('Kode Promo', promoController,
+          _buildTextField('Kode Promo', orderController.promoController,
               hintText: 'Masukkan kode promo'),
         ],
       ),
@@ -509,172 +582,123 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           const Text('Pembayaran',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          Row(
-            children: paymentMethods.map((method) {
-              final isSelected = selectedPaymentMethod == method;
-              return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 4),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        selectedPaymentMethod = method;
-                        _calculateChange();
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          isSelected ? Colors.blue : Colors.grey.shade200,
-                      foregroundColor: isSelected ? Colors.white : Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      minimumSize: const Size(0, 30),
+          Obx(() {
+            return Row(
+              children: ['Tunai', 'QRIS', 'Debit'].map((method) {
+                final isSelected =
+                    orderController.selectedPaymentMethod.value == method;
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          orderController.updatePaymentMethod(method),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            isSelected ? Colors.blue : Colors.grey.shade200,
+                        foregroundColor:
+                            isSelected ? Colors.white : Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        minimumSize: const Size(0, 30),
+                      ),
+                      child: Text(method, style: const TextStyle(fontSize: 10)),
                     ),
-                    child: Text(method, style: const TextStyle(fontSize: 10)),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
+                );
+              }).toList(),
+            );
+          }),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(6)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total',
-                    style:
-                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                Text('Rp${_formatPrice(_calculateOrderTotal().round())}',
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
-            ),
+            child: Obx(() {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Total',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  Text(
+                      'Rp${orderController.formatPrice(orderController.orderTotal.round())}',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.bold)),
+                ],
+              );
+            }),
           ),
           const SizedBox(height: 8),
-          if (selectedPaymentMethod == 'Tunai') ...[
-            _buildTextField('Jumlah Pembayaran', cashAmountController,
-                hintText: 'Jumlah uang cash'),
-            const SizedBox(height: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Kembalian',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: changeController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6)),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    fillColor: Colors.grey.shade100,
-                    filled: true,
-                    isDense: true,
-                  ),
-                  style: const TextStyle(fontSize: 12),
+          Obx(() {
+            return orderController.selectedPaymentMethod.value == 'Tunai'
+                ? Column(
+                    children: [
+                      _buildTextField('Jumlah Pembayaran',
+                          orderController.cashAmountController,
+                          hintText: 'Jumlah uang cash'),
+                      const SizedBox(height: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Kembalian',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w500, fontSize: 12)),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: orderController.changeController,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6)),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 6),
+                              fillColor: Colors.grey.shade100,
+                              filled: true,
+                              isDense: true,
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  )
+                : const SizedBox.shrink();
+          }),
+          Obx(() {
+            return SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: orderController.orderItems.isEmpty ||
+                        orderController.isLoading.value ||
+                        orderController.isProcessingPayment.value
+                    ? null
+                    : orderController.processOrder,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-          ],
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: currentOrderItems.isEmpty ? null : _processPayment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: orderController.isLoading.value ||
+                        orderController.isProcessingPayment.value
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Proses Pembayaran',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold)),
               ),
-              child: const Text('Proses Pembayaran',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
-  }
-
-  void _processPayment() {
-    if (customerNameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Nama customer tidak boleh kosong'),
-            backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    if (selectedPaymentMethod == 'Tunai') {
-      double cashAmount =
-          double.tryParse(cashAmountController.text.replaceAll(',', '')) ?? 0;
-      double total = _calculateOrderTotal();
-      if (cashAmount < total) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Jumlah pembayaran kurang'),
-              backgroundColor: Colors.red),
-        );
-        return;
-      }
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Pembayaran'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Customer: ${customerNameController.text}'),
-            Text('Total: Rp${_formatPrice(_calculateOrderTotal().round())}'),
-            Text('Metode: $selectedPaymentMethod'),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _completePayment();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Konfirmasi'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _completePayment() {
-    // Implement your payment processing logic here
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pembayaran berhasil!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    // Reset form after successful payment
-    setState(() {
-      currentOrderItems.clear();
-      customerNameController.clear();
-      phoneController.clear();
-      tableController.clear();
-      notesController.clear();
-      promoController.clear();
-      cashAmountController.clear();
-      changeController.clear();
-      selectedPaymentMethod = 'Tunai';
-    });
   }
 }
