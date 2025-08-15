@@ -517,7 +517,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Status pembayaran akan diperbarui otomatis setiap 5 detik',
+                  'Status pembayaran akan diperbarui otomatis setiap 1 detik',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ),

@@ -283,6 +283,34 @@ class NewOrderController extends GetxController {
     }
   }
 
+  Future<void> checkQrisPaymentStatus(String orderId) async {
+    try {
+      final statusResponse =
+          await _orderService.checkQrisPaymentStatus(orderId);
+
+      if (statusResponse.status == 'SUCCESS') {
+        // Payment successful
+        _qrisStatusTimer?.cancel();
+        isQrisPaymentActive.value = false;
+        _showSuccessMessage('Pembayaran QRIS berhasil!');
+        resetForm();
+      } else if (statusResponse.status == 'FAILED' ||
+          statusResponse.status == 'EXPIRED') {
+        // Payment failed
+        _qrisStatusTimer?.cancel();
+        isQrisPaymentActive.value = false;
+        error.value = 'Pembayaran QRIS gagal atau expired';
+        _showErrorSnackbar(error.value);
+      } else {
+        // Still pending, show current status
+        print('QRIS Payment Status: ${statusResponse.status}');
+      }
+    } catch (e) {
+      print('Error checking QRIS status: $e');
+      error.value = 'Error checking QRIS status: $e';
+    }
+  }
+
   // Initiate QRIS payment
   Future<void> _initiateQrisPayment(String orderId) async {
     try {
@@ -301,13 +329,16 @@ class NewOrderController extends GetxController {
   void _startQrisStatusCheck(String orderId) {
     _qrisStatusTimer?.cancel();
 
+    // Check immediately first
+    checkQrisPaymentStatus(orderId);
+
     _qrisStatusTimer =
-        Timer.periodic(const Duration(seconds: 5), (timer) async {
+        Timer.periodic(const Duration(seconds: 1), (timer) async {
       try {
         final statusResponse =
             await _orderService.checkQrisPaymentStatus(orderId);
 
-        if (statusResponse.status == 'PAID') {
+        if (statusResponse.status == 'SUCCESS') {
           // Payment successful
           timer.cancel();
           isQrisPaymentActive.value = false;
@@ -321,6 +352,7 @@ class NewOrderController extends GetxController {
           error.value = 'Pembayaran QRIS gagal atau expired';
           _showErrorSnackbar(error.value);
         }
+        // If still pending, continue checking
       } catch (e) {
         print('Error checking QRIS status: $e');
       }
