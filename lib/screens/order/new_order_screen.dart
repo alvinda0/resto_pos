@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:pos/controller/product/product_controller.dart';
 import 'package:pos/controller/order/new_order_controller.dart';
 import 'package:pos/models/product/product_model.dart';
@@ -29,6 +31,16 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   void dispose() {
     productSearchController.dispose();
     super.dispose();
+  }
+
+  // Helper method to decode base64 image
+  Uint8List _decodeBase64Image(String base64String) {
+    // Remove data:image/png;base64, prefix if it exists
+    String cleanBase64 = base64String;
+    if (base64String.contains(',')) {
+      cleanBase64 = base64String.split(',').last;
+    }
+    return base64Decode(cleanBase64);
   }
 
   @override
@@ -409,23 +421,34 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
                       ),
-                      child: Image.network(
-                        qrisPayment.qrisData!,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey.shade200,
-                            child: const Center(
-                              child: Text('QR Code tidak dapat dimuat'),
-                            ),
-                          );
-                        },
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          _decodeBase64Image(qrisPayment.qrisData!),
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey.shade200,
+                              child: const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.error_outline,
+                                        color: Colors.red),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'QR Code tidak dapat dimuat',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     );
                   }
