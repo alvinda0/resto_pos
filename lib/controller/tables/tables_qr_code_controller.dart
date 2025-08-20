@@ -36,10 +36,9 @@ class QrCodeController extends GetxController {
       final codes = await _qrCodeService.getQrCodes();
       qrCodes.assignAll(codes);
     } catch (e) {
-      // Extract clean error message
+      // Extract clean error message and set to error state
       String cleanError = _extractCleanErrorMessage(e.toString());
       error.value = cleanError;
-      _showSnackBar('Error', cleanError, isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -89,18 +88,24 @@ class QrCodeController extends GetxController {
         return aNum.compareTo(bNum);
       });
 
-      _showSnackBar(
-        'Berhasil',
-        '$tableCount meja berhasil ditambahkan (Meja ${startNumber} - ${startNumber + tableCount - 1})',
-        isError: false,
-      );
+      // Use WidgetsBinding to delay snackbar until after build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar(
+          'Berhasil',
+          '$tableCount meja berhasil ditambahkan (Meja ${startNumber} - ${startNumber + tableCount - 1})',
+          isError: false,
+        );
+      });
 
       return true;
     } catch (e) {
       String cleanError = _extractCleanErrorMessage(e.toString());
       error.value = cleanError;
-      _showSnackBar('Error', 'Gagal menambahkan meja: $cleanError',
-          isError: true);
+      // Use WidgetsBinding to delay snackbar until after build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar('Error', 'Gagal menambahkan meja: $cleanError',
+            isError: true);
+      });
       return false;
     } finally {
       isCreatingBulk.value = false;
@@ -120,11 +125,14 @@ class QrCodeController extends GetxController {
         // Remove from local list
         qrCodes.removeWhere((qr) => qr.id == qrCodeId);
 
-        _showSnackBar(
-          'Berhasil',
-          'Meja $tableNumber berhasil dihapus',
-          isError: false,
-        );
+        // Use WidgetsBinding to delay snackbar until after build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showSnackBar(
+            'Berhasil',
+            'Meja $tableNumber berhasil dihapus',
+            isError: false,
+          );
+        });
 
         return true;
       }
@@ -133,11 +141,14 @@ class QrCodeController extends GetxController {
     } catch (e) {
       String cleanError = _extractCleanErrorMessage(e.toString());
       error.value = cleanError;
-      _showSnackBar(
-        'Error',
-        'Gagal menghapus meja $tableNumber: $cleanError',
-        isError: true,
-      );
+      // Use WidgetsBinding to delay snackbar until after build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar(
+          'Error',
+          'Gagal menghapus meja $tableNumber: $cleanError',
+          isError: true,
+        );
+      });
       return false;
     } finally {
       isDeleting.value = false;

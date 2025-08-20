@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/product/product_controller.dart';
 import 'package:pos/models/product/product_model.dart';
+import 'package:pos/screens/product/add_product_dialog.dart';
 import 'package:pos/widgets/pagination_widget.dart';
 
 class ProductManagementScreen extends StatelessWidget {
@@ -12,7 +13,7 @@ class ProductManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 400;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -49,9 +50,13 @@ class ProductManagementScreen extends StatelessWidget {
 
               return RefreshIndicator(
                 onRefresh: controller.refreshProducts,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(isMobile ? 12 : 24),
-                  child: _buildProductGrid(context),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.all(isMobile ? 12 : 24),
+                      sliver: _buildProductGrid(context),
+                    ),
+                  ],
                 ),
               );
             }),
@@ -69,10 +74,13 @@ class ProductManagementScreen extends StatelessWidget {
         children: [
           Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 16),
-          Text(
-            controller.error.value,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              controller.error.value,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -90,11 +98,16 @@ class ProductManagementScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.inventory_2_outlined,
-              size: 48, color: Colors.grey.shade400),
+              size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'Tidak ada produk ditemukan',
             style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Coba ubah filter atau tambah produk baru',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
           ),
         ],
       ),
@@ -118,7 +131,9 @@ class ProductManagementScreen extends StatelessWidget {
           children: [
             Expanded(flex: 2, child: _buildCategoryFilter(true)),
             const SizedBox(width: 12),
-            Expanded(child: _buildAddButton(true)),
+            _buildClearFilterButton(),
+            const SizedBox(width: 8),
+            _buildAddButton(true),
           ],
         ),
       ],
@@ -131,6 +146,8 @@ class ProductManagementScreen extends StatelessWidget {
         Expanded(flex: 3, child: _buildSearchField()),
         const SizedBox(width: 16),
         Expanded(flex: 2, child: _buildCategoryFilter(false)),
+        const SizedBox(width: 16),
+        _buildClearFilterButton(),
         const SizedBox(width: 16),
         _buildAddButton(false),
       ],
@@ -147,6 +164,7 @@ class ProductManagementScreen extends StatelessWidget {
       child: TextField(
         controller: controller.searchController,
         onChanged: (value) {
+          // Debounce search
           if (controller.searchQuery.value != value) {
             Future.delayed(const Duration(milliseconds: 500), () {
               if (controller.searchController.text == value) {
@@ -156,9 +174,21 @@ class ProductManagementScreen extends StatelessWidget {
           }
         },
         decoration: InputDecoration(
-          hintText: 'Cari Menu Makanan',
+          hintText: 'Cari produk...',
           hintStyle: TextStyle(color: Colors.grey.shade500),
           prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 20),
+          suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+              ? IconButton(
+                  icon:
+                      Icon(Icons.clear, color: Colors.grey.shade500, size: 18),
+                  onPressed: () {
+                    controller.searchController.clear();
+                    controller.searchProducts('');
+                  },
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(8),
+                )
+              : const SizedBox.shrink()),
           border: InputBorder.none,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -174,38 +204,53 @@ class ProductManagementScreen extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: controller.selectedCategory.value.isEmpty
-              ? null
-              : controller.selectedCategory.value,
-          hint: Text('Semua Kategori',
-              style: TextStyle(
-                  color: Colors.grey.shade500, fontSize: isMobile ? 14 : 16)),
-          isExpanded: true,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade500),
-          items: const [
-            DropdownMenuItem<String>(
-                value: null, child: Text('Semua Kategori')),
-            DropdownMenuItem<String>(value: 'Makanan', child: Text('Makanan')),
-            DropdownMenuItem<String>(value: 'Minuman', child: Text('Minuman')),
-          ],
-          onChanged: (String? value) =>
-              controller.filterByCategory(value ?? ''),
-        ),
-      ),
+      child: Obx(() => DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: controller.selectedCategory.value.isEmpty
+                  ? null
+                  : controller.selectedCategory.value,
+              hint: Text('Semua Kategori',
+                  style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: isMobile ? 14 : 16)),
+              isExpanded: true,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              icon:
+                  Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade500),
+              items: [
+                const DropdownMenuItem<String>(
+                    value: '', child: Text('Semua Kategori')),
+                ...controller.categories.map((category) =>
+                    DropdownMenuItem<String>(
+                        value: category.id, child: Text(category.name))),
+              ],
+              onChanged: (String? value) =>
+                  controller.filterByCategory(value ?? ''),
+            ),
+          )),
     );
+  }
+
+  Widget _buildClearFilterButton() {
+    return Obx(() => (controller.searchQuery.value.isNotEmpty ||
+            controller.selectedCategory.value.isNotEmpty)
+        ? IconButton(
+            onPressed: controller.clearFilters,
+            icon: Icon(Icons.filter_list_off, color: Colors.grey.shade600),
+            tooltip: 'Hapus Filter',
+          )
+        : const SizedBox.shrink());
   }
 
   Widget _buildAddButton(bool isMobile) {
     if (isMobile) {
       return ElevatedButton(
-        onPressed: () => _showAddMenuSnackbar(),
+        onPressed: () =>
+            Get.dialog(const AddProductDialog()), // Fixed: Added Get.dialog()
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue.shade600,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           minimumSize: const Size(0, 40),
         ),
@@ -214,7 +259,8 @@ class ProductManagementScreen extends StatelessWidget {
     }
 
     return ElevatedButton.icon(
-      onPressed: () => _showAddMenuSnackbar(),
+      onPressed: () =>
+          Get.dialog(const AddProductDialog()), // Fixed: Added Get.dialog()
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
@@ -222,40 +268,40 @@ class ProductManagementScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       icon: const Icon(Icons.add, size: 18),
-      label: const Text('Tambah Menu',
+      label: const Text('Tambah Produk',
           style: TextStyle(fontWeight: FontWeight.w500)),
     );
   }
 
   Widget _buildProductGrid(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    int crossAxisCount = screenWidth < 400
+    int crossAxisCount = screenWidth < 600
         ? 1
-        : screenWidth < 800
+        : screenWidth < 900
             ? 2
             : screenWidth < 1200
                 ? 3
                 : 4;
-    double spacing = screenWidth < 400 ? 12 : 24;
-    double aspectRatio = screenWidth < 400 ? 1.2 : 0.85;
+    double spacing = screenWidth < 600 ? 12 : 20;
+    double aspectRatio = screenWidth < 600 ? 1.0 : 0.8;
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return SliverGrid(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: spacing,
         mainAxisSpacing: spacing,
         childAspectRatio: aspectRatio,
       ),
-      itemCount: controller.products.length,
-      itemBuilder: (context, index) =>
-          _buildProductCard(controller.products[index], context),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) =>
+            _buildProductCard(controller.products[index], context),
+        childCount: controller.products.length,
+      ),
     );
   }
 
   Widget _buildProductCard(Product product, BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 400;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
       decoration: BoxDecoration(
@@ -283,44 +329,51 @@ class ProductManagementScreen extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildStatusBadge(product, 9),
-                    const Spacer(),
-                    Text(
-                      controller.formatCurrency(product.basePrice),
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red),
+                    Row(
+                      children: [
+                        _buildStatusBadge(product, 9),
+                        const Spacer(),
+                        Text(
+                          controller.formatCurrency(product.basePrice),
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(product.name,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                if (product.description.isNotEmpty &&
-                    product.description != '-') ...[
-                  const SizedBox(height: 2),
-                  Text(product.description,
+                    const SizedBox(height: 4),
+                    Text(product.name,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                    if (product.description.isNotEmpty &&
+                        product.description != '-') ...[
+                      const SizedBox(height: 2),
+                      Text(product.description,
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 2),
+                    Text(
+                      'HPP: ${controller.formatCurrency(product.hpp.toInt())} • Pos: ${product.position}',
                       style:
                           TextStyle(fontSize: 10, color: Colors.grey.shade600),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ],
-                const SizedBox(height: 2),
-                Text(
-                  'HPP: ${controller.formatCurrency(product.hpp)} • Pos: ${product.position}',
-                  style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                _buildActionButtons(product, 24, 10, 4),
+                _buildActionButtons(product, 28, 11, 6),
               ],
             ),
           ),
@@ -340,42 +393,54 @@ class ProductManagementScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildStatusBadge(product, 10),
-                const SizedBox(height: 6),
-                Text(product.name,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                if (product.description.isNotEmpty &&
-                    product.description != '-') ...[
-                  const SizedBox(height: 2),
-                  Text(product.description,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildStatusBadge(product, 10),
+                    const SizedBox(height: 6),
+                    Text(product.name,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                    if (product.description.isNotEmpty &&
+                        product.description != '-') ...[
+                      const SizedBox(height: 2),
+                      Text(product.description,
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      'HPP: ${controller.formatCurrency(product.hpp.toInt())} • Pos: ${product.position}',
                       style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          TextStyle(fontSize: 10, color: Colors.grey.shade600),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ],
-                const SizedBox(height: 4),
-                Text(
-                  'HPP: ${controller.formatCurrency(product.hpp)} • Posisi: ${product.position}',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  controller.formatCurrency(product.basePrice),
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 6),
+                    Text(
+                      controller.formatCurrency(product.basePrice),
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildActionButtons(product, 32, 12, 6),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                _buildActionButtons(product, 28, 11, 6),
               ],
             ),
           ),
@@ -399,8 +464,15 @@ class ProductManagementScreen extends StatelessWidget {
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2));
+                  return Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
                 },
                 errorBuilder: (context, error, stackTrace) =>
                     _buildPlaceholderImage(),
@@ -419,7 +491,7 @@ class ProductManagementScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        product.isAvailable ? 'AKTIF' : 'NONAKTIF',
+        product.isAvailable ? 'TERSEDIA' : 'TIDAK TERSEDIA',
         style: TextStyle(
           color:
               product.isAvailable ? Colors.green.shade700 : Colors.red.shade700,
@@ -438,7 +510,7 @@ class ProductManagementScreen extends StatelessWidget {
           child: SizedBox(
             height: height,
             child: ElevatedButton(
-              onPressed: () => _showEditSnackbar(product.name),
+              onPressed: () => _showEditDialog(product),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue.shade600,
                 foregroundColor: Colors.white,
@@ -453,24 +525,35 @@ class ProductManagementScreen extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         Expanded(
           child: SizedBox(
             height: height,
-            child: ElevatedButton(
-              onPressed: () => _showDeleteConfirmation(product),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade600,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(borderRadius)),
-                minimumSize: Size.zero,
-              ),
-              child: Text('Hapus',
-                  style: TextStyle(
-                      fontSize: fontSize, fontWeight: FontWeight.w500)),
-            ),
+            child: Obx(() => ElevatedButton(
+                  onPressed: controller.isDeleting.value
+                      ? null
+                      : () => _showDeleteConfirmation(product),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(borderRadius)),
+                    minimumSize: Size.zero,
+                  ),
+                  child: controller.isDeleting.value
+                      ? SizedBox(
+                          width: fontSize + 2,
+                          height: fontSize + 2,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text('Hapus',
+                          style: TextStyle(
+                              fontSize: fontSize, fontWeight: FontWeight.w500)),
+                )),
           ),
         ),
       ],
@@ -485,7 +568,7 @@ class ProductManagementScreen extends StatelessWidget {
         children: [
           Icon(Icons.image_outlined, size: 32, color: Colors.grey.shade400),
           const SizedBox(height: 4),
-          Text('No Image',
+          Text('Tidak ada gambar',
               style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
         ],
       ),
@@ -515,14 +598,34 @@ class ProductManagementScreen extends StatelessWidget {
     });
   }
 
-  void _showAddMenuSnackbar() {
-    Get.snackbar('Info', 'Fitur tambah menu akan segera tersedia',
-        snackPosition: SnackPosition.BOTTOM);
+  void _showAddMenuDialog() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Tambah Produk Baru'),
+        content: const Text('Fitur tambah produk akan segera tersedia.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _showEditSnackbar(String productName) {
-    Get.snackbar('Info', 'Edit $productName',
-        snackPosition: SnackPosition.BOTTOM);
+  void _showEditDialog(Product product) {
+    Get.dialog(
+      AlertDialog(
+        title: Text('Edit ${product.name}'),
+        content: const Text('Fitur edit produk akan segera tersedia.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showDeleteConfirmation(Product product) {
@@ -531,12 +634,23 @@ class ProductManagementScreen extends StatelessWidget {
         title: const Text('Konfirmasi Hapus'),
         content: Text('Apakah Anda yakin ingin menghapus "${product.name}"?'),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Get.back();
-              Get.snackbar('Info', 'Fitur hapus akan segera tersedia',
-                  snackPosition: SnackPosition.BOTTOM);
+              final success = await controller.deleteProduct(product.id);
+              if (!success) {
+                Get.snackbar(
+                  'Error',
+                  'Gagal menghapus produk',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red.shade100,
+                  colorText: Colors.red.shade800,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,

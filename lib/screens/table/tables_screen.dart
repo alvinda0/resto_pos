@@ -35,8 +35,6 @@ class _TableScreenState extends State<TableScreen> {
 
   Future<void> _initializeData() async {
     await _qrCodeController.fetchQrCodes();
-    await Future.delayed(const Duration(milliseconds: 100));
-    _filterTables();
   }
 
   void _filterTables() {
@@ -559,9 +557,17 @@ class _TableScreenState extends State<TableScreen> {
         );
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) => _filterTables());
+      // Remove the addPostFrameCallback from here
+      // _filterTables() will be called automatically when qrCodes changes
+      // via the listener in initState
 
-      if (_filteredTables.isEmpty && _qrCodeController.qrCodes.isEmpty) {
+      // Use qrCodes directly from controller and apply filter in real-time
+      final filteredTables = _qrCodeController.qrCodes.where((qrCode) {
+        final query = _searchController.text.toLowerCase();
+        return qrCode.tableNumber.toLowerCase().contains(query);
+      }).toList();
+
+      if (filteredTables.isEmpty && _qrCodeController.qrCodes.isEmpty) {
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -578,7 +584,7 @@ class _TableScreenState extends State<TableScreen> {
         );
       }
 
-      if (_filteredTables.isEmpty) {
+      if (filteredTables.isEmpty) {
         return const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -593,7 +599,6 @@ class _TableScreenState extends State<TableScreen> {
       return RefreshIndicator(
         onRefresh: () async {
           await _qrCodeController.refreshData();
-          _filterTables();
         },
         child: GridView.builder(
           padding: const EdgeInsets.all(16),
@@ -603,10 +608,10 @@ class _TableScreenState extends State<TableScreen> {
             mainAxisSpacing: 12,
             childAspectRatio: 1.2,
           ),
-          itemCount: _filteredTables.length,
+          itemCount: filteredTables.length,
           itemBuilder: (context, index) {
-            final qrCode = _filteredTables[index];
-            return _buildTableGridItem(qrCode); // Use the updated method
+            final qrCode = filteredTables[index];
+            return _buildTableGridItem(qrCode);
           },
         ),
       );
