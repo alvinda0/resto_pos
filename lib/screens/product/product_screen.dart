@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:pos/controller/product/product_controller.dart';
 import 'package:pos/models/product/product_model.dart';
 import 'package:pos/screens/product/add_product_dialog.dart';
+import 'package:pos/screens/product/edit_product_dialog.dart';
 import 'package:pos/widgets/pagination_widget.dart';
 
 class ProductManagementScreen extends StatelessWidget {
@@ -615,16 +616,8 @@ class ProductManagementScreen extends StatelessWidget {
 
   void _showEditDialog(Product product) {
     Get.dialog(
-      AlertDialog(
-        title: Text('Edit ${product.name}'),
-        content: const Text('Fitur edit produk akan segera tersedia.'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      EditProductDialog(product: product),
+      barrierDismissible: false,
     );
   }
 
