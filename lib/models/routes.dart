@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/account/account_screen.dart';
 import 'package:pos/screens/assets/assets_screen.dart';
+import 'package:pos/screens/employee/employee_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
@@ -199,8 +200,7 @@ class AppRoutes {
       // Employee Routes (Karyawan)
       GetPage(
         name: employees,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Data Karyawan'), employees),
+        page: () => _wrapWithMainLayout(const EmployeeScreen(), employees),
       ),
       GetPage(
         name: employeesPayment,
