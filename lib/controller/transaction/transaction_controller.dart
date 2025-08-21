@@ -1,8 +1,14 @@
 // controllers/transaction_controller.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/transaction/transaction_model.dart';
+import 'package:pos/screens/report/export_tax_report_dialog.dart';
 import 'package:pos/services/transaction/transaction_service.dart';
+import 'package:dio/dio.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 
 class TransactionController extends GetxController {
   final TransactionService _transactionService = TransactionService.instance;
@@ -19,6 +25,7 @@ class TransactionController extends GetxController {
   final RxInt _totalPages = 0.obs;
   final RxString _searchQuery = ''.obs;
   final RxString _selectedTab = 'rinci'.obs;
+  final RxBool _isExporting = false.obs;
 
   // Rekap data
   final RxList<Map<String, dynamic>> _rekapData = <Map<String, dynamic>>[].obs;
@@ -45,6 +52,7 @@ class TransactionController extends GetxController {
   DateTime? get endDate => _endDate.value;
   String get selectedTab => _selectedTab.value;
   List<Map<String, dynamic>> get rekapData => _rekapData;
+  bool get isExporting => _isExporting.value;
 
   // Rekap summary getters
   double get totalRevenue {
@@ -125,6 +133,106 @@ class TransactionController extends GetxController {
       if (tab == 'rekap' && _rekapData.isEmpty) {
         // Only load rekap data if it's empty
         await loadRekapData();
+      }
+    }
+  }
+
+  Future<void> showExportModal() async {
+    // Show modal dialog for export options
+    await Get.dialog(
+      ExportTaxReportDialog(
+        onExport: exportTaxReport,
+        initialStartDate: _startDate.value,
+        initialEndDate: _endDate.value,
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Future<void> exportTaxReport({
+    DateTime? startDate,
+    DateTime? endDate,
+    double? newTaxRate,
+    bool realTax = false,
+  }) async {
+    try {
+      _isExporting.value = true;
+
+      // Use provided dates or current filter dates
+      final exportStartDate = startDate ??
+          _startDate.value ??
+          DateTime.now().subtract(const Duration(days: 30));
+      final exportEndDate = endDate ?? _endDate.value ?? DateTime.now();
+
+      final result = await _transactionService.exportTaxReport(
+        startDate: exportStartDate,
+        endDate: exportEndDate,
+        newTaxRate: newTaxRate,
+        realTax: realTax,
+      );
+
+      if (result != null && result['success'] == true) {
+        final downloadUrl = result['download_url'] as String;
+
+        // Try to download and save the file
+        await _downloadFile(downloadUrl);
+
+        showSuccess('Tax report exported successfully!');
+      } else {
+        showError(result?['message'] ?? 'Failed to export tax report');
+      }
+    } catch (e) {
+      showError('Error exporting tax report: $e');
+    } finally {
+      _isExporting.value = false;
+    }
+  }
+
+  Future<void> _downloadFile(String url) async {
+    try {
+      // For web platform, open URL directly
+      if (GetPlatform.isWeb) {
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        } else {
+          throw 'Could not launch $url';
+        }
+        return;
+      }
+
+      // For mobile/desktop platforms, download and save
+      final dio = Dio();
+
+      // Get downloads directory
+      Directory? downloadsDirectory;
+      if (GetPlatform.isAndroid) {
+        downloadsDirectory = Directory('/storage/emulated/0/Download');
+      } else {
+        downloadsDirectory = await getApplicationDocumentsDirectory();
+      }
+
+      // Generate filename from URL or use current timestamp
+      final fileName = url.split('/').last.contains('.xlsx')
+          ? url.split('/').last
+          : 'tax-report-${DateTime.now().millisecondsSinceEpoch}.xlsx';
+
+      final filePath = '${downloadsDirectory.path}/$fileName';
+
+      // Download file
+      await dio.download(url, filePath);
+
+      showSuccess('File downloaded to: $filePath');
+
+      // Try to open the file
+      if (await canLaunchUrl(Uri.file(filePath))) {
+        await launchUrl(Uri.file(filePath));
+      }
+    } catch (e) {
+      // If download fails, try to open URL directly
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not download or open file';
       }
     }
   }

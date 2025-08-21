@@ -44,6 +44,55 @@ class TransactionService extends GetxService {
     }
   }
 
+  /// Export tax reports
+  Future<Map<String, dynamic>?> exportTaxReport({
+    required DateTime startDate,
+    required DateTime endDate,
+    double? newTaxRate,
+    bool realTax = false,
+  }) async {
+    try {
+      final Map<String, dynamic> requestBody = {
+        'start_time': startDate.toIso8601String(),
+        'end_time': endDate.toIso8601String(),
+      };
+
+      if (realTax) {
+        requestBody['real_tax'] = true;
+        requestBody['new_tax_rate'] = 0;
+      } else if (newTaxRate != null) {
+        requestBody['new_tax_rate'] = newTaxRate;
+      }
+
+      final response = await _httpClient.post(
+        '/tax-reports/export',
+        requestBody,
+        requireAuth: true,
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['status'] == 'success') {
+          return {
+            'success': true,
+            'download_url': jsonData['download_url'],
+            'message': jsonData['message'],
+          };
+        }
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to export tax report: ${response.statusCode}',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error exporting tax report: $e',
+      };
+    }
+  }
+
   /// Get transaction by ID
   Future<Transaction?> getTransactionById(String transactionId,
       {String? storeId}) async {

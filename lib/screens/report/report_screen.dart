@@ -29,11 +29,22 @@ class ReportScreen extends StatelessWidget {
           Obx(() => Container(
                 margin: const EdgeInsets.only(right: 16),
                 child: ElevatedButton.icon(
-                  onPressed: controller.isLoading
+                  onPressed: controller.isExporting
                       ? null
-                      : () => controller.exportTransactions(),
-                  icon: const Icon(Icons.download, size: 18),
-                  label: const Text('Export Excel'),
+                      : () => controller.showExportModal(), // Changed this line
+                  icon: controller.isExporting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.download, size: 18),
+                  label: Text(
+                      controller.isExporting ? 'Exporting...' : 'Export Excel'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
