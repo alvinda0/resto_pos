@@ -60,6 +60,12 @@ class AppRoutes {
   // Report Routes (Laporan)
   static const String report = '/report';
   static const String wallet = '/wallet';
+  static const String reportBills = '/report/bills';
+  static const String reportProfit = '/report/profit';
+
+  // Employee Routes (Karyawan)
+  static const String employees = '/employees';
+  static const String employeesPayment = '/employees/payment';
 
   // New Standalone Routes
   static const String assets = '/assets';
@@ -178,6 +184,29 @@ class AppRoutes {
         page: () => _wrapWithMainLayout(
             const PlaceholderScreen(title: 'Dompet'), wallet),
       ),
+      GetPage(
+        name: reportBills,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Tagihan'), reportBills),
+      ),
+      GetPage(
+        name: reportProfit,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Keuntungan'), reportProfit),
+      ),
+
+      // Employee Routes (Karyawan)
+      GetPage(
+        name: employees,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Data Karyawan'), employees),
+      ),
+      GetPage(
+        name: employeesPayment,
+        page: () => _wrapWithMainLayout(
+            const PlaceholderScreen(title: 'Pembayaran Karyawan'),
+            employeesPayment),
+      ),
 
       // New Standalone Routes
       GetPage(
@@ -259,30 +288,19 @@ class AppRoutes {
       // Legacy Routes (for backward compatibility)
       GetPage(
         name: products,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Logs'), product),
+        page: () => _wrapWithMainLayout(ProductManagementScreen(), product),
       ),
       GetPage(
         name: ingredients,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Logs'), material),
+        page: () => _wrapWithMainLayout(const InventoryScreen(), material),
       ),
       GetPage(
         name: sales,
-        page: () =>
-            _wrapWithMainLayout(const PlaceholderScreen(title: 'Logs'), orders),
+        page: () => _wrapWithMainLayout(const OrderScreen(), orders),
       ),
       GetPage(
         name: promo,
-        page: () =>
-            _wrapWithMainLayout(const PlaceholderScreen(title: 'Logs'), promos),
-      ),
-
-      // Product List Route (existing functionality)
-      GetPage(
-        name: '/product',
-        page: () => _wrapWithMainLayout(ProductManagementScreen(), '/product'),
-        transition: Transition.rightToLeft,
+        page: () => _wrapWithMainLayout(const PromoScreen(), promos),
       ),
     ];
   }
@@ -319,6 +337,12 @@ class AppRoutes {
   // Report navigation helpers (Laporan)
   static void toReport() => Get.toNamed(report);
   static void toWallet() => Get.toNamed(wallet);
+  static void toReportBills() => Get.toNamed(reportBills);
+  static void toReportProfit() => Get.toNamed(reportProfit);
+
+  // Employee navigation helpers (Karyawan)
+  static void toEmployees() => Get.toNamed(employees);
+  static void toEmployeesPayment() => Get.toNamed(employeesPayment);
 
   // New standalone navigation helpers
   static void toAssets() => Get.toNamed(assets);
