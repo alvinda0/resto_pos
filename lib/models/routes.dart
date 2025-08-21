@@ -5,6 +5,7 @@ import 'package:pos/screens/account/account_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
+import 'package:pos/screens/role/role_form_screen.dart';
 import 'package:pos/screens/role/role_screen.dart';
 import 'package:pos/screens/auth/login_screen.dart';
 import 'package:pos/screens/dashboard/sidebar.dart';
@@ -54,6 +55,7 @@ class AppRoutes {
   // Account and Role Routes (Akun dan Role)
   static const String manageAccount = '/manage-account';
   static const String account = '/account';
+  static const String roleform = '/roleform';
 
   // Report Routes (Laporan)
   static const String report = '/report';
@@ -160,6 +162,10 @@ class AppRoutes {
       GetPage(
         name: account,
         page: () => _wrapWithMainLayout(const UserManagementScreen(), account),
+      ),
+      GetPage(
+        name: roleform,
+        page: () => _wrapWithMainLayout(const RoleFormScreen(), roleform),
       ),
 
       // Report Routes (Laporan)
@@ -308,6 +314,7 @@ class AppRoutes {
   // Account and Role navigation helpers (Akun dan Role)
   static void toManageAccount() => Get.toNamed(manageAccount);
   static void toAccount() => Get.toNamed(account);
+  static void toRoleForm() => Get.toNamed(roleform);
 
   // Report navigation helpers (Laporan)
   static void toReport() => Get.toNamed(report);

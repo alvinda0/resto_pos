@@ -11,6 +11,7 @@ class RoleController extends GetxController {
   final RxList<Role> roles = <Role>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isLoadingMore = false.obs;
+  final RxBool isSubmitting = false.obs;
   final RxString error = ''.obs;
   final RxString searchQuery = ''.obs;
 
@@ -28,6 +29,11 @@ class RoleController extends GetxController {
   // Text controller untuk search
   final TextEditingController searchController = TextEditingController();
 
+  // Form controllers
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController positionController = TextEditingController();
+
   // Timer untuk debounce search
   Timer? _debounceTimer;
 
@@ -43,6 +49,9 @@ class RoleController extends GetxController {
   @override
   void onClose() {
     searchController.dispose();
+    nameController.dispose();
+    descriptionController.dispose();
+    positionController.dispose();
     _debounceTimer?.cancel();
     super.onClose();
   }
@@ -200,6 +209,148 @@ class RoleController extends GetxController {
       error.value = 'Terjadi kesalahan saat memuat detail role: $e';
       return null;
     }
+  }
+
+  /// Create new role
+  Future<bool> createRole({
+    required String name,
+    required String description,
+    int? position,
+    List<String>? permissionIds,
+  }) async {
+    try {
+      isSubmitting.value = true;
+      error.value = '';
+
+      final response = await _roleService.createRole(
+        name: name,
+        description: description,
+        position: position,
+        permissionIds: permissionIds,
+      );
+
+      if (response.success) {
+        showSuccessMessage(response.message);
+        await refreshRoles(); // Refresh the list after creating
+        return true;
+      } else {
+        showErrorMessage(response.message);
+        return false;
+      }
+    } catch (e) {
+      final errorMessage = 'Gagal membuat role: $e';
+      error.value = errorMessage;
+      showErrorMessage(errorMessage);
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Update existing role
+  Future<bool> updateRole({
+    required String roleId,
+    required String name,
+    required String description,
+    int? position,
+    List<String>? permissionIds,
+  }) async {
+    try {
+      isSubmitting.value = true;
+      error.value = '';
+
+      final response = await _roleService.updateRole(
+        roleId: roleId,
+        name: name,
+        description: description,
+        position: position,
+        permissionIds: permissionIds,
+      );
+
+      if (response.success) {
+        showSuccessMessage(response.message);
+        await refreshRoles(); // Refresh the list after updating
+        return true;
+      } else {
+        showErrorMessage(response.message);
+        return false;
+      }
+    } catch (e) {
+      final errorMessage = 'Gagal mengupdate role: $e';
+      error.value = errorMessage;
+      showErrorMessage(errorMessage);
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Delete role
+  Future<bool> deleteRole(String roleId) async {
+    try {
+      isSubmitting.value = true;
+      error.value = '';
+
+      final response = await _roleService.deleteRole(roleId);
+
+      if (response.success) {
+        showSuccessMessage(response.message);
+        await refreshRoles(); // Refresh the list after deleting
+        return true;
+      } else {
+        showErrorMessage(response.message);
+        return false;
+      }
+    } catch (e) {
+      final errorMessage = 'Gagal menghapus role: $e';
+      error.value = errorMessage;
+      showErrorMessage(errorMessage);
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Reset form controllers
+  void resetForm() {
+    nameController.clear();
+    descriptionController.clear();
+    positionController.clear();
+    error.value = '';
+  }
+
+  /// Validate form
+  String? validateName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Nama role tidak boleh kosong';
+    }
+    if (value.trim().length < 3) {
+      return 'Nama role minimal 3 karakter';
+    }
+    return null;
+  }
+
+  String? validateDescription(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Deskripsi tidak boleh kosong';
+    }
+    if (value.trim().length < 10) {
+      return 'Deskripsi minimal 10 karakter';
+    }
+    return null;
+  }
+
+  String? validatePosition(String? value) {
+    if (value != null && value.isNotEmpty) {
+      final position = int.tryParse(value);
+      if (position == null) {
+        return 'Posisi harus berupa angka';
+      }
+      if (position < 1 || position > 1000) {
+        return 'Posisi harus antara 1-1000';
+      }
+    }
+    return null;
   }
 
   /// Show success message
