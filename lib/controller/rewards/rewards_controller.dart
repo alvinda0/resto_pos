@@ -1,4 +1,6 @@
 // controllers/reward_controller.dart
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/rewards/rewards_model.dart';
 import 'package:pos/services/rewards/rewards_service.dart';
@@ -19,6 +21,11 @@ class RewardController extends GetxController {
 
   // Available page sizes
   final List<int> availablePageSizes = [5, 10, 25, 50];
+
+  // Form loading states
+  final RxBool isCreating = false.obs;
+  final RxBool isUpdating = false.obs;
+  final RxBool isDeleting = false.obs;
 
   @override
   void onInit() {
@@ -50,6 +57,177 @@ class RewardController extends GetxController {
         isLoading.value = false;
       }
     }
+  }
+
+  // Create reward
+  Future<void> createReward({
+    required String name,
+    required String description,
+    required int pointsCost,
+    File? image,
+  }) async {
+    try {
+      isCreating.value = true;
+      error.value = '';
+
+      await _rewardService.createReward(
+        name: name,
+        description: description,
+        pointsCost: pointsCost,
+        image: image,
+      );
+
+      // Refresh the list
+      await fetchRewards(showLoading: false);
+
+      // Show success message
+      Get.snackbar(
+        'Berhasil',
+        'Hadiah berhasil ditambahkan',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isCreating.value = false;
+    }
+  }
+
+  // Update reward
+  Future<void> updateReward({
+    required String rewardId,
+    required String name,
+    required String description,
+    required int pointsCost,
+    File? image,
+  }) async {
+    try {
+      isUpdating.value = true;
+      error.value = '';
+
+      await _rewardService.updateReward(
+        rewardId: rewardId,
+        name: name,
+        description: description,
+        pointsCost: pointsCost,
+        image: image,
+      );
+
+      // Refresh the list
+      await fetchRewards(showLoading: false);
+
+      // Show success message
+      Get.snackbar(
+        'Berhasil',
+        'Hadiah berhasil diperbarui',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isUpdating.value = false;
+    }
+  }
+
+  // Toggle reward status
+  Future<void> toggleRewardStatus(String rewardId, bool currentStatus) async {
+    try {
+      await _rewardService.toggleRewardStatus(
+        rewardId: rewardId,
+        isActive: !currentStatus,
+      );
+
+      // Refresh the list
+      await fetchRewards(showLoading: false);
+
+      // Show success message
+      Get.snackbar(
+        'Berhasil',
+        'Status hadiah berhasil diubah',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // Delete reward
+  Future<void> deleteReward(String rewardId) async {
+    try {
+      isDeleting.value = true;
+      error.value = '';
+
+      await _rewardService.deleteReward(rewardId: rewardId);
+
+      // Refresh the list
+      await fetchRewards(showLoading: false);
+
+      // Show success message
+      Get.snackbar(
+        'Berhasil',
+        'Hadiah berhasil dihapus',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isDeleting.value = false;
+    }
+  }
+
+  // Show delete confirmation dialog
+  void showDeleteConfirmation(String rewardId, String rewardName) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Konfirmasi Hapus'),
+        content:
+            Text('Apakah Anda yakin ingin menghapus hadiah "$rewardName"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              deleteReward(rewardId);
+            },
+            child: const Text(
+              'Hapus',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // Refresh data
