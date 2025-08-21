@@ -20,7 +20,7 @@ import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/order/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
-import 'package:pos/screens/transaction/transaction_screen.dart';
+import 'package:pos/screens/report/report_screen.dart';
 import 'package:pos/screens/withdraw/withdraw_screen.dart';
 
 class AppRoutes {
@@ -171,7 +171,7 @@ class AppRoutes {
       // Report Routes (Laporan)
       GetPage(
         name: report,
-        page: () => _wrapWithMainLayout(const TransactionScreen(), report),
+        page: () => _wrapWithMainLayout(const ReportScreen(), report),
       ),
       GetPage(
         name: wallet,

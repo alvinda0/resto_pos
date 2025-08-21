@@ -6,8 +6,8 @@ import 'package:pos/models/transaction/transaction_model.dart';
 
 import 'package:pos/widgets/pagination_widget.dart';
 
-class TransactionScreen extends StatelessWidget {
-  const TransactionScreen({Key? key}) : super(key: key);
+class ReportScreen extends StatelessWidget {
+  const ReportScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
