@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/account/account_screen.dart';
+import 'package:pos/screens/assets/assets_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
@@ -211,8 +212,7 @@ class AppRoutes {
       // New Standalone Routes
       GetPage(
         name: assets,
-        page: () =>
-            _wrapWithMainLayout(const PlaceholderScreen(title: 'Aset'), assets),
+        page: () => _wrapWithMainLayout(const AssetScreen(), assets),
       ),
       GetPage(
         name: income,
