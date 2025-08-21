@@ -38,35 +38,65 @@ class PaginationWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Tentukan apakah ini mobile (layar kecil)
+        final isMobile = constraints.maxWidth < 600;
+
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 16 : 24,
+            vertical: 16,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              top: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+        );
+      },
+    );
+  }
+
+  // Layout untuk desktop/tablet
+  Widget _buildDesktopLayout() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildRowsPerPageSelector(),
+        _buildItemsCountInfo(),
+        _buildPaginationControls(compact: false),
+      ],
+    );
+  }
+
+  // Layout untuk mobile
+  Widget _buildMobileLayout() {
+    return Column(
+      children: [
+        // Baris pertama: Items count dan rows per page
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildItemsCountInfo(),
+            _buildRowsPerPageSelector(),
+          ],
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Left side - Rows per page selector
-          _buildRowsPerPageSelector(),
-
-          // Center - Items count info
-          _buildItemsCountInfo(),
-
-          // Right side - Pagination controls
-          _buildPaginationControls(),
-        ],
-      ),
+        const SizedBox(height: 12),
+        // Baris kedua: Pagination controls
+        _buildPaginationControls(compact: true),
+      ],
     );
   }
 
   Widget _buildRowsPerPageSelector() {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Rows per page:',
+          'Rows:',
           style: TextStyle(
             color: Colors.grey.shade700,
             fontSize: 14,
@@ -116,7 +146,15 @@ class PaginationWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildPaginationControls() {
+  Widget _buildPaginationControls({required bool compact}) {
+    // Untuk mobile, batasi jumlah page numbers yang ditampilkan
+    List<int> displayPageNumbers = pageNumbers;
+
+    if (compact && pageNumbers.length > 5) {
+      // Logic untuk menampilkan page numbers yang lebih sedikit di mobile
+      displayPageNumbers = _getCompactPageNumbers();
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -133,14 +171,32 @@ class PaginationWidget extends StatelessWidget {
           tooltip: 'Previous page',
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
 
         // Page numbers
-        ...pageNumbers.map((pageNumber) {
+        ...displayPageNumbers.map((pageNumber) {
+          if (pageNumber == -1) {
+            // Ellipsis
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              width: 32,
+              height: 32,
+              child: const Center(
+                child: Text(
+                  '...',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            );
+          }
+
           final isCurrentPage = pageNumber == currentPage;
 
           return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
+            margin: const EdgeInsets.symmetric(horizontal: 1),
             child: InkWell(
               onTap: isCurrentPage ? null : () => onPageSelected(pageNumber),
               borderRadius: BorderRadius.circular(4),
@@ -171,7 +227,7 @@ class PaginationWidget extends StatelessWidget {
           );
         }),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
 
         // Next page button
         IconButton(
@@ -186,6 +242,127 @@ class PaginationWidget extends StatelessWidget {
           tooltip: 'Next page',
         ),
       ],
+    );
+  }
+
+  // Generate compact page numbers untuk mobile
+  List<int> _getCompactPageNumbers() {
+    if (pageNumbers.length <= 5) return pageNumbers;
+
+    List<int> result = [];
+    int totalPages = pageNumbers.last;
+
+    if (currentPage <= 3) {
+      // Tampilkan: 1, 2, 3, 4, ..., last
+      result.addAll([1, 2, 3, 4]);
+      if (totalPages > 5) {
+        result.addAll([-1, totalPages]); // -1 untuk ellipsis
+      } else if (totalPages == 5) {
+        result.add(5);
+      }
+    } else if (currentPage >= totalPages - 2) {
+      // Tampilkan: 1, ..., last-3, last-2, last-1, last
+      result.addAll([1, -1]);
+      for (int i = totalPages - 3; i <= totalPages; i++) {
+        result.add(i);
+      }
+    } else {
+      // Tampilkan: 1, ..., current-1, current, current+1, ..., last
+      result.addAll([
+        1,
+        -1,
+        currentPage - 1,
+        currentPage,
+        currentPage + 1,
+        -1,
+        totalPages
+      ]);
+    }
+
+    return result;
+  }
+}
+
+// Contoh penggunaan:
+class PaginationExample extends StatefulWidget {
+  @override
+  _PaginationExampleState createState() => _PaginationExampleState();
+}
+
+class _PaginationExampleState extends State<PaginationExample> {
+  int currentPage = 1;
+  int itemsPerPage = 10;
+  int totalItems = 250;
+  List<int> availablePageSizes = [5, 10, 25, 50];
+
+  int get totalPages => (totalItems / itemsPerPage).ceil();
+  int get startIndex => (currentPage - 1) * itemsPerPage + 1;
+  int get endIndex => (currentPage * itemsPerPage).clamp(0, totalItems);
+  bool get hasPreviousPage => currentPage > 1;
+  bool get hasNextPage => currentPage < totalPages;
+
+  List<int> get pageNumbers {
+    List<int> pages = [];
+    for (int i = 1; i <= totalPages; i++) {
+      pages.add(i);
+    }
+    return pages;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Responsive Pagination')),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: itemsPerPage,
+              itemBuilder: (context, index) {
+                int itemIndex = startIndex + index;
+                if (itemIndex > totalItems) return SizedBox.shrink();
+
+                return ListTile(
+                  title: Text('Item $itemIndex'),
+                  subtitle: Text('This is item number $itemIndex'),
+                );
+              },
+            ),
+          ),
+          PaginationWidget(
+            currentPage: currentPage,
+            totalItems: totalItems,
+            itemsPerPage: itemsPerPage,
+            availablePageSizes: availablePageSizes,
+            startIndex: startIndex,
+            endIndex: endIndex,
+            hasPreviousPage: hasPreviousPage,
+            hasNextPage: hasNextPage,
+            pageNumbers: pageNumbers,
+            onPageSizeChanged: (newSize) {
+              setState(() {
+                itemsPerPage = newSize;
+                currentPage = 1; // Reset ke halaman pertama
+              });
+            },
+            onPreviousPage: () {
+              setState(() {
+                currentPage--;
+              });
+            },
+            onNextPage: () {
+              setState(() {
+                currentPage++;
+              });
+            },
+            onPageSelected: (page) {
+              setState(() {
+                currentPage = page;
+              });
+            },
+          ),
+        ],
+      ),
     );
   }
 }
