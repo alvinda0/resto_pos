@@ -109,6 +109,149 @@ class UserService extends GetxService {
     }
   }
 
+  /// Create new user
+  Future<ApiResponse<User>> createUser({
+    required String name,
+    required String email,
+    required String password,
+    required bool isStaff,
+    required String roleId,
+    String? storeId,
+  }) async {
+    try {
+      final Map<String, dynamic> requestBody = {
+        'name': name,
+        'email': email,
+        'password': password,
+        'is_staff': isStaff,
+        'role_id': roleId,
+      };
+
+      final response = await _httpClient.post(
+        '/users',
+        requestBody, // Pass as positional argument
+        requireAuth: true,
+        storeId: storeId,
+      );
+
+      final Map<String, dynamic> jsonResponse = json.decode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final user = User.fromJson(jsonResponse['data']);
+        return ApiResponse<User>(
+          success: jsonResponse['success'] ?? true,
+          message: jsonResponse['message'] ?? 'User created successfully',
+          data: user,
+          status: jsonResponse['status'] ?? response.statusCode,
+        );
+      } else {
+        return ApiResponse<User>(
+          success: false,
+          message: jsonResponse['message'] ?? 'Failed to create user',
+          status: jsonResponse['status'] ?? response.statusCode,
+        );
+      }
+    } catch (e) {
+      print('Create user error: $e');
+      return ApiResponse<User>(
+        success: false,
+        message: 'Network error: $e',
+        status: 500,
+      );
+    }
+  }
+
+  /// Update user
+  Future<ApiResponse<User>> updateUser({
+    required String userId,
+    required String name,
+    required String email,
+    String? password,
+    required bool isStaff,
+    required String roleId,
+    String? storeId,
+  }) async {
+    try {
+      final Map<String, dynamic> requestBody = {
+        'name': name,
+        'email': email,
+        'is_staff': isStaff,
+        'role_id': roleId,
+      };
+
+      // Only include password if provided
+      if (password != null && password.isNotEmpty) {
+        requestBody['password'] = password;
+      }
+
+      final response = await _httpClient.put(
+        '/users/$userId',
+        requestBody, // Pass as positional argument, not named parameter
+        requireAuth: true,
+        storeId: storeId,
+      );
+
+      final Map<String, dynamic> jsonResponse = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        final user = User.fromJson(jsonResponse['data']);
+        return ApiResponse<User>(
+          success: jsonResponse['success'] ?? true,
+          message: jsonResponse['message'] ?? 'User updated successfully',
+          data: user,
+          status: jsonResponse['status'] ?? response.statusCode,
+        );
+      } else {
+        return ApiResponse<User>(
+          success: false,
+          message: jsonResponse['message'] ?? 'Failed to update user',
+          status: jsonResponse['status'] ?? response.statusCode,
+        );
+      }
+    } catch (e) {
+      print('Update user error: $e');
+      return ApiResponse<User>(
+        success: false,
+        message: 'Network error: $e',
+        status: 500,
+      );
+    }
+  }
+
+  /// Delete user
+  Future<ApiResponse<void>> deleteUser(String userId, {String? storeId}) async {
+    try {
+      final response = await _httpClient.delete(
+        '/users/$userId',
+        requireAuth: true,
+        storeId: storeId,
+      );
+
+      final Map<String, dynamic> jsonResponse = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return ApiResponse<void>(
+          success: jsonResponse['success'] ?? true,
+          message: jsonResponse['message'] ?? 'User deleted successfully',
+          status: jsonResponse['status'] ?? response.statusCode,
+        );
+      } else {
+        return ApiResponse<void>(
+          success: false,
+          message: jsonResponse['message'] ?? 'Failed to delete user',
+          status: jsonResponse['status'] ?? response.statusCode,
+        );
+      }
+    } catch (e) {
+      print('Delete user error: $e');
+      return ApiResponse<void>(
+        success: false,
+        message: 'Network error: $e',
+        status: 500,
+      );
+    }
+  }
+
   /// Search users
   Future<UserListResponse> searchUsers({
     required String query,
@@ -121,6 +264,33 @@ class UserService extends GetxService {
       limit: limit,
       search: query,
       storeId: storeId,
+    );
+  }
+}
+
+/// Generic API Response class
+class ApiResponse<T> {
+  final bool success;
+  final String message;
+  final T? data;
+  final int status;
+
+  ApiResponse({
+    required this.success,
+    required this.message,
+    this.data,
+    required this.status,
+  });
+
+  factory ApiResponse.fromJson(
+      Map<String, dynamic> json, T Function(Map<String, dynamic>)? fromJsonT) {
+    return ApiResponse<T>(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      data: json['data'] != null && fromJsonT != null
+          ? fromJsonT(json['data'])
+          : null,
+      status: json['status'] ?? 0,
     );
   }
 }

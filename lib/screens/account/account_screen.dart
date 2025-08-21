@@ -1,8 +1,10 @@
-// screens/user_management_screen.dart
+// screens/user_management_screen.dart - FIXED VERSION
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/account/account_controller.dart';
+import 'package:pos/controller/role/role_controller.dart';
 import 'package:pos/models/account/account_model.dart';
+import 'package:pos/screens/account/account_form_dialog.dart';
 import 'package:pos/widgets/pagination_widget.dart';
 
 class UserManagementScreen extends StatelessWidget {
@@ -10,9 +12,11 @@ class UserManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use Get.find() instead of Get.put() to avoid recreating
-    final UserController controller =
+    // Initialize controllers
+    final UserController userController =
         Get.put(UserController(), permanent: false);
+    final RoleController roleController =
+        Get.put(RoleController(), permanent: false);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -50,19 +54,19 @@ class UserManagementScreen extends StatelessWidget {
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: TextField(
-                    controller: controller.searchController,
-                    onChanged: controller.updateSearchQuery,
+                    controller: userController.searchController,
+                    onChanged: userController.updateSearchQuery,
                     decoration: InputDecoration(
                       hintText: 'Cari user...',
                       hintStyle: TextStyle(color: Colors.grey.shade600),
                       prefixIcon: Icon(Icons.search,
                           color: Colors.grey.shade600, size: 20),
                       suffixIcon: Obx(
-                        () => controller.searchQuery.value.isNotEmpty
+                        () => userController.searchQuery.value.isNotEmpty
                             ? IconButton(
                                 icon: Icon(Icons.clear,
                                     size: 16, color: Colors.grey.shade600),
-                                onPressed: controller.clearSearch,
+                                onPressed: userController.clearSearch,
                               )
                             : const SizedBox(),
                       ),
@@ -78,7 +82,7 @@ class UserManagementScreen extends StatelessWidget {
                 // Add user button
                 ElevatedButton.icon(
                   onPressed: () {
-                    // Navigate to add user screen
+                    _showUserForm(userController, roleController, null);
                   },
                   icon: const Icon(Icons.add, color: Colors.white, size: 18),
                   label: const Text('Tambah User',
@@ -113,7 +117,7 @@ class UserManagementScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // Table header
+                  // Table header with actions
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 16),
@@ -121,6 +125,18 @@ class UserManagementScreen extends StatelessWidget {
                       color: Colors.grey.shade50,
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(8)),
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                  ),
+
+                  // Table header columns
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
                       border: Border(
                         bottom: BorderSide(color: Colors.grey.shade200),
                       ),
@@ -152,7 +168,7 @@ class UserManagementScreen extends StatelessWidget {
                             child: Text('Tanggal Bergabung',
                                 style: TextStyle(fontWeight: FontWeight.w600))),
                         SizedBox(
-                            width: 60,
+                            width: 80,
                             child: Text('Aksi',
                                 style: TextStyle(fontWeight: FontWeight.w600))),
                       ],
@@ -163,7 +179,7 @@ class UserManagementScreen extends StatelessWidget {
                   Expanded(
                     child: Obx(() {
                       // Show loading indicator
-                      if (controller.isLoading.value) {
+                      if (userController.isLoading.value) {
                         return const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -177,7 +193,7 @@ class UserManagementScreen extends StatelessWidget {
                       }
 
                       // Show searching indicator
-                      if (controller.isSearching.value) {
+                      if (userController.isSearching.value) {
                         return const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -191,7 +207,7 @@ class UserManagementScreen extends StatelessWidget {
                       }
 
                       // Show error message
-                      if (controller.errorMessage.isNotEmpty) {
+                      if (userController.errorMessage.isNotEmpty) {
                         return Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
@@ -211,13 +227,13 @@ class UserManagementScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  controller.errorMessage.value,
+                                  userController.errorMessage.value,
                                   style: TextStyle(color: Colors.grey.shade600),
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton(
-                                  onPressed: controller.refreshUsers,
+                                  onPressed: userController.refreshUsers,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blue,
                                   ),
@@ -231,7 +247,7 @@ class UserManagementScreen extends StatelessWidget {
                       }
 
                       // Show empty state
-                      if (controller.users.isEmpty) {
+                      if (userController.users.isEmpty) {
                         return Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
@@ -242,7 +258,7 @@ class UserManagementScreen extends StatelessWidget {
                                     size: 48, color: Colors.grey.shade400),
                                 const SizedBox(height: 16),
                                 Text(
-                                  controller.searchQuery.isEmpty
+                                  userController.searchQuery.isEmpty
                                       ? 'Belum ada user'
                                       : 'Tidak ada user yang sesuai',
                                   style: TextStyle(
@@ -251,17 +267,31 @@ class UserManagementScreen extends StatelessWidget {
                                     color: Colors.grey.shade600,
                                   ),
                                 ),
-                                if (controller.searchQuery.isNotEmpty) ...[
+                                if (userController.searchQuery.isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Pencarian: "${controller.searchQuery.value}"',
+                                    'Pencarian: "${userController.searchQuery.value}"',
                                     style:
                                         TextStyle(color: Colors.grey.shade500),
                                   ),
                                   const SizedBox(height: 16),
                                   TextButton(
-                                    onPressed: controller.clearSearch,
+                                    onPressed: userController.clearSearch,
                                     child: const Text('Hapus pencarian'),
+                                  ),
+                                ],
+                                if (userController.searchQuery.isEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () => _showUserForm(
+                                        userController, roleController, null),
+                                    icon: const Icon(Icons.add,
+                                        color: Colors.white),
+                                    label: const Text('Tambah User Pertama',
+                                        style: TextStyle(color: Colors.white)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -273,33 +303,34 @@ class UserManagementScreen extends StatelessWidget {
                       // Show user list
                       return ListView.builder(
                         padding: EdgeInsets.zero,
-                        itemCount: controller.users.length,
+                        itemCount: userController.users.length,
                         itemBuilder: (context, index) {
-                          final user = controller.users[index];
-                          final rowNumber = controller.startIndex + index;
+                          final user = userController.users[index];
+                          final rowNumber = userController.startIndex + index;
 
-                          return _buildUserRow(user, rowNumber, controller);
+                          return _buildUserRow(
+                              user, rowNumber, userController, roleController);
                         },
                       );
                     }),
                   ),
 
                   // Pagination - only show when there are users
-                  Obx(() => controller.users.isNotEmpty
+                  Obx(() => userController.users.isNotEmpty
                       ? PaginationWidget(
-                          currentPage: controller.currentPage.value,
-                          totalItems: controller.totalItems.value,
-                          itemsPerPage: controller.itemsPerPage.value,
-                          availablePageSizes: controller.availablePageSizes,
-                          startIndex: controller.startIndex,
-                          endIndex: controller.endIndex,
-                          hasPreviousPage: controller.hasPreviousPage,
-                          hasNextPage: controller.hasNextPage,
-                          pageNumbers: controller.pageNumbers,
-                          onPageSizeChanged: controller.changePageSize,
-                          onPreviousPage: controller.goToPreviousPage,
-                          onNextPage: controller.goToNextPage,
-                          onPageSelected: controller.goToPage,
+                          currentPage: userController.currentPage.value,
+                          totalItems: userController.totalItems.value,
+                          itemsPerPage: userController.itemsPerPage.value,
+                          availablePageSizes: userController.availablePageSizes,
+                          startIndex: userController.startIndex,
+                          endIndex: userController.endIndex,
+                          hasPreviousPage: userController.hasPreviousPage,
+                          hasNextPage: userController.hasNextPage,
+                          pageNumbers: userController.pageNumbers,
+                          onPageSizeChanged: userController.changePageSize,
+                          onPreviousPage: userController.goToPreviousPage,
+                          onNextPage: userController.goToNextPage,
+                          onPageSelected: userController.goToPage,
                         )
                       : const SizedBox()),
                 ],
@@ -311,7 +342,8 @@ class UserManagementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUserRow(User user, int rowNumber, UserController controller) {
+  Widget _buildUserRow(User user, int rowNumber, UserController userController,
+      RoleController roleController) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
@@ -339,13 +371,13 @@ class UserManagementScreen extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: Colors.blue.shade100,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
                     Icons.person,
                     size: 16,
-                    color: Colors.grey.shade600,
+                    color: Colors.blue.shade600,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -402,11 +434,11 @@ class UserManagementScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: controller.getUserTypeColor(user),
+                color: userController.getUserTypeColor(user),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                controller.getUserTypeText(user),
+                userController.getUserTypeText(user),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -429,19 +461,29 @@ class UserManagementScreen extends StatelessWidget {
 
           // Actions
           SizedBox(
-            width: 60,
+            width: 80,
             child: PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.grey.shade600),
+              icon: Icon(
+                Icons.more_vert,
+                color: Colors.grey.shade600,
+                size: 20,
+              ),
+              tooltip: 'Menu',
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 8,
+              offset: const Offset(0, 8),
               onSelected: (value) {
                 switch (value) {
                   case 'view':
                     _showUserDetails(user);
                     break;
                   case 'edit':
-                    _editUser(user);
+                    _showUserForm(userController, roleController, user);
                     break;
                   case 'delete':
-                    _confirmDeleteUser(user, controller);
+                    _handleDeleteUser(user, userController);
                     break;
                 }
               },
@@ -450,8 +492,9 @@ class UserManagementScreen extends StatelessWidget {
                   value: 'view',
                   child: Row(
                     children: [
-                      Icon(Icons.visibility_outlined, size: 16),
-                      SizedBox(width: 8),
+                      Icon(Icons.visibility_outlined,
+                          color: Colors.grey, size: 18),
+                      SizedBox(width: 12),
                       Text('Lihat Detail'),
                     ],
                   ),
@@ -460,19 +503,20 @@ class UserManagementScreen extends StatelessWidget {
                   value: 'edit',
                   child: Row(
                     children: [
-                      Icon(Icons.edit_outlined, size: 16),
-                      SizedBox(width: 8),
-                      Text('Edit'),
+                      Icon(Icons.edit_outlined, color: Colors.blue, size: 18),
+                      SizedBox(width: 12),
+                      Text('Edit User'),
                     ],
                   ),
                 ),
+                const PopupMenuDivider(),
                 const PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Hapus', style: TextStyle(color: Colors.red)),
+                      Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                      SizedBox(width: 12),
+                      Text('Hapus User', style: TextStyle(color: Colors.red)),
                     ],
                   ),
                 ),
@@ -482,6 +526,78 @@ class UserManagementScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // FIXED: This method now properly loads roles and passes them to the dialog
+  void _showUserForm(UserController userController,
+      RoleController roleController, User? user) async {
+    try {
+      // Show loading dialog while fetching roles
+      Get.dialog(
+        const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Memuat data role...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Load roles if not already loaded or refresh them
+      await roleController.loadRoles();
+
+      // Close loading dialog
+      Get.back();
+
+      // Check if roles were loaded successfully
+      if (roleController.roles.isEmpty &&
+          roleController.error.value.isNotEmpty) {
+        Get.snackbar(
+          'Error',
+          'Gagal memuat data role: ${roleController.error.value}',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Show the user form dialog with available roles
+      UserFormDialog.show(
+        user: user,
+      );
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      // Show error message
+      Get.snackbar(
+        'Error',
+        'Terjadi kesalahan saat memuat form: $e',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      print('Error in _showUserForm: $e');
+    }
+  }
+
+  void _handleDeleteUser(User user, UserController controller) async {
+    final confirmed = await controller.showDeleteConfirmation(user);
+    if (confirmed) {
+      await controller.deleteUser(user.id);
+    }
   }
 
   String _formatDate(DateTime dateTime) {
@@ -505,52 +621,110 @@ class UserManagementScreen extends StatelessWidget {
 
   void _showUserDetails(User user) {
     Get.dialog(
-      AlertDialog(
-        title: const Text('Detail User'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Nama: ${user.name}'),
-            Text('Email: ${user.email}'),
-            Text('Role: ${user.role.name}'),
-            Text('Type: ${user.isStaff ? "Staff" : "User"}'),
-            Text('Store ID: ${user.storeId}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Tutup'),
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(Icons.person, color: Colors.blue.shade600),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          user.email,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+
+              const Divider(height: 32),
+
+              // Details
+              _buildDetailRow('User ID', user.id),
+              _buildDetailRow('Store ID', user.storeId),
+              _buildDetailRow('Role', user.role.name),
+              if (user.role.description.isNotEmpty)
+                _buildDetailRow('Deskripsi Role', user.role.description),
+              _buildDetailRow('Status', user.isStaff ? 'Staff' : 'User'),
+              _buildDetailRow('Tanggal Bergabung', _formatDate(user.createdAt)),
+
+              const SizedBox(height: 24),
+
+              // Actions
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                  ),
+                  child: const Text('Tutup',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  void _editUser(User user) {
-    // Navigate to edit user screen
-    Get.snackbar('Info', 'Fitur edit user akan segera hadir');
-  }
-
-  void _confirmDeleteUser(User user, UserController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Konfirmasi Hapus'),
-        content: Text('Apakah Anda yakin ingin menghapus user "${user.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Batal'),
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+            ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              // TODO: Implement delete functionality
-              Get.snackbar('Info', 'Fitur hapus user akan segera hadir');
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          const Text(': '),
+          Expanded(
+            child: Text(
+              value.isNotEmpty ? value : '-',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),

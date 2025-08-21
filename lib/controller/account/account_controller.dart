@@ -12,6 +12,7 @@ class UserController extends GetxController {
   final RxList<User> users = <User>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isSearching = false.obs;
+  final RxBool isSubmitting = false.obs;
   final RxString errorMessage = ''.obs;
   final RxString searchQuery = ''.obs;
 
@@ -25,6 +26,15 @@ class UserController extends GetxController {
   // Search controller and debounce timer
   final TextEditingController searchController = TextEditingController();
   Timer? _debounceTimer;
+
+  // Form controllers for create/edit user
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
+  final RxBool isStaff = false.obs;
+  final RxString selectedRoleId = ''.obs;
 
   // Loading flag to prevent multiple simultaneous requests
   bool _isLoadingData = false;
@@ -88,6 +98,10 @@ class UserController extends GetxController {
   @override
   void onClose() {
     searchController.dispose();
+    nameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
     _debounceTimer?.cancel();
     super.onClose();
   }
@@ -140,6 +154,115 @@ class UserController extends GetxController {
       isLoading.value = false;
       isSearching.value = false;
       _isLoadingData = false;
+    }
+  }
+
+  /// Create new user
+  Future<bool> createUser({
+    required String name,
+    required String email,
+    required String password,
+    required bool isStaff,
+    required String roleId,
+  }) async {
+    try {
+      isSubmitting.value = true;
+      errorMessage.value = '';
+
+      final response = await _userService.createUser(
+        name: name,
+        email: email,
+        password: password,
+        isStaff: isStaff,
+        roleId: roleId,
+      );
+
+      if (response.success) {
+        showSuccessMessage(response.message);
+        await refreshUsers();
+        resetForm();
+        return true;
+      } else {
+        errorMessage.value = response.message;
+        showErrorMessage(response.message);
+        return false;
+      }
+    } catch (e) {
+      final errorMsg = 'Gagal membuat user: $e';
+      errorMessage.value = errorMsg;
+      showErrorMessage(errorMsg);
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Update existing user
+  Future<bool> updateUser({
+    required String userId,
+    required String name,
+    required String email,
+    String? password,
+    required bool isStaff,
+    required String roleId,
+  }) async {
+    try {
+      isSubmitting.value = true;
+      errorMessage.value = '';
+
+      final response = await _userService.updateUser(
+        userId: userId,
+        name: name,
+        email: email,
+        password: password,
+        isStaff: isStaff,
+        roleId: roleId,
+      );
+
+      if (response.success) {
+        showSuccessMessage(response.message);
+        await refreshUsers();
+        resetForm();
+        return true;
+      } else {
+        errorMessage.value = response.message;
+        showErrorMessage(response.message);
+        return false;
+      }
+    } catch (e) {
+      final errorMsg = 'Gagal mengupdate user: $e';
+      errorMessage.value = errorMsg;
+      showErrorMessage(errorMsg);
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  /// Delete user
+  Future<bool> deleteUser(String userId) async {
+    try {
+      isSubmitting.value = true;
+      errorMessage.value = '';
+
+      final response = await _userService.deleteUser(userId);
+
+      if (response.success) {
+        showSuccessMessage(response.message);
+        await refreshUsers();
+        return true;
+      } else {
+        errorMessage.value = response.message;
+        showErrorMessage(response.message);
+        return false;
+      }
+    } catch (e) {
+      final errorMsg = 'Gagal menghapus user: $e';
+      errorMessage.value = errorMsg;
+      showErrorMessage(errorMsg);
+      return false;
+    } finally {
+      isSubmitting.value = false;
     }
   }
 
@@ -210,6 +333,74 @@ class UserController extends GetxController {
     }
   }
 
+  /// Reset form controllers
+  void resetForm() {
+    nameController.clear();
+    emailController.clear();
+    passwordController.clear();
+    confirmPasswordController.clear();
+    isStaff.value = false;
+    selectedRoleId.value = '';
+    errorMessage.value = '';
+  }
+
+  /// Fill form with user data for editing
+  void fillForm(User user) {
+    nameController.text = user.name;
+    emailController.text = user.email;
+    passwordController.clear(); // Don't fill password for security
+    confirmPasswordController.clear();
+    isStaff.value = user.isStaff;
+    selectedRoleId.value = user.role.id;
+  }
+
+  /// Form validation methods
+  String? validateName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Nama tidak boleh kosong';
+    }
+    if (value.trim().length < 2) {
+      return 'Nama minimal 2 karakter';
+    }
+    return null;
+  }
+
+  String? validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email tidak boleh kosong';
+    }
+    if (!GetUtils.isEmail(value.trim())) {
+      return 'Format email tidak valid';
+    }
+    return null;
+  }
+
+  String? validatePassword(String? value, {bool isRequired = true}) {
+    if (isRequired && (value == null || value.isEmpty)) {
+      return 'Password tidak boleh kosong';
+    }
+    if (value != null && value.isNotEmpty) {
+      if (value.length < 8) {
+        return 'Password minimal 8 karakter';
+      }
+    }
+    return null;
+  }
+
+  String? validateConfirmPassword(String? value) {
+    if (value != passwordController.text) {
+      return 'Konfirmasi password tidak sama';
+    }
+    return null;
+  }
+
+  String? validateRole(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Role harus dipilih';
+    }
+    return null;
+  }
+
   /// Get user type display text
   String getUserTypeText(User user) {
     return user.isStaff ? 'STAFF' : 'USER';
@@ -236,56 +427,81 @@ class UserController extends GetxController {
     }
   }
 
-  /// Show user actions menu
-  void showUserActions(User user) {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Lihat Detail'),
-              onTap: () {
-                Get.back();
-                // Navigate to user detail
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit User'),
-              onTap: () {
-                Get.back();
-                // Navigate to edit user
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title:
-                  const Text('Hapus User', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Get.back();
-                // Show delete confirmation
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+  /// Show success message
+  void showSuccessMessage(String message) {
+    Get.snackbar(
+      'Berhasil',
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 3),
+      icon: const Icon(Icons.check_circle, color: Colors.white),
     );
+  }
+
+  /// Show error message
+  void showErrorMessage(String message) {
+    Get.snackbar(
+      'Error',
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 4),
+      icon: const Icon(Icons.error, color: Colors.white),
+    );
+  }
+
+  /// Show confirmation dialog for delete
+  Future<bool> showDeleteConfirmation(User user) async {
+    return await Get.dialog<bool>(
+          AlertDialog(
+            title: const Text('Konfirmasi Hapus'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Apakah Anda yakin ingin menghapus user berikut?'),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Nama: ${user.name}',
+                          style: const TextStyle(fontWeight: FontWeight.w500)),
+                      Text('Email: ${user.email}'),
+                      Text('Role: ${user.role.name}'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Tindakan ini tidak dapat dibatalkan.',
+                  style:
+                      TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Get.back(result: true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child:
+                    const Text('Hapus', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
