@@ -164,6 +164,8 @@ class TransactionController extends GetxController {
           DateTime.now().subtract(const Duration(days: 30));
       final exportEndDate = endDate ?? _endDate.value ?? DateTime.now();
 
+      showSuccess('Preparing Excel export...');
+
       final result = await _transactionService.exportTaxReport(
         startDate: exportStartDate,
         endDate: exportEndDate,
@@ -172,28 +174,73 @@ class TransactionController extends GetxController {
       );
 
       if (result != null && result['success'] == true) {
-        final downloadUrl = result['download_url'] as String;
+        final downloadUrl = result['download_url'] as String?;
 
-        // Try to download and save the file
-        await _downloadFile(downloadUrl);
+        if (downloadUrl != null && downloadUrl.isNotEmpty) {
+          showSuccess('Downloading Excel file...');
 
-        showSuccess('Tax report exported successfully!');
+          // Validate that the URL looks like an Excel download
+          if (_isValidExcelUrl(downloadUrl)) {
+            await _downloadFile(downloadUrl);
+          } else {
+            // If URL doesn't look like Excel, still try to download
+            showSuccess('Download URL received, attempting download...');
+            await _downloadFile(downloadUrl);
+          }
+        } else {
+          showError('No download URL received from server');
+        }
       } else {
-        showError(result?['message'] ?? 'Failed to export tax report');
+        final errorMessage =
+            result?['message'] ?? 'Failed to export tax report';
+        showError(errorMessage);
+
+        // Log detailed error for debugging
+        print('Export error details: $result');
       }
     } catch (e) {
       showError('Error exporting tax report: $e');
+      print('Export exception: $e');
     } finally {
       _isExporting.value = false;
     }
+  }
+
+  bool _isValidExcelUrl(String url) {
+    final lowerUrl = url.toLowerCase();
+    return lowerUrl.contains('.xlsx') ||
+        lowerUrl.contains('.xls') ||
+        lowerUrl.contains('excel') ||
+        lowerUrl.contains('spreadsheet') ||
+        lowerUrl.contains(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  }
+
+  void showExcelSuccess(String message, {String? fileName}) {
+    Get.snackbar(
+      'Excel Export Success',
+      fileName != null ? '$message\nFile: $fileName' : message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.green.shade100,
+      colorText: Colors.green.shade800,
+      duration: const Duration(seconds: 4),
+      icon: const Icon(
+        Icons.table_chart,
+        color: Colors.green,
+      ),
+    );
   }
 
   Future<void> _downloadFile(String url) async {
     try {
       // For web platform, open URL directly
       if (GetPlatform.isWeb) {
-        if (await canLaunchUrl(Uri.parse(url))) {
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        // Add Excel MIME type headers for better browser handling
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri,
+              mode: LaunchMode.externalApplication,
+              webOnlyWindowName: '_blank');
         } else {
           throw 'Could not launch $url';
         }
@@ -207,34 +254,134 @@ class TransactionController extends GetxController {
       Directory? downloadsDirectory;
       if (GetPlatform.isAndroid) {
         downloadsDirectory = Directory('/storage/emulated/0/Download');
+        // Check if directory exists, create if not
+        if (!await downloadsDirectory.exists()) {
+          downloadsDirectory = await getExternalStorageDirectory();
+        }
+      } else if (GetPlatform.isIOS) {
+        downloadsDirectory = await getApplicationDocumentsDirectory();
       } else {
         downloadsDirectory = await getApplicationDocumentsDirectory();
       }
 
-      // Generate filename from URL or use current timestamp
-      final fileName = url.split('/').last.contains('.xlsx')
-          ? url.split('/').last
-          : 'tax-report-${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      // Generate proper Excel filename
+      final fileName = _generateExcelFileName(url);
+      final filePath = '${downloadsDirectory!.path}/$fileName';
 
-      final filePath = '${downloadsDirectory.path}/$fileName';
+      // Configure Dio for Excel download
+      dio.options.headers = {
+        'Accept':
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Type':
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
 
-      // Download file
-      await dio.download(url, filePath);
+      // Download file with progress
+      await dio.download(
+        url,
+        filePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            double progress = received / total;
+            // Optional: Show download progress
+            print('Download progress: ${(progress * 100).toStringAsFixed(0)}%');
+          }
+        },
+      );
 
-      showSuccess('File downloaded to: $filePath');
+      // Verify file was downloaded and is Excel format
+      final file = File(filePath);
+      if (await file.exists()) {
+        final fileSize = await file.length();
+        if (fileSize > 0) {
+          showSuccess('Excel file downloaded successfully: $fileName');
 
-      // Try to open the file
-      if (await canLaunchUrl(Uri.file(filePath))) {
-        await launchUrl(Uri.file(filePath));
+          // Try to open the file with appropriate Excel app
+          await _openExcelFile(filePath);
+        } else {
+          throw 'Downloaded file is empty';
+        }
+      } else {
+        throw 'File was not downloaded';
       }
     } catch (e) {
-      // If download fails, try to open URL directly
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not download or open file';
+      print('Download error: $e');
+
+      // Fallback: try to open URL directly in browser
+      try {
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          showSuccess('Opening Excel file in browser...');
+        } else {
+          throw 'Could not open download URL';
+        }
+      } catch (fallbackError) {
+        throw 'Could not download or open Excel file: $e';
       }
     }
+  }
+
+  Future<void> _openExcelFile(String filePath) async {
+    try {
+      final file = File(filePath);
+
+      if (GetPlatform.isAndroid) {
+        // On Android, try to open with Excel or compatible app
+        final uri = Uri.parse(
+            'content://com.android.externalstorage.documents/document/primary:Download/${file.path.split('/').last}');
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri);
+        } else {
+          // Fallback to file URI
+          final fileUri = Uri.file(filePath);
+          if (await canLaunchUrl(fileUri)) {
+            await launchUrl(fileUri);
+          }
+        }
+      } else if (GetPlatform.isIOS) {
+        // On iOS, open with system share sheet
+        final fileUri = Uri.file(filePath);
+        if (await canLaunchUrl(fileUri)) {
+          await launchUrl(fileUri);
+        }
+      } else {
+        // Desktop platforms
+        final fileUri = Uri.file(filePath);
+        if (await canLaunchUrl(fileUri)) {
+          await launchUrl(fileUri);
+        }
+      }
+    } catch (e) {
+      print('Could not open Excel file: $e');
+      // Don't throw error, file is already downloaded
+    }
+  }
+
+  String _generateExcelFileName(String url) {
+    String fileName;
+
+    // Try to extract filename from URL
+    final uri = Uri.parse(url);
+    final pathSegments = uri.pathSegments;
+
+    if (pathSegments.isNotEmpty && pathSegments.last.contains('.')) {
+      fileName = pathSegments.last;
+
+      // Ensure it has .xlsx extension
+      if (!fileName.toLowerCase().endsWith('.xlsx') &&
+          !fileName.toLowerCase().endsWith('.xls')) {
+        fileName = fileName.split('.').first + '.xlsx';
+      }
+    } else {
+      // Generate filename based on current date and report type
+      final now = DateTime.now();
+      final dateStr =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+      fileName = 'tax-report-$dateStr.xlsx';
+    }
+
+    return fileName;
   }
 
   /// Generate rekap data from currently loaded transactions (for initial load)

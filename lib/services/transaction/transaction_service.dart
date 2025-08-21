@@ -52,16 +52,30 @@ class TransactionService extends GetxService {
     bool realTax = false,
   }) async {
     try {
-      final Map<String, dynamic> requestBody = {
-        'start_time': startDate.toIso8601String(),
-        'end_time': endDate.toIso8601String(),
-      };
+      // Format dates to match API expectation (with Z timezone)
+      final String startTimeFormatted =
+          '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}T00:00:00Z';
+      final String endTimeFormatted =
+          '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}T23:59:59Z';
+
+      Map<String, dynamic> requestBody;
 
       if (realTax) {
-        requestBody['real_tax'] = true;
-        requestBody['new_tax_rate'] = 0;
-      } else if (newTaxRate != null) {
-        requestBody['new_tax_rate'] = newTaxRate;
+        // Real Tax format
+        requestBody = {
+          'start_time': startTimeFormatted,
+          'end_time': endTimeFormatted,
+          'new_tax_rate': 0,
+          'real_tax': true,
+        };
+      } else {
+        // Manipulated Tax format
+        requestBody = {
+          'start_time': startTimeFormatted,
+          'end_time': endTimeFormatted,
+          'new_tax_rate': newTaxRate ?? 0.05, // Default 5% if not provided
+        };
+        // Don't include real_tax field for manipulated tax
       }
 
       final response = await _httpClient.post(
@@ -72,23 +86,60 @@ class TransactionService extends GetxService {
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
-        if (jsonData['status'] == 'success') {
+
+        // Handle different response formats
+        if (jsonData['status'] == 'success' || jsonData['success'] == true) {
+          String? downloadUrl;
+
+          // Try different possible locations for download URL
+          if (jsonData['download_url'] != null) {
+            downloadUrl = jsonData['download_url'] as String;
+          } else if (jsonData['data'] != null &&
+              jsonData['data']['download_url'] != null) {
+            downloadUrl = jsonData['data']['download_url'] as String;
+          } else if (jsonData['url'] != null) {
+            downloadUrl = jsonData['url'] as String;
+          }
+
           return {
             'success': true,
-            'download_url': jsonData['download_url'],
-            'message': jsonData['message'],
+            'download_url': downloadUrl,
+            'message': jsonData['message'] ?? 'Export successful',
           };
         }
       }
 
+      // Handle error responses
+      String errorMessage = 'Failed to export tax report';
+
+      if (response.statusCode == 400) {
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['message'] ??
+              errorData['error'] ??
+              'Bad Request - Invalid parameters';
+        } catch (e) {
+          errorMessage = 'Bad Request - Invalid request format';
+        }
+      } else if (response.statusCode == 401) {
+        errorMessage = 'Unauthorized - Please login again';
+      } else if (response.statusCode == 403) {
+        errorMessage = 'Forbidden - Access denied';
+      } else if (response.statusCode == 404) {
+        errorMessage = 'Not Found - Export endpoint not available';
+      } else if (response.statusCode >= 500) {
+        errorMessage = 'Server Error - Please try again later';
+      }
+
       return {
         'success': false,
-        'message': 'Failed to export tax report: ${response.statusCode}',
+        'message': '$errorMessage (Status: ${response.statusCode})',
+        'status_code': response.statusCode,
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Error exporting tax report: $e',
+        'message': 'Network error: $e',
       };
     }
   }
