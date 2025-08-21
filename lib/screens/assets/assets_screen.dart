@@ -1460,21 +1460,24 @@ class AssetScreen extends StatelessWidget {
       return;
     }
 
-    // Format dates to remove time component
-    final formattedAcquisitionDate = DateTime(
+    // Format dates to UTC and ensure proper ISO format
+    final formattedAcquisitionDate = DateTime.utc(
       acquisitionDate.year,
       acquisitionDate.month,
       acquisitionDate.day,
+      0, 0, 0, 0, // Set time to 00:00:00.000
     );
 
     final DateTime? formattedCoverageEndDate = coverageEndDate != null
-        ? DateTime(
+        ? DateTime.utc(
             coverageEndDate.year,
             coverageEndDate.month,
             coverageEndDate.day,
+            23, 59, 59, 999, // Set to end of day
           )
         : null;
 
+    // Create asset with proper field mapping
     final newAsset = Asset(
       id: existingAsset?.id ?? '',
       storeId: existingAsset?.storeId ?? '',
@@ -1483,12 +1486,17 @@ class AssetScreen extends StatelessWidget {
       category: categoryController.text.trim(),
       sku: existingAsset?.sku ?? '',
       acquisitionDate: formattedAcquisitionDate,
-      coverageEndDate: formattedCoverageEndDate,
+      coverageEndDate: selectedType == AssetType.fixedTangible
+          ? null
+          : formattedCoverageEndDate,
       cost: int.parse(costController.text),
       residualValue: int.tryParse(residualValueController.text) ?? 0,
       usefulLifeMonths: int.parse(usefulLifeController.text),
       depMethod: selectedDepMethod,
-      depFactor: double.tryParse(depFactorController.text) ?? 1.0,
+      depFactor: double.tryParse(depFactorController.text) ??
+          (selectedDepMethod == DepreciationMethod.decliningBalance
+              ? 2.0
+              : 1.0),
       accumulatedDepreciation: existingAsset?.accumulatedDepreciation ?? 0,
       lastDepreciatedAt: existingAsset?.lastDepreciatedAt,
       status: existingAsset?.status ?? AssetStatus.active,

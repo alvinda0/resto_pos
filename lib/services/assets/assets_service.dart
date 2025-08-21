@@ -65,14 +65,34 @@ class AssetService extends GetxService {
   }
 
   // Create new asset
+  // Create new asset
   Future<AssetSingleResponse> createAsset(
     Asset asset, {
     String? storeId,
   }) async {
     try {
+      // Ensure the asset is valid before sending the request
+      if (!validateAsset(asset)) {
+        throw Exception('Invalid asset data');
+      }
+
+      // Prepare the JSON payload
+      final payload = {
+        'type': asset.type,
+        'name': asset.name,
+        'category': asset.category,
+        'acquisition_date': asset.acquisitionDate.toIso8601String(),
+        'coverage_end_date': asset.coverageEndDate?.toIso8601String(),
+        'cost': asset.cost,
+        'residual_value': asset.residualValue,
+        'useful_life_months': asset.usefulLifeMonths,
+        'dep_method': asset.depMethod,
+        'dep_factor': asset.depFactor,
+      };
+
       final response = await _httpClient.post(
         '/assets',
-        asset.toJson(),
+        payload,
         storeId: storeId,
       );
 

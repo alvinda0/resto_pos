@@ -61,39 +61,43 @@ class Asset {
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
       'type': type,
       'name': name,
       'category': category,
-      'acquisition_date': acquisitionDate.toIso8601String().split('T')[0],
-      'coverage_end_date': coverageEndDate?.toIso8601String().split('T')[0],
+      'acquisition_date': acquisitionDate.toIso8601String(),
       'cost': cost,
       'residual_value': residualValue,
       'useful_life_months': usefulLifeMonths,
       'dep_method': depMethod,
       'dep_factor': depFactor,
     };
+
+    // Conditional field untuk prepaid expense
+    if (type == 'PREPAID_EXPENSE' && coverageEndDate != null) {
+      json['coverage_end_date'] = coverageEndDate!.toIso8601String();
+    }
+
+    return json;
   }
 
   Map<String, dynamic> toUpdateJson() {
-    final json = <String, dynamic>{};
+    final json = <String, dynamic>{
+      'type': type,
+      'name': name,
+      'category': category,
+      'acquisition_date': acquisitionDate.toIso8601String(),
+      'cost': cost,
+      'residual_value': residualValue,
+      'useful_life_months': usefulLifeMonths,
+      'dep_method': depMethod,
+      'dep_factor': depFactor,
+    };
 
-    json['type'] = type;
-    json['name'] = name;
-    json['category'] = category;
-    json['acquisition_date'] =
-        acquisitionDate.toIso8601String().split('T')[0]; // Format: YYYY-MM-DD
+    // Hanya tambahkan coverage_end_date jika tidak null
     if (coverageEndDate != null) {
-      json['coverage_end_date'] = coverageEndDate!
-          .toIso8601String()
-          .split('T')[0]; // Format: YYYY-MM-DD
+      json['coverage_end_date'] = coverageEndDate!.toIso8601String();
     }
-    json['cost'] = cost;
-    json['residual_value'] = residualValue;
-    json['useful_life_months'] = usefulLifeMonths;
-    json['dep_method'] = depMethod;
-    json['dep_factor'] = depFactor;
-    json['status'] = status;
 
     return json;
   }
