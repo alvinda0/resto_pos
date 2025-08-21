@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/account/account_screen.dart';
 import 'package:pos/screens/assets/assets_screen.dart';
+import 'package:pos/screens/customer/customer_screen.dart';
 import 'package:pos/screens/employee/employee_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
@@ -17,7 +18,6 @@ import 'package:pos/screens/product/product_screen.dart';
 import 'package:pos/screens/recipe/recipe_screen.dart';
 import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
-import 'package:pos/screens/dashboard/customers_screen.dart';
 import 'package:pos/screens/dashboard/promo_screen.dart';
 import 'package:pos/screens/order/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
@@ -231,7 +231,7 @@ class AppRoutes {
       ),
       GetPage(
           name: customers,
-          page: () => _wrapWithMainLayout(const CustomersScreen(), customers)),
+          page: () => _wrapWithMainLayout(CustomerScreen(), customers)),
 
       // Referral Routes
       GetPage(
