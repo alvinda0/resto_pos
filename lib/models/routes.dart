@@ -26,6 +26,7 @@ import 'package:pos/screens/order/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 import 'package:pos/screens/report/report_screen.dart';
+import 'package:pos/screens/tax/tax_screen.dart';
 import 'package:pos/screens/withdraw/withdraw_screen.dart';
 
 class AppRoutes {
@@ -270,8 +271,7 @@ class AppRoutes {
       ),
       GetPage(
         name: settingsTax,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Konfigurasi Pajak'), settingsTax),
+        page: () => _wrapWithMainLayout(TaxScreen(), settingsTax),
       ),
       GetPage(
         name: settingsCredentials,

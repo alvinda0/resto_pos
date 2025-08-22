@@ -20,16 +20,19 @@ void main() async {
 
 /// Initialize all required services
 Future<void> initServices() async {
-  // Initialize storage service first
-  Get.put(StorageService.instance);
+  try {
+    // Initialize storage service first
+    Get.put(StorageService.instance);
 
-  // Initialize auth service
-  Get.put(AuthService.instance);
-  Get.lazyPut(() => QrCodeService());
+    // Initialize auth service
+    Get.put(AuthService.instance);
 
-  // Initialize auth controller
-  Get.put(AuthController());
-  Get.lazyPut<CategoryController>(() => CategoryController());
+    // Initialize services with lazy loading to avoid conflicts
+    Get.lazyPut(() => QrCodeService());
+    // Initialize auth controller
+    Get.put(AuthController());
+    Get.lazyPut<CategoryController>(() => CategoryController());
+  } catch (e) {}
 }
 
 class MyApp extends StatelessWidget {
@@ -38,9 +41,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'POS System',
+      title: 'RESTOT',
       initialRoute: AppRoutes.splash,
-      getPages: AppRoutes.getPages(), // Call the getPages method here
+      getPages: AppRoutes.getPages(),
       home: SplashScreen(),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
