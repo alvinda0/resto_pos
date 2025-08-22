@@ -28,6 +28,7 @@ import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';
 import 'package:pos/screens/report/report_screen.dart';
 import 'package:pos/screens/tax/tax_screen.dart';
+import 'package:pos/screens/theme/theme_screen.dart';
 import 'package:pos/screens/withdraw/withdraw_screen.dart';
 
 class AppRoutes {
@@ -267,8 +268,7 @@ class AppRoutes {
       // Settings Routes (Pengaturan)
       GetPage(
         name: settingsThemes,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Tema'), settingsThemes),
+        page: () => _wrapWithMainLayout(const ThemeScreen(), settingsThemes),
       ),
       GetPage(
         name: settingsTax,
