@@ -6,6 +6,7 @@ import 'package:pos/screens/assets/assets_screen.dart';
 import 'package:pos/screens/customer/customer_screen.dart';
 import 'package:pos/screens/employee/employee_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
+import 'package:pos/screens/payroll/payroll_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
 import 'package:pos/screens/role/role_form_screen.dart';
@@ -204,9 +205,8 @@ class AppRoutes {
       ),
       GetPage(
         name: employeesPayment,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Pembayaran Karyawan'),
-            employeesPayment),
+        page: () =>
+            _wrapWithMainLayout(const PayrollScreen(), employeesPayment),
       ),
 
       // New Standalone Routes

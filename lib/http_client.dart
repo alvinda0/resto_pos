@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos/config/config.dart';
@@ -94,6 +95,30 @@ class HttpClient extends GetxService {
     return headers;
   }
 
+  // Method to get headers for multipart requests
+  Map<String, String> _getMultipartHeaders(String? customStoreId,
+      {bool requireAuth = true}) {
+    final Map<String, String> headers = {
+      'Accept': 'application/json',
+    };
+    // Don't set Content-Type for multipart - http package will set it automatically
+
+    if (requireAuth) {
+      final token = _storage.getToken();
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+    }
+
+    // Use the improved _getStoreId method
+    final storeId = _getStoreId(customStoreId);
+    if (storeId != null && storeId.isNotEmpty) {
+      headers['X-Store-ID'] = storeId;
+    }
+
+    return headers;
+  }
+
   // Helper method to build URI with query parameters
   Uri _buildUri(String endpoint, {Map<String, String>? queryParameters}) {
     final uri = Uri.parse('$baseUrl$endpoint');
@@ -150,6 +175,48 @@ class HttpClient extends GetxService {
     }
   }
 
+  // New multipart POST method for file uploads
+  Future<http.Response> postMultipart(
+    String endpoint,
+    Map<String, String> fields, {
+    Map<String, File>? files,
+    bool requireAuth = true,
+    String? storeId,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl$endpoint');
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add headers
+      final headers = _getMultipartHeaders(storeId, requireAuth: requireAuth);
+      request.headers.addAll(headers);
+
+      // Add text fields
+      request.fields.addAll(fields);
+
+      // Add files
+      if (files != null) {
+        for (final entry in files.entries) {
+          final fieldName = entry.key;
+          final file = entry.value;
+
+          final multipartFile = await http.MultipartFile.fromPath(
+            fieldName,
+            file.path,
+          );
+          request.files.add(multipartFile);
+        }
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception('Error saat POST multipart request: $e');
+    }
+  }
+
   Future<http.Response> put(
     String endpoint,
     Map<String, dynamic> data, {
@@ -170,6 +237,48 @@ class HttpClient extends GetxService {
       return _handleResponse(response);
     } catch (e) {
       throw Exception('Error saat PUT request: $e');
+    }
+  }
+
+  // New multipart PUT method for file uploads
+  Future<http.Response> putMultipart(
+    String endpoint,
+    Map<String, String> fields, {
+    Map<String, File>? files,
+    bool requireAuth = true,
+    String? storeId,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl$endpoint');
+      final request = http.MultipartRequest('PUT', uri);
+
+      // Add headers
+      final headers = _getMultipartHeaders(storeId, requireAuth: requireAuth);
+      request.headers.addAll(headers);
+
+      // Add text fields
+      request.fields.addAll(fields);
+
+      // Add files
+      if (files != null) {
+        for (final entry in files.entries) {
+          final fieldName = entry.key;
+          final file = entry.value;
+
+          final multipartFile = await http.MultipartFile.fromPath(
+            fieldName,
+            file.path,
+          );
+          request.files.add(multipartFile);
+        }
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception('Error saat PUT multipart request: $e');
     }
   }
 
