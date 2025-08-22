@@ -7,6 +7,7 @@ import 'package:pos/screens/customer/customer_screen.dart';
 import 'package:pos/screens/employee/employee_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/payroll/payroll_screen.dart';
+import 'package:pos/screens/points/points_screen.dart';
 import 'package:pos/screens/redemption/redemption_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
@@ -257,9 +258,8 @@ class AppRoutes {
       ),
       GetPage(
         name: pointsConfiguration,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Konfigurasi Poin'),
-            pointsConfiguration),
+        page: () =>
+            _wrapWithMainLayout(PointConfigScreen(), pointsConfiguration),
       ),
 
       // Settings Routes (Pengaturan)
