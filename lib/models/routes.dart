@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:pos/screens/account/account_screen.dart';
+import 'package:pos/screens/api_key/api_key_screen.dart';
 import 'package:pos/screens/assets/assets_screen.dart';
 import 'package:pos/screens/customer/customer_screen.dart';
 import 'package:pos/screens/employee/employee_screen.dart';
@@ -276,8 +277,7 @@ class AppRoutes {
       GetPage(
         name: settingsCredentials,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Konfigurasi QRIS'),
-            settingsCredentials),
+            const CredentialAccessScreen(), settingsCredentials),
       ),
       GetPage(
         name: settingsLogsViewer,
