@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos/controller/order/order_controller.dart';
 import 'package:pos/models/order/order_model.dart';
 import 'package:pos/screens/order/invoice_screen.dart';
-import 'package:pos/screens/order/order_detail_screen.dart';
+import 'package:pos/screens/order/order_payment_screen.dart';
 
 class OrderScreen extends StatefulWidget {
   const OrderScreen({super.key});
