@@ -1,7 +1,10 @@
+import 'dart:convert'; // Add this import
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/referral/referral_controller.dart';
+import 'package:pos/controller/customer/customer_controller.dart'; // Add this import
 import 'package:pos/models/referral/referral_model.dart';
+import 'package:pos/widgets/pagination_widget.dart';
 
 class ReferralScreen extends StatefulWidget {
   @override
@@ -11,6 +14,8 @@ class ReferralScreen extends StatefulWidget {
 class _ReferralScreenState extends State<ReferralScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ReferralController _referralController = Get.put(ReferralController());
+  final CustomerController _customerController =
+      Get.put(CustomerController()); // Add this line
 
   String _searchQuery = '';
 
@@ -124,7 +129,6 @@ class _ReferralScreenState extends State<ReferralScreen> {
                 // Add referral button
                 ElevatedButton.icon(
                   onPressed: () {
-                    // TODO: Navigate to add referral screen
                     _showAddReferralDialog();
                   },
                   icon: Icon(Icons.add, size: 16),
@@ -206,7 +210,13 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                     fontSize: 14))),
                         Expanded(
                             flex: 1,
-                            child: Text('Kode QR',
+                            child: Text('Komisi',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14))),
+                        Expanded(
+                            flex: 1,
+                            child: Text('QR Code',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14))),
@@ -274,6 +284,12 @@ class _ReferralScreenState extends State<ReferralScreen> {
                         itemCount: filteredReferrals.length,
                         itemBuilder: (context, index) {
                           final referral = filteredReferrals[index];
+                          final globalIndex =
+                              (_referralController.currentPage.value - 1) *
+                                      _referralController.itemsPerPage.value +
+                                  index +
+                                  1;
+
                           return Container(
                             padding: EdgeInsets.symmetric(
                                 horizontal: 20, vertical: 16),
@@ -288,7 +304,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                 Container(
                                   width: 30,
                                   child: Text(
-                                    '${index + 1}',
+                                    '$globalIndex',
                                     style: TextStyle(
                                         fontSize: 14, color: Colors.grey[600]),
                                   ),
@@ -324,6 +340,30 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                     referral.code,
                                     style: TextStyle(
                                         fontSize: 14, color: Colors.grey[700]),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${referral.commissionRate}${referral.commissionType == 'percentage' ? '%' : ''}',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.green[700]),
+                                      ),
+                                      Text(
+                                        referral.commissionType == 'percentage'
+                                            ? 'Persen'
+                                            : 'Fixed',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey[600]),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 Expanded(
@@ -377,6 +417,25 @@ class _ReferralScreenState extends State<ReferralScreen> {
               ),
             ),
           ),
+
+          // Pagination Widget
+          Obx(() => PaginationWidget(
+                currentPage: _referralController.currentPage.value,
+                totalItems: _referralController.totalItems.value,
+                itemsPerPage: _referralController.itemsPerPage.value,
+                availablePageSizes: _referralController.availablePageSizes,
+                startIndex: _referralController.startIndex,
+                endIndex: _referralController.endIndex,
+                hasPreviousPage: _referralController.hasPreviousPage,
+                hasNextPage: _referralController.hasNextPage,
+                pageNumbers: _referralController.pageNumbers,
+                onPageSizeChanged: (newSize) =>
+                    _referralController.onPageSizeChanged(newSize),
+                onPreviousPage: () => _referralController.onPreviousPage(),
+                onNextPage: () => _referralController.onNextPage(),
+                onPageSelected: (page) =>
+                    _referralController.onPageSelected(page),
+              )),
         ],
       ),
     );
@@ -398,9 +457,9 @@ class _ReferralScreenState extends State<ReferralScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: referral.qrCodeImage.isNotEmpty
-                  ? Image.network(
-                      referral.qrCodeImage,
-                      fit: BoxFit.cover,
+                  ? Image.memory(
+                      base64Decode(referral.qrCodeImage),
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return Center(
                           child: Icon(Icons.qr_code,
@@ -414,6 +473,11 @@ class _ReferralScreenState extends State<ReferralScreen> {
             ),
             SizedBox(height: 16),
             Text('Kode: ${referral.code}'),
+            if (referral.oneTimePassword.isNotEmpty) ...[
+              SizedBox(height: 8),
+              Text('OTP: ${referral.oneTimePassword}',
+                  style: TextStyle(fontWeight: FontWeight.w500)),
+            ],
           ],
         ),
         actions: [
@@ -454,56 +518,153 @@ class _ReferralScreenState extends State<ReferralScreen> {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final emailController = TextEditingController();
-    final codeController = TextEditingController();
+    final commissionRateController = TextEditingController();
+    String commissionType = 'percentage'; // default
+    String? selectedCustomerId; // Store selected customer ID
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Tambah Referral'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Nama Customer'),
-              ),
-              TextField(
-                controller: phoneController,
-                decoration: InputDecoration(labelText: 'No. Telepon'),
-              ),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-              ),
-              TextField(
-                controller: codeController,
-                decoration: InputDecoration(labelText: 'Kode Referral'),
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Tambah Referral'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Customer dropdown - NEW
+                Obx(() => DropdownButtonFormField<String>(
+                      value: selectedCustomerId,
+                      decoration: InputDecoration(
+                        labelText: 'Pilih Customer *',
+                        border: OutlineInputBorder(),
+                      ),
+                      hint: Text('Pilih Customer'),
+                      items: _customerController.customers.map((customer) {
+                        return DropdownMenuItem<String>(
+                          value: customer.id,
+                          child: Text('${customer.name} '),
+                        );
+                      }).toList(),
+                      onChanged: (String? value) {
+                        setDialogState(() {
+                          selectedCustomerId = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Pilih customer terlebih dahulu';
+                        }
+                        return null;
+                      },
+                    )),
+                SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nama Referral *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: InputDecoration(
+                    labelText: 'No. Telepon *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: commissionType,
+                  decoration: InputDecoration(
+                    labelText: 'Tipe Komisi',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                        value: 'percentage', child: Text('Persentase')),
+                    DropdownMenuItem(
+                        value: 'fixed', child: Text('Nominal Tetap')),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() {
+                      commissionType = value!;
+                    });
+                  },
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: commissionRateController,
+                  decoration: InputDecoration(
+                    labelText: commissionType == 'percentage'
+                        ? 'Rate Komisi (%)'
+                        : 'Nominal Komisi (Rp)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () {
+                // Validation
+                if (selectedCustomerId == null || selectedCustomerId!.isEmpty) {
+                  Get.snackbar('Error', 'Pilih customer terlebih dahulu');
+                  return;
+                }
+
+                if (nameController.text.trim().isEmpty) {
+                  Get.snackbar('Error', 'Nama referral tidak boleh kosong');
+                  return;
+                }
+
+                if (phoneController.text.trim().isEmpty) {
+                  Get.snackbar('Error', 'No. telepon tidak boleh kosong');
+                  return;
+                }
+
+                if (emailController.text.trim().isEmpty) {
+                  Get.snackbar('Error', 'Email tidak boleh kosong');
+                  return;
+                }
+
+                if (commissionRateController.text.trim().isEmpty) {
+                  Get.snackbar('Error', 'Rate komisi tidak boleh kosong');
+                  return;
+                }
+
+                Navigator.pop(context);
+                _referralController.createReferral(
+                  customerId: selectedCustomerId!,
+                  referralName: nameController.text.trim(),
+                  referralPhone: phoneController.text.trim(),
+                  referralEmail: emailController.text.trim(),
+                  commissionType: commissionType,
+                  commissionRate:
+                      double.tryParse(commissionRateController.text.trim()) ??
+                          0.0,
+                );
+              },
+              child: Text('Simpan'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _referralController.createReferral(
-                storeId: 'store_id_placeholder', // Replace with actual store ID
-                customerId:
-                    'customer_id_placeholder', // Replace with actual customer ID
-                customerName: nameController.text,
-                customerPhone: phoneController.text,
-                customerEmail: emailController.text,
-                code: codeController.text,
-              );
-            },
-            child: Text('Simpan'),
-          ),
-        ],
       ),
     );
   }
@@ -512,7 +673,6 @@ class _ReferralScreenState extends State<ReferralScreen> {
     final nameController = TextEditingController(text: referral.customerName);
     final phoneController = TextEditingController(text: referral.customerPhone);
     final emailController = TextEditingController(text: referral.customerEmail);
-    final codeController = TextEditingController(text: referral.code);
 
     showDialog(
       context: context,
@@ -524,19 +684,49 @@ class _ReferralScreenState extends State<ReferralScreen> {
             children: [
               TextField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: 'Nama Customer'),
+                decoration: InputDecoration(
+                  labelText: 'Nama Referral *',
+                  border: OutlineInputBorder(),
+                ),
               ),
+              SizedBox(height: 16),
               TextField(
                 controller: phoneController,
-                decoration: InputDecoration(labelText: 'No. Telepon'),
+                decoration: InputDecoration(
+                  labelText: 'No. Telepon *',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
               ),
+              SizedBox(height: 16),
               TextField(
                 controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(
+                  labelText: 'Email *',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
               ),
-              TextField(
-                controller: codeController,
-                decoration: InputDecoration(labelText: 'Kode Referral'),
+              SizedBox(height: 16),
+              // Commission info display only (not editable in PATCH)
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Informasi Komisi (tidak dapat diedit):'),
+                    SizedBox(height: 8),
+                    Text(
+                        'Tipe: ${referral.commissionType == 'percentage' ? 'Persentase' : 'Nominal Tetap'}'),
+                    Text(
+                        'Rate: ${referral.commissionRate}${referral.commissionType == 'percentage' ? '%' : ''}'),
+                  ],
+                ),
               ),
             ],
           ),
@@ -548,13 +738,29 @@ class _ReferralScreenState extends State<ReferralScreen> {
           ),
           TextButton(
             onPressed: () {
+              // Validation
+              if (nameController.text.trim().isEmpty) {
+                Get.snackbar('Error', 'Nama referral tidak boleh kosong');
+                return;
+              }
+
+              if (phoneController.text.trim().isEmpty) {
+                Get.snackbar('Error', 'No. telepon tidak boleh kosong');
+                return;
+              }
+
+              if (emailController.text.trim().isEmpty) {
+                Get.snackbar('Error', 'Email tidak boleh kosong');
+                return;
+              }
+
               Navigator.pop(context);
               _referralController.updateReferral(
                 referral.id,
-                customerName: nameController.text,
-                customerPhone: phoneController.text,
-                customerEmail: emailController.text,
-                code: codeController.text,
+                referralName: nameController.text.trim(),
+                referralPhone: phoneController.text.trim(),
+                referralEmail: emailController.text.trim(),
+                // Note: commission_type and commission_rate are not included in PATCH
               );
             },
             child: Text('Update'),

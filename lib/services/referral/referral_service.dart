@@ -14,10 +14,19 @@ class ReferralService extends GetxService {
 
   final HttpClient _httpClient = HttpClient.instance;
 
-  // GET all referrals
-  Future<ReferralResponse> getAllReferrals() async {
+  // GET all referrals with pagination
+  Future<ReferralResponse> getAllReferrals({
+    int page = 1,
+    int limit = 10,
+    String? storeId,
+  }) async {
     try {
-      final response = await _httpClient.get('/referrals');
+      String url = '/referrals?page=$page&limit=$limit';
+      if (storeId != null && storeId.isNotEmpty) {
+        url += '&store_id=$storeId';
+      }
+
+      final response = await _httpClient.get(url);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -46,23 +55,23 @@ class ReferralService extends GetxService {
     }
   }
 
-  // CREATE new referral
+  // CREATE new referral - Updated to match new API
   Future<ReferralModel> createReferral({
-    required String storeId,
     required String customerId,
-    required String customerName,
-    required String customerPhone,
-    required String customerEmail,
-    required String code,
+    required String referralName,
+    required String referralPhone,
+    required String referralEmail,
+    required String commissionType,
+    required double commissionRate,
   }) async {
     try {
       final Map<String, dynamic> data = {
-        'store_id': storeId,
         'customer_id': customerId,
-        'customer_name': customerName,
-        'customer_phone': customerPhone,
-        'customer_email': customerEmail,
-        'code': code,
+        'referral_name': referralName,
+        'referral_phone': referralPhone,
+        'referral_email': referralEmail,
+        'commission_type': commissionType,
+        'commission_rate': commissionRate,
       };
 
       final response = await _httpClient.post('/referrals', data);
@@ -71,36 +80,41 @@ class ReferralService extends GetxService {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         return ReferralModel.fromJson(jsonResponse['data']);
       } else {
-        throw Exception('Failed to create referral: ${response.statusCode}');
+        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
+        throw Exception(errorResponse['message'] ??
+            'Failed to create referral: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error creating referral: $e');
     }
   }
 
-  // UPDATE referral
-  Future<ReferralModel> updateReferral(
+  // UPDATE referral - Updated to match new API
+  Future<bool> updateReferral(
     String id, {
-    String? customerName,
-    String? customerPhone,
-    String? customerEmail,
-    String? code,
+    String? referralName,
+    String? referralPhone,
+    String? referralEmail,
+    String? commissionType,
+    double? commissionRate,
   }) async {
     try {
       final Map<String, dynamic> data = {};
 
-      if (customerName != null) data['customer_name'] = customerName;
-      if (customerPhone != null) data['customer_phone'] = customerPhone;
-      if (customerEmail != null) data['customer_email'] = customerEmail;
-      if (code != null) data['code'] = code;
+      if (referralName != null) data['referral_name'] = referralName;
+      if (referralPhone != null) data['referral_phone'] = referralPhone;
+      if (referralEmail != null) data['referral_email'] = referralEmail;
+      if (commissionType != null) data['commission_type'] = commissionType;
+      if (commissionRate != null) data['commission_rate'] = commissionRate;
 
-      final response = await _httpClient.put('/referrals/$id', data);
+      final response = await _httpClient.patch('/referrals/$id', data);
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        return ReferralModel.fromJson(jsonResponse['data']);
+        return true;
       } else {
-        throw Exception('Failed to update referral: ${response.statusCode}');
+        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
+        throw Exception(errorResponse['message'] ??
+            'Failed to update referral: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error updating referral: $e');
@@ -115,7 +129,9 @@ class ReferralService extends GetxService {
       if (response.statusCode == 200 || response.statusCode == 204) {
         return true;
       } else {
-        throw Exception('Failed to delete referral: ${response.statusCode}');
+        final Map<String, dynamic> errorResponse = jsonDecode(response.body);
+        throw Exception(errorResponse['message'] ??
+            'Failed to delete referral: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error deleting referral: $e');
@@ -177,6 +193,56 @@ class ReferralService extends GetxService {
       }
     } catch (e) {
       throw Exception('Error fetching referral by code: $e');
+    }
+  }
+
+  // GET referral statistics (if needed)
+  Future<Map<String, dynamic>> getReferralStats() async {
+    try {
+      final response = await _httpClient.get('/referrals/stats');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        return jsonResponse['data'] ?? {};
+      } else {
+        throw Exception(
+            'Failed to fetch referral stats: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching referral stats: $e');
+    }
+  }
+
+  // Validate referral code
+  Future<bool> validateReferralCode(String code) async {
+    try {
+      final response = await _httpClient.get('/referrals/validate/$code');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        return jsonResponse['data']['valid'] ?? false;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Generate QR code for referral (if API supports it)
+  Future<String> generateQRCode(String referralId) async {
+    try {
+      final response =
+          await _httpClient.post('/referrals/$referralId/qr-code', {});
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        return jsonResponse['data']['qr_code_image'] ?? '';
+      } else {
+        throw Exception('Failed to generate QR code: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error generating QR code: $e');
     }
   }
 }
