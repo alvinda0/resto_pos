@@ -485,17 +485,6 @@ class _TableScreenState extends State<TableScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Meja'),
-        actions: [
-          IconButton(
-              onPressed: _showAddTableModal,
-              icon: const Icon(Icons.add_circle_outline)),
-          IconButton(
-              onPressed: () => _qrCodeController.refreshData(),
-              icon: const Icon(Icons.refresh)),
-        ],
-      ),
       body: Column(
         children: [
           Container(
@@ -512,15 +501,6 @@ class _TableScreenState extends State<TableScreen> {
                         borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Obx(() => Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Total: ${_qrCodeController.qrCodesCount} meja'),
-                        if (_searchController.text.isNotEmpty)
-                          Text('Ditemukan: ${_filteredTables.length} meja'),
-                      ],
-                    )),
               ],
             ),
           ),

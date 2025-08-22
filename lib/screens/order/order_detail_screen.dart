@@ -67,7 +67,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   @override
   void dispose() {
-    paymentController.clearPaymentResult(); // Clear result saat dialog ditutup
+    paymentController.clearPaymentResult();
     customerNameController.dispose();
     phoneController.dispose();
     tableController.dispose();
@@ -79,9 +79,15 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     super.dispose();
   }
 
+  // Helper method to determine device type and breakpoints
+  bool get isMobile => MediaQuery.of(context).size.width < 600;
+  bool get isTablet =>
+      MediaQuery.of(context).size.width >= 600 &&
+      MediaQuery.of(context).size.width < 1024;
+  bool get isDesktop => MediaQuery.of(context).size.width >= 1024;
+
   void _addProductToOrder(Product product) {
     setState(() {
-      // Check if product already exists in order
       int existingIndex = currentOrderItems.indexWhere((item) {
         if (item is Map) {
           return (item['productId'] ?? item['id']) == product.id;
@@ -90,11 +96,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       });
 
       if (existingIndex >= 0) {
-        // Increase quantity if product exists
         currentOrderItems[existingIndex] = _createOrderItem(
             product, _getItemQuantity(currentOrderItems[existingIndex]) + 1);
       } else {
-        // Add new product to order
         currentOrderItems.add(_createOrderItem(product, 1));
       }
     });
@@ -136,24 +140,23 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
+      insetPadding: EdgeInsets.all(isMobile ? 8 : 16),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 1400, maxHeight: 800),
+        constraints: BoxConstraints(
+          maxWidth: isDesktop ? 1400 : (isTablet ? 1000 : double.infinity),
+          maxHeight: isDesktop ? 800 : (isTablet ? 700 : double.infinity),
+        ),
+        width: double.infinity,
+        height: isMobile ? MediaQuery.of(context).size.height * 0.95 : null,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
         ),
         child: Column(
           children: [
             _buildHeader(),
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return constraints.maxWidth >= 1000
-                      ? _buildThreeColumnLayout()
-                      : _buildMobileLayout();
-                },
-              ),
+              child: _buildResponsiveLayout(),
             ),
           ],
         ),
@@ -163,21 +166,24 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(isMobile ? 8 : 12),
+          topRight: Radius.circular(isMobile ? 8 : 12),
         ),
         border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Text(
               'BAYAR PESANAN',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: isMobile ? 18 : 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           IconButton(
@@ -193,6 +199,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
+  Widget _buildResponsiveLayout() {
+    if (isDesktop) {
+      return _buildThreeColumnLayout();
+    } else if (isTablet) {
+      return _buildTwoColumnLayout();
+    } else {
+      return _buildSingleColumnLayout();
+    }
+  }
+
+  // Desktop: 3 columns (Add Product | Order List | Customer & Payment)
   Widget _buildThreeColumnLayout() {
     return Row(
       children: [
@@ -205,15 +222,59 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
-  Widget _buildMobileLayout() {
-    return SingleChildScrollView(
+  // Tablet: 2 columns (Left: Add Product & Order | Right: Customer & Payment)
+  Widget _buildTwoColumnLayout() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: [
+              Expanded(flex: 1, child: _buildAddProductSection()),
+              Container(height: 1, color: Colors.grey.shade300),
+              Expanded(flex: 1, child: _buildOrderSection()),
+            ],
+          ),
+        ),
+        Container(width: 1, color: Colors.grey.shade300),
+        Expanded(
+          flex: 1,
+          child: _buildCustomerPaymentSection(),
+        ),
+      ],
+    );
+  }
+
+  // Mobile: Single column with tabs or scrollable sections
+  Widget _buildSingleColumnLayout() {
+    return DefaultTabController(
+      length: 3,
       child: Column(
         children: [
-          _buildAddProductSection(),
-          Container(height: 1, color: Colors.grey.shade300),
-          _buildOrderSection(),
-          Container(height: 1, color: Colors.grey.shade300),
-          _buildCustomerPaymentSection(),
+          Container(
+            color: Colors.grey.shade100,
+            child: TabBar(
+              labelColor: Colors.blue,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blue,
+              labelStyle:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(text: 'Produk'),
+                Tab(text: 'Pesanan'),
+                Tab(text: 'Bayar'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildAddProductSection(),
+                _buildOrderSection(),
+                _buildCustomerPaymentSection(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -223,19 +284,22 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
           ),
-          child: const Text(
+          child: Text(
             'Tambah Produk',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
             child: Column(
               children: [
                 TextField(
@@ -245,8 +309,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     prefixIcon: const Icon(Icons.search, size: 20),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 8 : 12,
+                      vertical: isMobile ? 6 : 8,
+                    ),
                     isDense: true,
                   ),
                 ),
@@ -262,12 +328,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     }
 
                     return GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _getProductGridColumns(),
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 8,
-                        childAspectRatio: 0.75,
+                        childAspectRatio: isMobile ? 0.8 : 0.75,
                       ),
                       itemCount: productController.products.length,
                       itemBuilder: (context, index) =>
@@ -281,6 +346,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ),
       ],
     );
+  }
+
+  int _getProductGridColumns() {
+    if (isMobile) return 2;
+    if (isTablet) return 3;
+    return 2; // Desktop dalam kolom kecil
   }
 
   Widget _buildProductCard(Product product) {
@@ -307,18 +378,26 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(isMobile ? 6 : 8),
             child: Column(
               children: [
-                Text(product.name,
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                Text('Rp${_formatPrice(product.basePrice)}',
-                    style:
-                        TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-                const SizedBox(height: 4),
+                Text(
+                  product.name,
+                  style: TextStyle(
+                    fontSize: isMobile ? 10 : 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'Rp${_formatPrice(product.basePrice)}',
+                  style: TextStyle(
+                    fontSize: isMobile ? 8 : 10,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                SizedBox(height: isMobile ? 2 : 4),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -329,11 +408,15 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       backgroundColor:
                           product.isAvailable ? Colors.blue : Colors.grey,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      minimumSize: const Size(0, 24),
+                      padding: EdgeInsets.symmetric(
+                        vertical: isMobile ? 2 : 4,
+                      ),
+                      minimumSize: Size(0, isMobile ? 20 : 24),
                     ),
-                    child: Text(product.isAvailable ? 'Tambah' : 'Habis',
-                        style: const TextStyle(fontSize: 10)),
+                    child: Text(
+                      product.isAvailable ? 'Tambah' : 'Habis',
+                      style: TextStyle(fontSize: isMobile ? 8 : 10),
+                    ),
                   ),
                 ),
               ],
@@ -348,7 +431,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
@@ -356,20 +439,51 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Daftar Pesanan',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Text('Total: ${currentOrderItems.length} items',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              Text(
+                'Daftar Pesanan',
+                style: TextStyle(
+                  fontSize: isMobile ? 14 : 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Total: ${currentOrderItems.length} items',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: isMobile ? 10 : 12,
+                ),
+              ),
             ],
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: currentOrderItems.length,
-            itemBuilder: (context, index) =>
-                _buildOrderItem(currentOrderItems[index], index),
-          ),
+          child: currentOrderItems.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shopping_cart_outlined,
+                        size: isMobile ? 40 : 60,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Belum ada pesanan',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: isMobile ? 12 : 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: EdgeInsets.all(isMobile ? 12 : 16),
+                  itemCount: currentOrderItems.length,
+                  itemBuilder: (context, index) =>
+                      _buildOrderItem(currentOrderItems[index], index),
+                ),
         ),
       ],
     );
@@ -377,8 +491,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   Widget _buildOrderItem(dynamic item, int index) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(8),
+      margin: EdgeInsets.only(bottom: isMobile ? 6 : 8),
+      padding: EdgeInsets.all(isMobile ? 6 : 8),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
@@ -386,32 +500,43 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       child: Row(
         children: [
           Container(
-            width: 30,
-            height: 30,
+            width: isMobile ? 24 : 30,
+            height: isMobile ? 24 : 30,
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.fastfood, size: 16),
+            child: Icon(Icons.fastfood, size: isMobile ? 12 : 16),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isMobile ? 6 : 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_getItemName(item),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w500, fontSize: 12)),
+                Text(
+                  _getItemName(item),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: isMobile ? 10 : 12,
+                  ),
+                ),
                 Row(
                   children: [
                     Text(
-                        '${_getItemQuantity(item)} x ${_getItemUnitPrice(item)}',
-                        style: TextStyle(
-                            fontSize: 10, color: Colors.grey.shade600)),
+                      '${_getItemQuantity(item)} x ${_getItemUnitPrice(item)}',
+                      style: TextStyle(
+                        fontSize: isMobile ? 8 : 10,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
                     const Spacer(),
-                    Text(_getItemTotalPrice(item),
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500)),
+                    Text(
+                      _getItemTotalPrice(item),
+                      style: TextStyle(
+                        fontSize: isMobile ? 10 : 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -422,25 +547,31 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             children: [
               IconButton(
                 onPressed: () => _decreaseQuantity(index),
-                icon: const Icon(Icons.remove, size: 12),
+                icon: Icon(Icons.remove, size: isMobile ? 10 : 12),
                 style: IconButton.styleFrom(
-                    backgroundColor: Colors.grey.shade200,
-                    minimumSize: const Size(24, 24),
-                    padding: EdgeInsets.zero),
+                  backgroundColor: Colors.grey.shade200,
+                  minimumSize: Size(isMobile ? 20 : 24, isMobile ? 20 : 24),
+                  padding: EdgeInsets.zero,
+                ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(_getItemQuantity(item).toString(),
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.bold)),
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 2 : 4),
+                child: Text(
+                  _getItemQuantity(item).toString(),
+                  style: TextStyle(
+                    fontSize: isMobile ? 10 : 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               IconButton(
                 onPressed: () => _increaseQuantity(index),
-                icon: const Icon(Icons.add, size: 12),
+                icon: Icon(Icons.add, size: isMobile ? 10 : 12),
                 style: IconButton.styleFrom(
-                    backgroundColor: Colors.grey.shade200,
-                    minimumSize: const Size(24, 24),
-                    padding: EdgeInsets.zero),
+                  backgroundColor: Colors.grey.shade200,
+                  minimumSize: Size(isMobile ? 20 : 24, isMobile ? 20 : 24),
+                  padding: EdgeInsets.zero,
+                ),
               ),
             ],
           ),
@@ -462,7 +593,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   Widget _buildCustomerDetailsCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
@@ -470,28 +601,43 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Detail Customer',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                  child:
-                      _buildTextField('Nama Customer', customerNameController)),
-              const SizedBox(width: 8),
-              Expanded(child: _buildTextField('Nomor WA', phoneController)),
-            ],
+          Text(
+            'Detail Customer',
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(child: _buildTextField('Nomor Meja', tableController)),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: _buildTextField('Catatan', notesController,
-                      hintText: 'Catatan')),
-            ],
-          ),
+          SizedBox(height: isMobile ? 8 : 12),
+          if (isDesktop || isTablet) ...[
+            Row(
+              children: [
+                Expanded(
+                    child: _buildTextField(
+                        'Nama Customer', customerNameController)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildTextField('Nomor WA', phoneController)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _buildTextField('Nomor Meja', tableController)),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: _buildTextField('Catatan', notesController,
+                        hintText: 'Catatan')),
+              ],
+            ),
+          ] else ...[
+            _buildTextField('Nama Customer', customerNameController),
+            const SizedBox(height: 8),
+            _buildTextField('Nomor WA', phoneController),
+            const SizedBox(height: 8),
+            _buildTextField('Nomor Meja', tableController),
+            const SizedBox(height: 8),
+            _buildTextField('Catatan', notesController, hintText: 'Catatan'),
+          ],
           const SizedBox(height: 8),
           _buildTextField('Kode Promo', promoController,
               hintText: 'Masukkan kode promo'),
@@ -505,19 +651,26 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: isMobile ? 10 : 12,
+          ),
+        ),
+        SizedBox(height: isMobile ? 2 : 4),
         TextField(
           controller: controller,
           decoration: InputDecoration(
             hintText: hintText,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 6 : 8,
+              vertical: isMobile ? 4 : 6,
+            ),
             isDense: true,
           ),
-          style: const TextStyle(fontSize: 12),
+          style: TextStyle(fontSize: isMobile ? 10 : 12),
         ),
       ],
     );
@@ -525,58 +678,106 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   Widget _buildPaymentCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Pembayaran',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Row(
-            children: paymentMethods.map((method) {
-              final isSelected = selectedPaymentMethod == method;
-              return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 4),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        selectedPaymentMethod = method;
-                        _calculateChange();
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          isSelected ? Colors.blue : Colors.grey.shade200,
-                      foregroundColor: isSelected ? Colors.white : Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      minimumSize: const Size(0, 30),
-                    ),
-                    child: Text(method, style: const TextStyle(fontSize: 10)),
-                  ),
-                ),
-              );
-            }).toList(),
+          Text(
+            'Pembayaran',
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isMobile ? 8 : 12),
+          // Payment method buttons
+          isDesktop || isTablet
+              ? Row(
+                  children: paymentMethods.map((method) {
+                    final isSelected = selectedPaymentMethod == method;
+                    return Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 4),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedPaymentMethod = method;
+                              _calculateChange();
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                isSelected ? Colors.blue : Colors.grey.shade200,
+                            foregroundColor:
+                                isSelected ? Colors.white : Colors.black,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isMobile ? 4 : 6,
+                            ),
+                            minimumSize: Size(0, isMobile ? 24 : 30),
+                          ),
+                          child: Text(
+                            method,
+                            style: TextStyle(fontSize: isMobile ? 8 : 10),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                )
+              : Column(
+                  children: paymentMethods.map((method) {
+                    final isSelected = selectedPaymentMethod == method;
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 4),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedPaymentMethod = method;
+                            _calculateChange();
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              isSelected ? Colors.blue : Colors.grey.shade200,
+                          foregroundColor:
+                              isSelected ? Colors.white : Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        child: Text(method),
+                      ),
+                    );
+                  }).toList(),
+                ),
+          SizedBox(height: isMobile ? 8 : 12),
+          // Total section
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(isMobile ? 6 : 8),
             decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(6)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total',
-                    style:
-                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                Text('Rp${_formatPrice(_calculateOrderTotal().round())}',
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold)),
+                Text(
+                  'Total',
+                  style: TextStyle(
+                    fontSize: isMobile ? 12 : 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Rp${_formatPrice(_calculateOrderTotal().round())}',
+                  style: TextStyle(
+                    fontSize: isMobile ? 12 : 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 8),
+          // Cash payment fields
           if (selectedPaymentMethod == 'Tunai') ...[
             _buildTextField('Jumlah Pembayaran', cashAmountController,
                 hintText: 'Jumlah uang cash'),
@@ -584,43 +785,95 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Kembalian',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-                const SizedBox(height: 4),
+                Text(
+                  'Kembalian',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: isMobile ? 10 : 12,
+                  ),
+                ),
+                SizedBox(height: isMobile ? 2 : 4),
                 TextField(
                   controller: changeController,
                   readOnly: true,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6)),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 6 : 8,
+                      vertical: isMobile ? 4 : 6,
+                    ),
                     fillColor: Colors.grey.shade100,
                     filled: true,
                     isDense: true,
                   ),
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: isMobile ? 10 : 12),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: isMobile ? 8 : 12),
           ],
-          _buildPaymentButton(), // Gunakan button baru dengan loading state
+          _buildPaymentButton(),
         ],
       ),
     );
   }
 
-  // Helper methods - FIXED VERSION
+  Widget _buildPaymentButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: Obx(() => ElevatedButton(
+            onPressed: paymentController.isProcessingPayment.value
+                ? null
+                : _processPayment,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(
+                vertical: isMobile ? 8 : 10,
+              ),
+            ),
+            child: paymentController.isProcessingPayment.value
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: isMobile ? 12 : 16,
+                        height: isMobile ? 12 : 16,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      SizedBox(width: isMobile ? 4 : 8),
+                      Text(
+                        'Memproses...',
+                        style: TextStyle(
+                          fontSize: isMobile ? 10 : 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    'Proses Pembayaran',
+                    style: TextStyle(
+                      fontSize: isMobile ? 10 : 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          )),
+    );
+  }
+
+  // Helper methods - keeping the original implementation
   String _getItemName(dynamic item) {
     if (item is Map) {
       return item['name']?.toString() ??
           item['productName']?.toString() ??
           'Unknown Product';
     }
-    // For OrderItem objects, you need to access the correct property
-    // Assuming OrderItem has productName or similar property
     try {
       return item.productName?.toString() ??
           item.product?.name?.toString() ??
@@ -655,14 +908,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         int quantity = item['quantity'] ?? 1;
         return unitPrice * quantity;
       } else {
-        // For OrderItem objects
         if (item.totalPrice != null) {
           return item.totalPrice is double
               ? item.totalPrice
               : double.parse(item.totalPrice.toString());
         }
 
-        // Try different possible price property names
         double unitPrice = 0.0;
         try {
           unitPrice = item.price?.toDouble() ??
@@ -689,7 +940,6 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             : double.parse((item['price'] ?? 0).toString());
         return 'Rp${_formatPrice(price.round())}';
       } else {
-        // For OrderItem objects
         double price = 0.0;
         try {
           price = item.price?.toDouble() ??
@@ -731,7 +981,6 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           'totalPrice': unitPrice * newQuantity,
         };
       } else {
-        // For OrderItem objects, convert to Map format
         try {
           unitPrice = item.price?.toDouble() ??
               item.unitPrice?.toDouble() ??
@@ -774,7 +1023,6 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             'totalPrice': unitPrice * newQuantity,
           };
         } else {
-          // For OrderItem objects, convert to Map format
           try {
             unitPrice = item.price?.toDouble() ??
                 item.unitPrice?.toDouble() ??
@@ -868,10 +1116,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   void _completePayment() async {
-    print('=== Starting _completePayment ==='); // Debug log
+    print('=== Starting _completePayment ===');
 
     try {
-      // Validasi table number
       int tableNumber = int.tryParse(tableController.text) ?? 0;
       if (tableNumber <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -882,7 +1129,6 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         return;
       }
 
-      // Validasi order items
       if (currentOrderItems.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -892,9 +1138,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         return;
       }
 
-      print('Calling processOrderPayment...'); // Debug log
+      print('Calling processOrderPayment...');
 
-      // Process payment menggunakan PaymentController
       final success = await paymentController.processOrderPayment(
         orderId: widget.order.id,
         customerName: customerNameController.text,
@@ -905,31 +1150,22 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         paymentMethod: selectedPaymentMethod,
       );
 
-      print('Payment process completed, success: $success'); // Debug log
+      print('Payment process completed, success: $success');
 
-      // PERBAIKAN: Check result dari payment controller
       final result = paymentController.paymentResult.value;
-      print(
-          'Payment result from controller: ${result?.isSuccess}'); // Debug log
+      print('Payment result from controller: ${result?.isSuccess}');
 
       if (success) {
-        print('Payment successful, closing dialog'); // Debug log
+        print('Payment successful, closing dialog');
 
-        // PERBAIKAN: Tutup dialog terlebih dahulu
         if (mounted && Navigator.canPop(context)) {
           Navigator.pop(context);
         }
 
-        // PERBAIKAN: Show success message hanya jika belum ada dari controller
-        // Controller sudah menangani success message, jadi kita tidak perlu duplikat
         print('Success message already handled by controller');
       } else {
-        print('Payment failed'); // Debug log
+        print('Payment failed');
 
-        // PERBAIKAN: Error message sudah ditangani oleh PaymentController
-        // Jadi kita tidak perlu menampilkan lagi di sini kecuali ada kasus khusus
-
-        // Hanya tampilkan jika benar-benar tidak ada error message dari controller
         final errorFromController = result?.errorMessage;
         if (errorFromController == null || errorFromController.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -941,22 +1177,18 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         }
       }
     } catch (e) {
-      print('Exception in _completePayment: $e'); // Debug log
+      print('Exception in _completePayment: $e');
 
-      // PERBAIKAN: Check apakah payment sebenarnya berhasil meskipun ada exception di UI
       final result = paymentController.paymentResult.value;
       if (result != null && result.isSuccess) {
-        print(
-            'Payment was successful despite UI exception, closing dialog'); // Debug log
+        print('Payment was successful despite UI exception, closing dialog');
 
-        // Tutup dialog karena payment berhasil
         if (mounted && Navigator.canPop(context)) {
           Navigator.pop(context);
         }
-        return; // Return early, jangan tampilkan error
+        return;
       }
 
-      // Fallback error handling hanya jika payment benar-benar gagal
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Terjadi kesalahan: $e'),
@@ -964,43 +1196,5 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ),
       );
     }
-  }
-
-  Widget _buildPaymentButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: Obx(() => ElevatedButton(
-            onPressed: paymentController.isProcessingPayment.value
-                ? null
-                : _processPayment,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-            ),
-            child: paymentController.isProcessingPayment.value
-                ? const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text('Memproses...',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  )
-                : const Text('Proses Pembayaran',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-          )),
-    );
   }
 }

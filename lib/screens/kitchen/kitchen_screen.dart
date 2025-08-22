@@ -23,39 +23,12 @@ class _KitchenScreenState extends State<KitchenScreen> {
           final isDesktop = constraints.maxWidth >= 768;
           return Column(
             children: [
-              _buildHeader(),
               _buildFilters(isDesktop),
               _buildDataTable(isDesktop),
               _buildPagination(), // Add pagination here
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Expanded(
-            child: Text(
-              'Manajemen Dapur',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ),
-          // Auto refresh toggle
-          Obx(() => Switch(
-                value: kitchenController.isAutoRefreshEnabled.value,
-                onChanged: (value) => kitchenController.toggleAutoRefresh(),
-              )),
-        ],
       ),
     );
   }
@@ -75,7 +48,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
     return Column(
       children: [
         _buildSearchField(),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8), // Reduced from 12 to 8
         Row(
           children: [
             Expanded(
@@ -84,7 +57,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                     kitchenController.statusOptions,
                     kitchenController.updateStatusFilter,
                     Icons.filter_list)),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6), // Reduced from 8 to 6
             Expanded(
                 child: _buildDropdown(
                     kitchenController.selectedMethod,
@@ -126,11 +99,15 @@ class _KitchenScreenState extends State<KitchenScreen> {
       onChanged: kitchenController.updateSearchQuery,
       decoration: InputDecoration(
         hintText: 'Cari berdasarkan Nama',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        hintStyle: const TextStyle(fontSize: 13), // Added smaller hint text
+        prefixIcon: const Icon(Icons.search, size: 20), // Reduced icon size
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6)), // Reduced border radius
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12, vertical: 8), // Reduced padding
+        isDense: true, // Added to make field more compact
       ),
+      style: const TextStyle(fontSize: 14), // Added smaller text size
     );
   }
 
@@ -140,15 +117,33 @@ class _KitchenScreenState extends State<KitchenScreen> {
           value: selectedValue.value,
           onChanged: (value) => value != null ? onChanged(value) : null,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            prefixIcon: Icon(icon,
+                size: 18,
+                color: Colors.grey.shade600), // Reduced icon size with color
+            border: OutlineInputBorder(
+                borderRadius:
+                    BorderRadius.circular(6)), // Reduced border radius
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10, vertical: 8), // Reduced padding
+            isDense: true, // Added to make dropdown more compact
+            filled: true, // Add filled background
+            fillColor: Colors.white, // Set background to white
           ),
+          style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87), // Added smaller text size with dark color
+          iconSize: 20, // Reduced dropdown arrow size
+          dropdownColor: Colors.white, // Set dropdown menu background to white
           items: options
               .map((option) => DropdownMenuItem(
                     value: option,
-                    child: Text(option),
+                    child: Text(
+                      option,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color:
+                              Colors.black87), // Smaller text with dark color
+                    ),
                   ))
               .toList(),
         ));

@@ -14,25 +14,6 @@ class DashboardScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0.5,
-        actions: [
-          Obx(() => IconButton(
-                onPressed:
-                    controller.isLoading ? null : controller.refreshStatistics,
-                icon: controller.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh),
-              )),
-        ],
-      ),
       body: Obx(() {
         if (controller.isLoading && !controller.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -104,24 +85,45 @@ class DashboardScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Weekly Chart & Trending Items Side by Side
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Weekly Chart - Left Side (60% width)
-                    Expanded(
-                      flex: 3,
-                      child: _buildWeeklyChart(controller),
-                    ),
+                // Responsive Layout for Chart and Trending Items
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Mobile layout (width < 600px): Stack vertically
+                    if (constraints.maxWidth < 600) {
+                      return Column(
+                        children: [
+                          // Weekly Chart - Full Width
+                          _buildWeeklyChart(controller),
 
-                    const SizedBox(width: 16),
+                          const SizedBox(height: 16),
 
-                    // Trending Items - Right Side (40% width)
-                    Expanded(
-                      flex: 2,
-                      child: _buildTrendingItems(controller),
-                    ),
-                  ],
+                          // Trending Items - Full Width Below Chart
+                          _buildTrendingItems(controller),
+                        ],
+                      );
+                    }
+                    // Tablet/Desktop layout: Side by side
+                    else {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Weekly Chart - Left Side (60% width)
+                          Expanded(
+                            flex: 3,
+                            child: _buildWeeklyChart(controller),
+                          ),
+
+                          const SizedBox(width: 16),
+
+                          // Trending Items - Right Side (40% width)
+                          Expanded(
+                            flex: 2,
+                            child: _buildTrendingItems(controller),
+                          ),
+                        ],
+                      );
+                    }
+                  },
                 ),
               ],
             ),
