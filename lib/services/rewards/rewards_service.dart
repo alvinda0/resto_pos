@@ -29,7 +29,9 @@ class RewardService {
         final jsonData = jsonDecode(response.body);
         return RewardResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to load rewards: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ??
+            'Failed to load rewards: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error fetching rewards: $e');
@@ -44,35 +46,122 @@ class RewardService {
     String? storeId,
   }) async {
     try {
-      // For now, we'll send as JSON without image support
-      // You'll need to implement multipart support in HttpClient if images are required
-      final Map<String, dynamic> data = {
-        'name': name,
-        'description': description,
-        'points_cost': pointsCost,
-      };
-
-      // Note: Image upload is not supported with current HttpClient
-      // You'll need to add postMultipart method to HttpClient for image support
-      if (image != null) {
-        throw Exception(
-            'Image upload not supported yet. Please implement postMultipart in HttpClient.');
+      if (name.isEmpty || description.isEmpty || pointsCost <= 0) {
+        throw Exception('Name, description, and points cost are required.');
       }
 
-      final response = await _httpClient.post(
-        '/rewards',
-        data,
-        storeId: storeId,
-      );
+      if (image != null) {
+        if (!await image.exists()) {
+          throw Exception('Image file does not exist.');
+        }
+        // Use multipart for image upload with reward as JSON field
+        final Map<String, dynamic> rewardData = {
+          'name': name,
+          'description': description,
+          'points_cost': pointsCost,
+        };
 
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        return RewardModel.fromJson(jsonData['data']);
+        final Map<String, String> fields = {
+          'reward': jsonEncode(rewardData), // Send reward data as JSON string
+        };
+
+        final Map<String, File> files = {
+          'image': image,
+        };
+
+        final response = await _httpClient.postMultipart(
+          '/rewards',
+          fields,
+          files: files,
+          storeId: storeId,
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final jsonData = jsonDecode(response.body);
+          // Handle different response structures
+          if (jsonData.containsKey('data')) {
+            return RewardModel.fromJson(jsonData['data']);
+          } else {
+            return RewardModel.fromJson(jsonData);
+          }
+        } else {
+          String errorMessage;
+          try {
+            final errorData = jsonDecode(response.body);
+            errorMessage = errorData['message'] ?? 'Failed to create reward';
+
+            // Handle validation errors
+            if (errorData.containsKey('errors')) {
+              final errors = errorData['errors'];
+              if (errors is Map) {
+                List<String> errorMessages = [];
+                errors.forEach((key, value) {
+                  if (value is List) {
+                    errorMessages.addAll(value.cast<String>());
+                  } else {
+                    errorMessages.add(value.toString());
+                  }
+                });
+                errorMessage = errorMessages.join(', ');
+              }
+            }
+          } catch (e) {
+            errorMessage = 'Failed to create reward: ${response.statusCode}';
+          }
+          throw Exception(errorMessage);
+        }
       } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Failed to create reward');
+        // Use regular JSON for no image
+        final Map<String, dynamic> data = {
+          'name': name,
+          'description': description,
+          'points_cost': pointsCost,
+        };
+
+        final response = await _httpClient.post(
+          '/rewards',
+          data,
+          storeId: storeId,
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final jsonData = jsonDecode(response.body);
+          // Handle different response structures
+          if (jsonData.containsKey('data')) {
+            return RewardModel.fromJson(jsonData['data']);
+          } else {
+            return RewardModel.fromJson(jsonData);
+          }
+        } else {
+          String errorMessage;
+          try {
+            final errorData = jsonDecode(response.body);
+            errorMessage = errorData['message'] ?? 'Failed to create reward';
+
+            // Handle validation errors
+            if (errorData.containsKey('errors')) {
+              final errors = errorData['errors'];
+              if (errors is Map) {
+                List<String> errorMessages = [];
+                errors.forEach((key, value) {
+                  if (value is List) {
+                    errorMessages.addAll(value.cast<String>());
+                  } else {
+                    errorMessages.add(value.toString());
+                  }
+                });
+                errorMessage = errorMessages.join(', ');
+              }
+            }
+          } catch (e) {
+            errorMessage = 'Failed to create reward: ${response.statusCode}';
+          }
+          throw Exception(errorMessage);
+        }
       }
     } catch (e) {
+      // Log the full error for debugging
+      print('Error creating reward: $e');
       throw Exception('Error creating reward: $e');
     }
   }
@@ -86,33 +175,115 @@ class RewardService {
     String? storeId,
   }) async {
     try {
-      final Map<String, dynamic> data = {
-        'name': name,
-        'description': description,
-        'points_cost': pointsCost,
-      };
-
-      // Note: Image upload is not supported with current HttpClient
-      // You'll need to add putMultipart method to HttpClient for image support
       if (image != null) {
-        throw Exception(
-            'Image upload not supported yet. Please implement putMultipart in HttpClient.');
-      }
+        // Use multipart for image upload with reward as JSON field
+        final Map<String, dynamic> rewardData = {
+          'name': name,
+          'description': description,
+          'points_cost': pointsCost,
+        };
 
-      final response = await _httpClient.put(
-        '/rewards/$rewardId',
-        data,
-        storeId: storeId,
-      );
+        final Map<String, String> fields = {
+          'reward': jsonEncode(rewardData), // Send reward data as JSON string
+        };
 
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        return RewardModel.fromJson(jsonData['data']);
+        final Map<String, File> files = {
+          'image': image,
+        };
+
+        final response = await _httpClient.putMultipart(
+          '/rewards/$rewardId',
+          fields,
+          files: files,
+          storeId: storeId,
+        );
+
+        if (response.statusCode == 200) {
+          final jsonData = jsonDecode(response.body);
+          // Handle different response structures
+          if (jsonData.containsKey('data')) {
+            return RewardModel.fromJson(jsonData['data']);
+          } else {
+            return RewardModel.fromJson(jsonData);
+          }
+        } else {
+          String errorMessage;
+          try {
+            final errorData = jsonDecode(response.body);
+            errorMessage = errorData['message'] ?? 'Failed to update reward';
+
+            // Handle validation errors
+            if (errorData.containsKey('errors')) {
+              final errors = errorData['errors'];
+              if (errors is Map) {
+                List<String> errorMessages = [];
+                errors.forEach((key, value) {
+                  if (value is List) {
+                    errorMessages.addAll(value.cast<String>());
+                  } else {
+                    errorMessages.add(value.toString());
+                  }
+                });
+                errorMessage = errorMessages.join(', ');
+              }
+            }
+          } catch (e) {
+            errorMessage = 'Failed to update reward: ${response.statusCode}';
+          }
+          throw Exception(errorMessage);
+        }
       } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Failed to update reward');
+        // Use regular JSON for no image
+        final Map<String, dynamic> data = {
+          'name': name,
+          'description': description,
+          'points_cost': pointsCost,
+        };
+
+        final response = await _httpClient.put(
+          '/rewards/$rewardId',
+          data,
+          storeId: storeId,
+        );
+
+        if (response.statusCode == 200) {
+          final jsonData = jsonDecode(response.body);
+          // Handle different response structures
+          if (jsonData.containsKey('data')) {
+            return RewardModel.fromJson(jsonData['data']);
+          } else {
+            return RewardModel.fromJson(jsonData);
+          }
+        } else {
+          String errorMessage;
+          try {
+            final errorData = jsonDecode(response.body);
+            errorMessage = errorData['message'] ?? 'Failed to update reward';
+
+            // Handle validation errors
+            if (errorData.containsKey('errors')) {
+              final errors = errorData['errors'];
+              if (errors is Map) {
+                List<String> errorMessages = [];
+                errors.forEach((key, value) {
+                  if (value is List) {
+                    errorMessages.addAll(value.cast<String>());
+                  } else {
+                    errorMessages.add(value.toString());
+                  }
+                });
+                errorMessage = errorMessages.join(', ');
+              }
+            }
+          } catch (e) {
+            errorMessage = 'Failed to update reward: ${response.statusCode}';
+          }
+          throw Exception(errorMessage);
+        }
       }
     } catch (e) {
+      // Log the full error for debugging
+      print('Error updating reward: $e');
       throw Exception('Error updating reward: $e');
     }
   }
@@ -134,9 +305,16 @@ class RewardService {
       );
 
       if (response.statusCode != 200) {
-        final errorData = jsonDecode(response.body);
-        throw Exception(
-            errorData['message'] ?? 'Failed to toggle reward status');
+        String errorMessage;
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage =
+              errorData['message'] ?? 'Failed to toggle reward status';
+        } catch (e) {
+          errorMessage =
+              'Failed to toggle reward status: ${response.statusCode}';
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
       throw Exception('Error toggling reward status: $e');
@@ -153,9 +331,15 @@ class RewardService {
         storeId: storeId,
       );
 
-      if (response.statusCode != 200) {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Failed to delete reward');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        String errorMessage;
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['message'] ?? 'Failed to delete reward';
+        } catch (e) {
+          errorMessage = 'Failed to delete reward: ${response.statusCode}';
+        }
+        throw Exception(errorMessage);
       }
     } catch (e) {
       throw Exception('Error deleting reward: $e');
