@@ -7,6 +7,7 @@ import 'package:pos/screens/customer/customer_screen.dart';
 import 'package:pos/screens/employee/employee_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/payroll/payroll_screen.dart';
+import 'package:pos/screens/redemption/redemption_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
 import 'package:pos/screens/role/role_form_screen.dart';
@@ -252,8 +253,7 @@ class AppRoutes {
       GetPage(
         name: pointsRedemptionsHistory,
         page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Riwayat Penukaran'),
-            pointsRedemptionsHistory),
+            const RedemptionScreen(), pointsRedemptionsHistory),
       ),
       GetPage(
         name: pointsConfiguration,
