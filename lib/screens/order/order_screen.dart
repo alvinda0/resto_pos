@@ -24,33 +24,11 @@ class _OrderScreenState extends State<OrderScreen> {
           final isDesktop = constraints.maxWidth >= 768;
           return Column(
             children: [
-              _buildHeader(),
               _buildFilters(isDesktop),
               _buildDataTable(isDesktop),
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              'Manajemen Pesanan',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -74,30 +52,40 @@ class _OrderScreenState extends State<OrderScreen> {
         Row(
           children: [
             Expanded(
-                child: _buildDropdown(
-                    orderController.selectedStatus,
-                    orderController.statusOptions,
-                    orderController.updateStatusFilter,
-                    Icons.filter_list)),
+              flex: 2,
+              child: _buildCompactDropdown(
+                  orderController.selectedStatus,
+                  orderController.statusOptions,
+                  orderController.updateStatusFilter,
+                  Icons.filter_list,
+                  'Status'),
+            ),
             const SizedBox(width: 8),
             Expanded(
-                child: _buildDropdown(
-                    orderController.selectedMethod,
-                    orderController.methodOptions,
-                    orderController.updateMethodFilter,
-                    Icons.payment)),
+              flex: 2,
+              child: _buildCompactDropdown(
+                  orderController.selectedMethod,
+                  orderController.methodOptions,
+                  orderController.updateMethodFilter,
+                  Icons.payment,
+                  'Method'),
+            ),
             const SizedBox(width: 8),
-            // Tambahkan button New Order
-            ElevatedButton.icon(
-              onPressed: () =>
-                  Get.toNamed('/neworders'), // atau AppRoutes.toNewOrders()
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Order'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            // Button New Order dengan ukuran lebih kecil
+            SizedBox(
+              height: 40,
+              child: ElevatedButton(
+                onPressed: () => Get.toNamed('/neworders'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Icon(Icons.add, size: 18),
               ),
             ),
           ],
@@ -106,10 +94,54 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
+  Widget _buildCompactDropdown(RxString selectedValue, List<String> options,
+      Function(String) onChanged, IconData icon, String hint) {
+    return Obx(() => Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: selectedValue.value,
+            onChanged: (value) => value != null ? onChanged(value) : null,
+            decoration: InputDecoration(
+              prefixIcon: Icon(icon, size: 18, color: Colors.grey.shade600),
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              isDense: true,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
+            isExpanded: true,
+            icon: Icon(Icons.keyboard_arrow_down,
+                size: 18, color: Colors.grey.shade600),
+            dropdownColor: Colors.white,
+            items: options
+                .map((option) => DropdownMenuItem(
+                      value: option,
+                      child: Text(
+                        option,
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black87),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ))
+                .toList(),
+          ),
+        ));
+  }
+
   Widget _buildDesktopFilters() {
     return Row(
       children: [
-        Expanded(flex: 3, child: _buildSearchField()),
+        Expanded(
+          flex: 3,
+          child: _buildSearchField(isMobile: true),
+        ),
         const SizedBox(width: 16),
         Expanded(
             flex: 2,
@@ -143,15 +175,22 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _buildSearchField() {
-    return TextField(
-      onChanged: orderController.updateSearchQuery,
-      decoration: InputDecoration(
-        hintText: 'Cari berdasarkan Nama',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  Widget _buildSearchField({bool isMobile = false}) {
+    return SizedBox(
+      height: isMobile ? 40 : null, // tinggi lebih kecil untuk mobile
+      child: TextField(
+        onChanged: orderController.updateSearchQuery,
+        style: TextStyle(fontSize: isMobile ? 12 : 14),
+        decoration: InputDecoration(
+          hintText: 'Cari berdasarkan Nama',
+          hintStyle: TextStyle(fontSize: isMobile ? 12 : 14),
+          prefixIcon: Icon(Icons.search, size: isMobile ? 18 : 20),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: isMobile ? 8 : 12,
+          ),
+        ),
       ),
     );
   }
@@ -272,14 +311,7 @@ class _OrderScreenState extends State<OrderScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold))),
               ],
             )
-          : const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Daftar Pesanan',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ],
-            ),
+          : const SizedBox.shrink(),
     );
   }
 
