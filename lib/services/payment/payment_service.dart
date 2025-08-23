@@ -7,7 +7,7 @@ import 'package:pos/models/payment/payment_model.dart';
 class PaymentService {
   final HttpClient _httpClient = HttpClient.instance;
 
-  // Main method: Process order + payment in sequence
+  // Main method: Process order + payment in sequence, then refresh order
   Future<PaymentProcessResult> processOrderPayment({
     required String orderId,
     required String customerName,
@@ -20,6 +20,7 @@ class PaymentService {
   }) async {
     OrderModel? updatedOrder;
     PaymentModel? payment;
+    OrderModel? finalOrder; // Order after payment completion
 
     try {
       print('Starting payment process for order: $orderId');
@@ -45,23 +46,40 @@ class PaymentService {
       );
       print('Payment processed successfully');
 
-      // PERBAIKAN: Return success result
+      // Step 3: Get the final order with payment details
+      print('Step 3: Getting final order details...');
+      finalOrder = await getOrderById(orderId);
+      print('Final order retrieved successfully');
+
+      // Return success result with final order
       return PaymentProcessResult(
         success: true,
-        order: updatedOrder,
+        order: finalOrder, // Use the final order with payment details
         payment: payment,
       );
     } catch (e, stackTrace) {
       print('Error in processOrderPayment: $e');
       print('StackTrace: $stackTrace');
 
-      // PERBAIKAN: Handle different types of errors
+      // Handle different types of errors
       String errorMessage = e.toString();
 
       // If order update succeeded but payment failed
       if (updatedOrder != null && payment == null) {
         errorMessage =
             'Order berhasil diperbarui, tetapi pembayaran gagal: $errorMessage';
+      }
+      // If both order update and payment succeeded but final order fetch failed
+      else if (updatedOrder != null && payment != null && finalOrder == null) {
+        print('Payment succeeded but failed to get final order details');
+        // Still return success since payment went through
+        return PaymentProcessResult(
+          success: true,
+          order: updatedOrder, // Use the updated order as fallback
+          payment: payment,
+          error:
+              'Pembayaran berhasil, tetapi gagal mengambil detail order final',
+        );
       }
       // If both failed
       else if (updatedOrder == null) {
@@ -73,6 +91,40 @@ class PaymentService {
         order: updatedOrder, // Include partial success
         error: errorMessage,
       );
+    }
+  }
+
+  // Get order by ID - NEW METHOD
+  Future<OrderModel> getOrderById(String orderId) async {
+    try {
+      print('Getting order by ID: $orderId');
+
+      final response = await _httpClient.get('/orders/$orderId');
+
+      print('Get order response status: ${response.statusCode}');
+      print('Get order response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true) {
+          print('Order retrieved successfully');
+          return OrderModel.fromJson(responseData['data']);
+        } else {
+          final errorMsg =
+              responseData['message'] ?? 'Failed to retrieve order';
+          print('Get order API returned success=false: $errorMsg');
+          throw Exception(errorMsg);
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMsg = errorData['message'] ?? 'HTTP ${response.statusCode}';
+        print('Get order HTTP error: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } catch (e) {
+      print('Error getting order by ID: $e');
+      rethrow;
     }
   }
 
@@ -90,11 +142,6 @@ class PaymentService {
       final request = {
         'order_details': orderDetails,
       };
-
-      // Add promo code if provided
-      if (promoCode != null && promoCode.isNotEmpty) {
-        request['promo_code'] = promoCode as List<Map<String, dynamic>>;
-      }
 
       print('Updating order items for order: $orderId');
       print('Request: ${jsonEncode(request)}');
@@ -257,7 +304,7 @@ class PaymentService {
     }
   }
 
-  // PERBAIKAN: Helper method untuk convert order items
+  // Helper method untuk convert order items
   List<Map<String, dynamic>> _convertOrderItems(List<dynamic> orderItems) {
     return orderItems.map((item) {
       String productId;
@@ -289,7 +336,7 @@ class PaymentService {
     }).toList();
   }
 
-  // PERBAIKAN: Helper method untuk handle order response
+  // Helper method untuk handle order response
   OrderModel _handleOrderResponse(response, String operation) {
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
