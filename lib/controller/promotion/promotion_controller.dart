@@ -69,6 +69,12 @@ class PromotionController extends GetxController {
     _debounceSearch();
   }
 
+  void changePageSize(int newSize) {
+    limit.value = newSize;
+    currentPage.value = 1; // Reset ke halaman pertama
+    loadPromotions(); // Reload data dengan page size baru
+  }
+
   void _onScrollChanged() {
     if (scrollController.position.pixels >=
         scrollController.position.maxScrollExtent - 200) {
@@ -346,12 +352,6 @@ class PromotionController extends GetxController {
           return false;
       }
     }).length;
-  }
-
-  // Change page size
-  void changePageSize(int newLimit) {
-    limit.value = newLimit;
-    resetAndLoadPromotions();
   }
 
   // Jump to specific page

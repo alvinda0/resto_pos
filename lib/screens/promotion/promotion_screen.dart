@@ -4,6 +4,7 @@ import 'package:pos/controller/promotion/promotion_controller.dart';
 import 'package:pos/models/promotion/promotion_model.dart';
 import 'package:pos/services/promotion/promotion_service.dart';
 import 'package:pos/storage_service.dart';
+import 'package:pos/widgets/pagination_widget.dart';
 
 class PromoScreen extends StatefulWidget {
   const PromoScreen({super.key});
@@ -25,6 +26,16 @@ class _PromoScreenState extends State<PromoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddPromotionDialog,
+        backgroundColor: Colors.red[400],
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text(
+          'Tambah',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: controller.refreshPromotions,
         child: Padding(
@@ -32,8 +43,6 @@ class _PromoScreenState extends State<PromoScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
-              const SizedBox(height: 24),
               _buildSearchAndFilter(),
               const SizedBox(height: 24),
               Expanded(child: _buildDataTable()),
@@ -45,54 +54,14 @@ class _PromoScreenState extends State<PromoScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Manajemen Promo',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Obx(() => Text(
-                  'Total ${controller.totalPromotions.value} promo',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                )),
-          ],
-        ),
-        ElevatedButton.icon(
-          onPressed: _showAddPromotionDialog,
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text(
-            'Tambah Promo',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red[400],
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            elevation: 2,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSearchAndFilter() {
     return Row(
       children: [
+        // Search field - lebih besar di mobile
         Expanded(
-          flex: 3,
+          flex: MediaQuery.of(context).size.width < 600 ? 2 : 3,
           child: Container(
-            height: 48,
+            height: 44,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
@@ -109,27 +78,34 @@ class _PromoScreenState extends State<PromoScreen> {
             child: TextField(
               controller: controller.searchController,
               decoration: InputDecoration(
-                hintText: 'Cari nama promo atau kode promo...',
-                hintStyle: TextStyle(color: Colors.grey[500]),
-                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                hintText: MediaQuery.of(context).size.width < 600
+                    ? 'Cari promo...'
+                    : 'Cari nama promo atau kode promo...',
+                hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                prefixIcon:
+                    Icon(Icons.search, color: Colors.grey[400], size: 20),
                 suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear, color: Colors.grey[400]),
+                        icon: Icon(Icons.clear,
+                            color: Colors.grey[400], size: 20),
                         onPressed: controller.clearSearch,
+                        iconSize: 20,
                       )
                     : const SizedBox.shrink()),
                 border: InputBorder.none,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
+              style: const TextStyle(fontSize: 14),
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
+        // Filter dropdown
         Expanded(
           flex: 1,
           child: Container(
-            height: 48,
+            height: 44,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
@@ -151,13 +127,14 @@ class _PromoScreenState extends State<PromoScreen> {
                         controller.changeFilter(newValue);
                       }
                     },
+                    isExpanded: true,
                     items:
                         controller.filterOptions.map<DropdownMenuItem<String>>(
                       (String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Text(value,
                                 style: const TextStyle(fontSize: 14)),
                           ),
@@ -226,48 +203,96 @@ class _PromoScreenState extends State<PromoScreen> {
           );
         }
 
-        return Column(
-          children: [
-            _buildTableHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: controller.scrollController,
-                child: Column(
-                  children: [
-                    ...controller.filteredPromotions.asMap().entries.map(
-                      (entry) {
-                        final index = entry.key;
-                        final promotion = entry.value;
-                        final globalIndex = (controller.currentPage.value - 1) *
-                                controller.limit.value +
-                            index +
-                            1;
-                        return _buildTableRow(promotion, globalIndex);
-                      },
-                    ),
-                    if (controller.isLoadingMore.value)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            SizedBox(width: 8),
-                            Text('Memuat lebih banyak...'),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+        // Check if mobile layout should be used
+        final isMobile = MediaQuery.of(context).size.width < 800;
+
+        if (isMobile) {
+          return _buildMobileLayout();
+        } else {
+          return _buildDesktopLayout();
+        }
+      }),
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return SingleChildScrollView(
+      controller: controller.scrollController,
+      child: Column(
+        children: [
+          ...controller.filteredPromotions.asMap().entries.map(
+            (entry) {
+              final index = entry.key;
+              final promotion = entry.value;
+              final globalIndex =
+                  (controller.currentPage.value - 1) * controller.limit.value +
+                      index +
+                      1;
+              return _buildMobileCard(promotion, globalIndex);
+            },
+          ),
+          if (controller.isLoadingMore.value)
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 8),
+                  Text('Memuat lebih banyak...'),
+                ],
               ),
             ),
-          ],
-        );
-      }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Column(
+      children: [
+        _buildTableHeader(),
+        Expanded(
+          child: SingleChildScrollView(
+            controller: controller.scrollController,
+            child: Column(
+              children: [
+                ...controller.filteredPromotions.asMap().entries.map(
+                  (entry) {
+                    final index = entry.key;
+                    final promotion = entry.value;
+                    final globalIndex = (controller.currentPage.value - 1) *
+                            controller.limit.value +
+                        index +
+                        1;
+                    return _buildTableRow(promotion, globalIndex);
+                  },
+                ),
+                if (controller.isLoadingMore.value)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Memuat lebih banyak...'),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -280,30 +305,29 @@ class _PromoScreenState extends State<PromoScreen> {
       ),
       child: Row(
         children: [
-          _buildHeaderCell('No', flex: 1),
-          _buildHeaderCell('Nama Promo', flex: 3),
-          _buildHeaderCell('Kode', flex: 2),
-          _buildHeaderCell('Diskon', flex: 2),
-          _buildHeaderCell('Status', flex: 2),
-          _buildHeaderCell('Aksi', flex: 2),
+          _buildHeaderCell('No', width: 60),
+          Expanded(flex: 3, child: _buildHeaderCell('Nama Promo')),
+          _buildHeaderCell('Kode', width: 100),
+          _buildHeaderCell('Diskon', width: 80),
+          _buildHeaderCell('Status', width: 110),
+          _buildHeaderCell('Aksi', width: 100),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderCell(String title, {required int flex}) {
-    return Expanded(
-      flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.black87,
-          ),
+  Widget _buildHeaderCell(String title, {double? width}) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: Colors.black87,
         ),
+        textAlign: width != null ? TextAlign.center : TextAlign.left,
       ),
     );
   }
@@ -317,39 +341,191 @@ class _PromoScreenState extends State<PromoScreen> {
       ),
       child: Row(
         children: [
-          _buildDataCell(index.toString(), flex: 1),
-          _buildDataCell(promotion.name, flex: 3, isBold: true),
-          _buildDataCell(promotion.promoCode, flex: 2, isCode: true),
-          _buildDataCell(promotion.formattedDiscount, flex: 2),
-          _buildStatusCell(promotion.status, flex: 2),
-          _buildActionCell(promotion, flex: 2),
+          _buildDataCell(index.toString(), width: 60, isCenter: true),
+          Expanded(
+              flex: 3, child: _buildDataCell(promotion.name, isBold: true)),
+          _buildDataCell(promotion.promoCode,
+              width: 100, isCode: true, isCenter: true),
+          _buildDataCell(promotion.formattedDiscount,
+              width: 80, isCenter: true),
+          _buildStatusCell(promotion.status, width: 110),
+          _buildActionCell(promotion, width: 100),
         ],
       ),
     );
   }
 
-  Widget _buildDataCell(String text,
-      {required int flex, bool isBold = false, bool isCode = false}) {
-    return Expanded(
-      flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-            fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
-            fontFamily: isCode ? 'monospace' : null,
+  Widget _buildMobileCard(Promotion promotion, int index) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            spreadRadius: 0,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header dengan nomor dan status
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$index',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red[600],
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                _buildMobileStatusChip(promotion.status),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Nama promo
+            Text(
+              promotion.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+
+            // Kode promo
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Text(
+                promotion.promoCode,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'monospace',
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Info grid
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Diskon',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        promotion.formattedDiscount,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Batas Penggunaan',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${promotion.usageLimit}x',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Actions
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showEditPromotionDialog(promotion),
+                    icon: const Icon(Icons.edit, size: 16),
+                    label: const Text('Edit'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.blue[600],
+                      side: BorderSide(color: Colors.blue[300]!),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => controller.deletePromotion(promotion.id),
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.red[600],
+                    backgroundColor: Colors.red[50],
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusCell(String status, {required int flex}) {
+  Widget _buildMobileStatusChip(String status) {
     Color statusColor;
     String statusText;
     IconData statusIcon;
@@ -376,101 +552,153 @@ class _PromoScreenState extends State<PromoScreen> {
         statusIcon = Icons.help;
     }
 
-    return Expanded(
-      flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: statusColor.withOpacity(0.3)),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(statusIcon, size: 14, color: statusColor),
+          const SizedBox(width: 4),
+          Text(
+            statusText,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: statusColor,
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(statusIcon, size: 14, color: statusColor),
-              const SizedBox(width: 4),
-              Text(
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataCell(String text,
+      {bool isBold = false,
+      bool isCode = false,
+      bool isCenter = false,
+      double? width}) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.black87,
+          fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+          fontFamily: isCode ? 'monospace' : null,
+        ),
+        textAlign: isCenter ? TextAlign.center : TextAlign.left,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _buildStatusCell(String status, {double? width}) {
+    Color statusColor;
+    String statusText;
+    IconData statusIcon;
+
+    switch (status.toLowerCase()) {
+      case 'active':
+        statusColor = Colors.green;
+        statusText = 'AKTIF';
+        statusIcon = Icons.check_circle;
+        break;
+      case 'inactive':
+        statusColor = Colors.orange;
+        statusText = 'TIDAK AKTIF';
+        statusIcon = Icons.pause_circle;
+        break;
+      case 'expired':
+        statusColor = Colors.red;
+        statusText = 'KEDALUWARSA';
+        statusIcon = Icons.cancel;
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusText = status.toUpperCase();
+        statusIcon = Icons.help;
+    }
+
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: statusColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: statusColor.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(statusIcon, size: 12, color: statusColor),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
                 statusText,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: statusColor,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildActionCell(Promotion promotion, {required int flex}) {
-    return Expanded(
-      flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Tooltip(
-              message: 'Edit',
-              child: InkWell(
-                onTap: () => _showEditPromotionDialog(promotion),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Icon(Icons.edit, size: 16, color: Colors.blue),
+  Widget _buildActionCell(Promotion promotion, {double? width}) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Tooltip(
+            message: 'Edit',
+            child: InkWell(
+              onTap: () => _showEditPromotionDialog(promotion),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
                 ),
+                child: const Icon(Icons.edit, size: 14, color: Colors.blue),
               ),
             ),
-            Tooltip(
-              message: promotion.status.toLowerCase() == 'active'
-                  ? 'Nonaktifkan'
-                  : 'Aktifkan',
-              child: InkWell(
-                onTap: () => controller.togglePromotionStatus(
-                    promotion.id, promotion.status),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Icon(
-                    promotion.status.toLowerCase() == 'active'
-                        ? Icons.pause_circle_outline
-                        : Icons.play_circle_outline,
-                    size: 16,
-                    color: Colors.orange,
-                  ),
+          ),
+          Tooltip(
+            message: 'Hapus',
+            child: InkWell(
+              onTap: () => controller.deletePromotion(promotion.id),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
                 ),
+                child: const Icon(Icons.delete_outline,
+                    size: 14, color: Colors.red),
               ),
             ),
-            Tooltip(
-              message: 'Hapus',
-              child: InkWell(
-                onTap: () => controller.deletePromotion(promotion.id),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Icon(Icons.delete_outline,
-                      size: 16, color: Colors.red),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -482,52 +710,44 @@ class _PromoScreenState extends State<PromoScreen> {
         return const SizedBox.shrink();
       }
 
-      return Container(
-        margin: const EdgeInsets.only(top: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 0,
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              controller.paginationInfo,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: controller.isFirstPage
-                      ? null
-                      : () => controller
-                          .jumpToPage(controller.currentPage.value - 1),
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                Text(
-                  'Halaman ${controller.currentPage.value} dari ${controller.totalPages.value}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                IconButton(
-                  onPressed: controller.isLastPage
-                      ? null
-                      : () => controller
-                          .jumpToPage(controller.currentPage.value + 1),
-                  icon: const Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
-          ],
-        ),
+      // Calculate pagination values
+      final totalItems = controller.totalPromotions.value;
+      final currentPage = controller.currentPage.value;
+      final itemsPerPage = controller.limit.value;
+      final totalPages = controller.totalPages.value;
+
+      // Calculate start and end index for current page
+      final startIndex = (currentPage - 1) * itemsPerPage + 1;
+      final endIndex = (currentPage * itemsPerPage).clamp(0, totalItems);
+
+      // Generate page numbers
+      List<int> pageNumbers = [];
+      for (int i = 1; i <= totalPages; i++) {
+        pageNumbers.add(i);
+      }
+
+      return PaginationWidget(
+        currentPage: currentPage,
+        totalItems: totalItems,
+        itemsPerPage: itemsPerPage,
+        availablePageSizes: const [10, 25, 50, 100], // Bisa disesuaikan
+        startIndex: startIndex,
+        endIndex: endIndex,
+        hasPreviousPage: !controller.isFirstPage,
+        hasNextPage: !controller.isLastPage,
+        pageNumbers: pageNumbers,
+        onPageSizeChanged: (newSize) {
+          controller.changePageSize(newSize);
+        },
+        onPreviousPage: () {
+          controller.jumpToPage(currentPage - 1);
+        },
+        onNextPage: () {
+          controller.jumpToPage(currentPage + 1);
+        },
+        onPageSelected: (page) {
+          controller.jumpToPage(page);
+        },
       );
     });
   }
