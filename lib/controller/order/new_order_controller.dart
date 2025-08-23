@@ -1,21 +1,28 @@
-// controller/order/new_order_controller.dart
+// controller/order/new_order_controller.dart - FIXED VERSION
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/order/new_order_model.dart';
 import 'package:pos/models/product/product_model.dart';
+import 'package:pos/services/order/PrintServiceOrder.dart';
 import 'package:pos/services/order/new_order_service.dart';
 
 class NewOrderController extends GetxController {
   final OrderService _orderService = OrderService.instance;
 
   // Observable variables - pastikan semua menggunakan .obs
+  final PrintService _printService = PrintService();
+
   final RxBool isLoading = false.obs;
   final RxBool isProcessingPayment = false.obs;
   final RxString error = ''.obs;
   final Rx<Order?> currentOrder = Rx<Order?>(null);
   final Rx<QrisPaymentResponse?> qrisPayment = Rx<QrisPaymentResponse?>(null);
   final RxBool isQrisPaymentActive = false.obs;
+
+  // NEW: Add print status tracking
+  final RxBool isPrinting = false.obs;
+  final RxString printStatus = ''.obs;
 
   // Timer for QRIS status checking
   Timer? _qrisStatusTimer;
@@ -65,9 +72,11 @@ class NewOrderController extends GetxController {
     isLoading.value = false;
     isProcessingPayment.value = false;
     isQrisPaymentActive.value = false;
+    isPrinting.value = false; // NEW
 
     // Clear error
     error.value = '';
+    printStatus.value = ''; // NEW
   }
 
   void _initializeListeners() {
@@ -333,7 +342,7 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // Process payment
+  // Process payment - IMPROVED VERSION
   Future<void> _processPayment(String orderId) async {
     try {
       isProcessingPayment.value = true;
@@ -351,6 +360,10 @@ class NewOrderController extends GetxController {
 
         if (paymentResponse.status == 'SUCCESS') {
           _showSuccessMessage('Pembayaran berhasil!');
+
+          // IMPROVED: Wait a moment and check printer status before auto print
+          await _attemptAutoPrint();
+
           resetForm();
         } else {
           throw Exception(
@@ -366,7 +379,97 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // Check QRIS payment status
+  // NEW: Improved auto print method with better error handling
+  Future<void> _attemptAutoPrint() async {
+    if (currentOrder.value == null) {
+      print('NewOrderController: No order available for printing');
+      return;
+    }
+
+    try {
+      isPrinting.value = true;
+      printStatus.value = 'Memeriksa koneksi printer...';
+      update();
+
+      // Wait a moment to ensure payment processing is complete
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // Check printer connection status
+      if (!_printService.isConnected) {
+        printStatus.value = 'Printer tidak terhubung';
+        _showWarningSnackbar(
+            'Pembayaran berhasil tetapi printer tidak terhubung. '
+            'Silakan print manual dari menu atau hubungkan printer terlebih dahulu.');
+        return;
+      }
+
+      printStatus.value = 'Mencetak struk...';
+      update();
+
+      // Attempt to print with retry mechanism
+      bool printed = false;
+      int retryCount = 0;
+      const maxRetries = 3;
+
+      while (!printed && retryCount < maxRetries) {
+        try {
+          printed = await _printService.printOrderReceipt(currentOrder.value!);
+
+          if (!printed) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              print(
+                  'NewOrderController: Print attempt $retryCount failed, retrying...');
+              await Future.delayed(Duration(milliseconds: 1000));
+            }
+          }
+        } catch (e) {
+          print('NewOrderController: Print attempt $retryCount error: $e');
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await Future.delayed(Duration(milliseconds: 1000));
+          }
+        }
+      }
+
+      if (printed) {
+        printStatus.value = 'Struk berhasil dicetak';
+        print('NewOrderController: Receipt auto-printed successfully');
+        _showSuccessMessage('Struk berhasil dicetak otomatis');
+      } else {
+        printStatus.value = 'Gagal mencetak struk';
+        print(
+            'NewOrderController: Auto print failed after $maxRetries attempts');
+        _showWarningSnackbar('Pembayaran berhasil tetapi gagal print otomatis. '
+            'Periksa koneksi printer dan coba print manual.');
+      }
+    } catch (e) {
+      print('NewOrderController: Auto print error: $e');
+      printStatus.value = 'Error saat mencetak: $e';
+      _showWarningSnackbar(
+          'Pembayaran berhasil tetapi terjadi error saat print: $e');
+    } finally {
+      isPrinting.value = false;
+      // Clear print status after delay
+      Future.delayed(Duration(seconds: 3), () {
+        printStatus.value = '';
+        update();
+      });
+      update();
+    }
+  }
+
+  // NEW: Manual print method for retry
+  Future<void> manualPrint() async {
+    if (currentOrder.value == null) {
+      _showErrorSnackbar('Tidak ada order untuk dicetak');
+      return;
+    }
+
+    await _attemptAutoPrint();
+  }
+
+  // Check QRIS payment status - IMPROVED VERSION
   Future<void> checkQrisPaymentStatus(String orderId) async {
     try {
       final statusResponse =
@@ -377,6 +480,10 @@ class NewOrderController extends GetxController {
         _qrisStatusTimer?.cancel();
         isQrisPaymentActive.value = false;
         _showSuccessMessage('Pembayaran QRIS berhasil!');
+
+        // Auto print for QRIS payment
+        await _attemptAutoPrint();
+
         resetForm();
       } else if (statusResponse.status == 'FAILED' ||
           statusResponse.status == 'EXPIRED') {
@@ -430,6 +537,10 @@ class NewOrderController extends GetxController {
           timer.cancel();
           isQrisPaymentActive.value = false;
           _showSuccessMessage('Pembayaran QRIS berhasil!');
+
+          // Auto print for QRIS payment
+          await _attemptAutoPrint();
+
           resetForm();
         } else if (statusResponse.status == 'FAILED' ||
             statusResponse.status == 'EXPIRED') {
@@ -493,6 +604,8 @@ class NewOrderController extends GetxController {
       qrisPayment.value = null;
       isQrisPaymentActive.value = false;
       error.value = '';
+      isPrinting.value = false; // NEW
+      printStatus.value = ''; // NEW
 
       // Clear controllers
       customerNameController.clear();
@@ -535,10 +648,26 @@ class NewOrderController extends GetxController {
         backgroundColor: Colors.red,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 5),
       );
     } catch (e) {
       print('Error showing error message: $e');
+    }
+  }
+
+  // NEW: Show warning message
+  void _showWarningSnackbar(String message) {
+    try {
+      Get.snackbar(
+        'Peringatan',
+        message,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 5),
+      );
+    } catch (e) {
+      print('Error showing warning message: $e');
     }
   }
 }

@@ -23,6 +23,12 @@ class BluetoothPrinterManager {
   bool _isReconnecting = false;
   bool _isBluetoothSupported = false;
 
+  // NEW: MTU and chunk size management
+  int _mtu = 23; // Default BLE MTU
+  int _maxChunkSize = 200; // Conservative default, will be updated based on MTU
+  static const int _defaultMaxChunkSize = 200;
+  static const int _minChunkSize = 50;
+
   // Stream controllers untuk notify perubahan state
   final ValueNotifier<bool> connectionStatus = ValueNotifier<bool>(false);
   final ValueNotifier<BluetoothDevice?> selectedDeviceNotifier =
@@ -41,6 +47,7 @@ class BluetoothPrinterManager {
   bool get isConnected => _isConnected;
   bool get isReconnecting => _isReconnecting;
   bool get isBluetoothSupported => _isBluetoothSupported;
+  int get maxChunkSize => _maxChunkSize;
 
   // Check if current platform supports Bluetooth
   bool _checkBluetoothSupport() {
@@ -62,6 +69,27 @@ class BluetoothPrinterManager {
     } catch (e) {
       print('BluetoothPrinterManager: Platform check error: $e');
       return false;
+    }
+  }
+
+  // NEW: Calculate optimal chunk size based on MTU
+  void _calculateChunkSize() {
+    try {
+      if (_mtu <= 23) {
+        // Default BLE MTU
+        _maxChunkSize = _minChunkSize;
+      } else {
+        // Conservative approach: use 70% of available space
+        // MTU - 3 (ATT header) - 20 (safety margin) = usable space
+        int usableSpace = ((_mtu - 23) * 0.7).round();
+        _maxChunkSize = (usableSpace + _minChunkSize)
+            .clamp(_minChunkSize, _defaultMaxChunkSize);
+      }
+
+      print('BluetoothPrinterManager: MTU: $_mtu, Chunk size: $_maxChunkSize');
+    } catch (e) {
+      print('BluetoothPrinterManager: Error calculating chunk size: $e');
+      _maxChunkSize = _minChunkSize;
     }
   }
 
@@ -197,6 +225,29 @@ class BluetoothPrinterManager {
 
       if (!alreadyConnected) {
         await device.connect(timeout: Duration(seconds: 15));
+      }
+
+      // NEW: Get and update MTU
+      try {
+        _mtu = await device.mtu.first;
+        print('BluetoothPrinterManager: Current MTU: $_mtu');
+
+        // Try to request larger MTU if possible
+        if (_mtu < 200) {
+          try {
+            int newMtu = await device.requestMtu(250);
+            _mtu = newMtu;
+            print('BluetoothPrinterManager: MTU updated to: $_mtu');
+          } catch (e) {
+            print('BluetoothPrinterManager: Could not increase MTU: $e');
+          }
+        }
+
+        _calculateChunkSize();
+      } catch (e) {
+        print('BluetoothPrinterManager: Error handling MTU: $e');
+        _mtu = 23; // Default
+        _calculateChunkSize();
       }
 
       // Discover services
@@ -353,6 +404,7 @@ class BluetoothPrinterManager {
       detailText +=
           "Platform: ${_isBluetoothSupported ? 'Mobile' : 'Unsupported'}\n";
       detailText += "Status: Terhubung\n";
+      detailText += "MTU: $_mtu, Chunk: $_maxChunkSize\n";
       detailText += "Waktu: ${DateTime.now().toString().split('.')[0]}\n\n";
       detailText +=
           "Test karakter:\n1234567890\nABCDEFGHIJK\nabcdefghijk\n\nTest print berhasil!\n\n";
@@ -361,37 +413,96 @@ class BluetoothPrinterManager {
       commands.addAll([0x0A, 0x0A, 0x0A]);
       commands.addAll([0x1D, 0x56, 0x00]);
 
-      Uint8List data = Uint8List.fromList(commands);
-      await _writeCharacteristic!.write(data, withoutResponse: true);
-
-      print('BluetoothPrinterManager: Test print sent successfully');
-      return true;
+      // Use the new chunked print method
+      return await _printDataChunked(commands);
     } catch (e) {
-      print('BluetoothPrinterManager: Print error: $e');
+      print('BluetoothPrinterManager: Test print error: $e');
       return false;
     }
   }
 
-  Future<bool> printData(List<int> data) async {
-    if (!_isBluetoothSupported) {
-      print('BluetoothPrinterManager: Print failed - Bluetooth not supported');
-      return false;
-    }
-
+  // NEW: Chunked data printing method
+  Future<bool> _printDataChunked(List<int> data) async {
     if (!_isConnected || _writeCharacteristic == null) {
       print('BluetoothPrinterManager: Cannot print - not connected');
       return false;
     }
 
     try {
-      Uint8List printData = Uint8List.fromList(data);
-      await _writeCharacteristic!.write(printData, withoutResponse: true);
-      print('BluetoothPrinterManager: Custom data printed successfully');
+      print(
+          'BluetoothPrinterManager: Printing ${data.length} bytes in chunks of $_maxChunkSize');
+
+      int totalChunks = (data.length / _maxChunkSize).ceil();
+      print('BluetoothPrinterManager: Total chunks to send: $totalChunks');
+
+      for (int i = 0; i < data.length; i += _maxChunkSize) {
+        int end =
+            (i + _maxChunkSize < data.length) ? i + _maxChunkSize : data.length;
+        List<int> chunk = data.sublist(i, end);
+
+        int chunkNumber = (i / _maxChunkSize).floor() + 1;
+        print(
+            'BluetoothPrinterManager: Sending chunk $chunkNumber/$totalChunks (${chunk.length} bytes)');
+
+        try {
+          Uint8List chunkData = Uint8List.fromList(chunk);
+          await _writeCharacteristic!.write(chunkData, withoutResponse: true);
+
+          // Small delay between chunks to prevent overwhelming the printer
+          if (i + _maxChunkSize < data.length) {
+            await Future.delayed(Duration(milliseconds: 50));
+          }
+        } catch (e) {
+          print(
+              'BluetoothPrinterManager: Error sending chunk $chunkNumber: $e');
+
+          // If chunk still too large, try smaller size
+          if (e.toString().contains('data longer than allowed')) {
+            print(
+                'BluetoothPrinterManager: Chunk too large, reducing size and retrying...');
+            int smallerChunkSize = (_maxChunkSize / 2).floor();
+            if (smallerChunkSize < _minChunkSize) {
+              throw Exception('Data chunk too large even at minimum size');
+            }
+
+            // Temporarily reduce chunk size and retry this chunk
+            for (int j = i; j < end; j += smallerChunkSize) {
+              int smallEnd =
+                  (j + smallerChunkSize < end) ? j + smallerChunkSize : end;
+              List<int> smallChunk = data.sublist(j, smallEnd);
+              Uint8List smallChunkData = Uint8List.fromList(smallChunk);
+
+              print(
+                  'BluetoothPrinterManager: Sending smaller chunk (${smallChunk.length} bytes)');
+              await _writeCharacteristic!
+                  .write(smallChunkData, withoutResponse: true);
+
+              if (j + smallerChunkSize < end) {
+                await Future.delayed(Duration(milliseconds: 50));
+              }
+            }
+          } else {
+            throw e;
+          }
+        }
+      }
+
+      print('BluetoothPrinterManager: All chunks sent successfully');
       return true;
     } catch (e) {
-      print('BluetoothPrinterManager: Print error: $e');
+      print('BluetoothPrinterManager: Chunked print error: $e');
       return false;
     }
+  }
+
+  // Updated printData method to use chunking
+  Future<bool> printData(List<int> data) async {
+    if (!_isBluetoothSupported) {
+      print('BluetoothPrinterManager: Print failed - Bluetooth not supported');
+      return false;
+    }
+
+    return await _printDataChunked(data);
   }
 
   Future<bool> reconnect() async {
@@ -412,16 +523,6 @@ class BluetoothPrinterManager {
   }
 
   void debugInfo() {
-    print('=== BluetoothPrinterManager Debug Info ===');
-    print('Platform Supported: $_isBluetoothSupported');
-    print('Connected: $_isConnected');
-    print('Reconnecting: $_isReconnecting');
-    print(
-        'Selected Device: ${_selectedDevice?.platformName} (${_selectedDevice?.remoteId})');
-    print('Write Characteristic: ${_writeCharacteristic != null}');
-
     Map<String, String?> savedInfo = getSavedPrinterInfo();
-    print('Saved Printer: ${savedInfo['name']} (${savedInfo['id']})');
-    print('==========================================');
   }
 }
