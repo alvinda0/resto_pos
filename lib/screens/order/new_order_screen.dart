@@ -237,37 +237,50 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   // Enhanced Mobile Layout with Tab Navigation
   Widget _buildEnhancedMobileLayout() {
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          Container(
-            color: Colors.white,
-            child: const TabBar(
-              labelColor: Colors.blue,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.blue,
-              indicatorWeight: 3,
-              tabs: [
-                Tab(
-                    icon: Icon(Icons.add_shopping_cart, size: 20),
-                    text: "Produk"),
-                Tab(icon: Icon(Icons.receipt_long, size: 20), text: "Pesanan"),
-                Tab(icon: Icon(Icons.payment, size: 20), text: "Bayar"),
-              ],
-            ),
+    return GetBuilder<NewOrderController>(
+      init: orderController,
+      builder: (controller) {
+        // Jika QRIS payment aktif, tampilkan interface QRIS
+        if (controller.isQrisPaymentActive.value) {
+          return _buildQrisPaymentInterface();
+        }
+
+        // Jika tidak, tampilkan tab normal
+        return DefaultTabController(
+          length: 3,
+          child: Column(
+            children: [
+              Container(
+                color: Colors.white,
+                child: const TabBar(
+                  labelColor: Colors.blue,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: Colors.blue,
+                  indicatorWeight: 3,
+                  tabs: [
+                    Tab(
+                        icon: Icon(Icons.add_shopping_cart, size: 20),
+                        text: "Produk"),
+                    Tab(
+                        icon: Icon(Icons.receipt_long, size: 20),
+                        text: "Pesanan"),
+                    Tab(icon: Icon(Icons.payment, size: 20), text: "Bayar"),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildMobileProductSection(),
+                    _buildMobileOrderSection(),
+                    _buildMobilePaymentSection(),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildMobileProductSection(),
-                _buildMobileOrderSection(),
-                _buildMobilePaymentSection(),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1102,262 +1115,327 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   }
 
   Widget _buildQrisPaymentInterface() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade50, Colors.blue.shade100],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isMobile = constraints.maxWidth < 768;
+
+        return Container(
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isMobile ? 16 : 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade50, Colors.blue.shade100],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
                   children: [
-                    Icon(Icons.qr_code, size: 24, color: Colors.blue.shade600),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Pembayaran QRIS',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code,
+                            size: isMobile ? 20 : 24,
+                            color: Colors.blue.shade600),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Pembayaran QRIS',
+                          style: TextStyle(
+                            fontSize: isMobile ? 18 : 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    GetBuilder<NewOrderController>(
+                      init: orderController,
+                      builder: (controller) {
+                        return Text(
+                          'Total: Rp${controller.formatPrice(controller.orderTotal.round())}',
+                          style: TextStyle(
+                            fontSize: isMobile ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                GetBuilder<NewOrderController>(
-                  init: orderController,
-                  builder: (controller) {
-                    return Text(
-                      'Total: Rp${controller.formatPrice(controller.orderTotal.round())}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
-                      ),
-                    );
-                  },
+              ),
+              SizedBox(height: isMobile ? 16 : 20),
+              Container(
+                padding: EdgeInsets.all(isMobile ? 16 : 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 2,
-                  blurRadius: 5,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                GetBuilder<NewOrderController>(
-                  init: orderController,
-                  builder: (controller) {
-                    final qrisPayment = controller.qrisPayment.value;
-                    if (qrisPayment != null && qrisPayment.qrisData != null) {
-                      return Container(
-                        width: 220,
-                        height: 220,
-                        decoration: BoxDecoration(
-                          border:
-                              Border.all(color: Colors.grey.shade300, width: 2),
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.white,
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.memory(
-                            _decodeBase64Image(qrisPayment.qrisData!),
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: const Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.error_outline,
-                                          color: Colors.red, size: 32),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'QR Code tidak dapat dimuat',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(fontSize: 12),
+                child: Column(
+                  children: [
+                    GetBuilder<NewOrderController>(
+                      init: orderController,
+                      builder: (controller) {
+                        final qrisPayment = controller.qrisPayment.value;
+                        if (qrisPayment != null &&
+                            qrisPayment.qrisData != null) {
+                          double qrSize =
+                              isMobile ? 180 : 220; // Smaller QR for mobile
+                          return Container(
+                            width: qrSize,
+                            height: qrSize,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: Colors.grey.shade300, width: 2),
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.memory(
+                                _decodeBase64Image(qrisPayment.qrisData!),
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey.shade200,
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.error_outline,
+                                              color: Colors.red, size: 32),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'QR Code tidak dapat dimuat',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                    }
-                    return Container(
-                      width: 220,
-                      height: 220,
-                      decoration: BoxDecoration(
-                        border:
-                            Border.all(color: Colors.grey.shade300, width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.grey.shade50,
-                      ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 16),
-                            Text('Memuat QR Code...')
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Scan QR Code dengan aplikasi pembayaran Anda',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                GetBuilder<NewOrderController>(
-                  init: orderController,
-                  builder: (controller) {
-                    final qrisPayment = controller.qrisPayment.value;
-                    if (qrisPayment != null) {
-                      final remaining =
-                          qrisPayment.expiresAt.difference(DateTime.now());
-                      if (remaining.isNegative) {
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        }
+                        double qrSize = isMobile ? 180 : 220;
                         return Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                          width: qrSize,
+                          height: qrSize,
                           decoration: BoxDecoration(
-                            color: Colors.red.shade100,
-                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Colors.grey.shade300, width: 2),
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey.shade50,
                           ),
-                          child: Text(
-                            'QR Code telah expired',
-                            style: TextStyle(
-                              color: Colors.red.shade700,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                          child: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 16),
+                                Text('Memuat QR Code...')
+                              ],
                             ),
                           ),
                         );
-                      }
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'Berakhir dalam ${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}',
-                          style: TextStyle(
-                            color: Colors.orange.shade700,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
-                          ),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: orderController.cancelQrisPayment,
-                        icon: const Icon(Icons.close, size: 18),
-                        label: const Text('Batalkan'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(color: Colors.red.shade300),
-                          foregroundColor: Colors.red.shade600,
-                        ),
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Scan QR Code dengan aplikasi pembayaran Anda',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: isMobile ? 13 : 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Get.snackbar(
-                            'Info',
-                            'Status pembayaran sedang dicek otomatis setiap 5 detik',
-                            backgroundColor: Colors.blue,
-                            colorText: Colors.white,
-                            duration: const Duration(seconds: 2),
-                            snackPosition: SnackPosition.TOP,
-                            margin: const EdgeInsets.all(16),
-                            borderRadius: 8,
+                    const SizedBox(height: 12),
+                    GetBuilder<NewOrderController>(
+                      init: orderController,
+                      builder: (controller) {
+                        final qrisPayment = controller.qrisPayment.value;
+                        if (qrisPayment != null) {
+                          final remaining =
+                              qrisPayment.expiresAt.difference(DateTime.now());
+                          if (remaining.isNegative) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'QR Code telah expired',
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isMobile ? 11 : 12,
+                                ),
+                              ),
+                            );
+                          }
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'Berakhir dalam ${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}',
+                              style: TextStyle(
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.w500,
+                                fontSize: isMobile ? 11 : 12,
+                              ),
+                            ),
                           );
-                        },
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Status Auto'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                    SizedBox(height: isMobile ? 16 : 20),
+                    // Mobile: Stack buttons vertically, Desktop: Side by side
+                    isMobile
+                        ? Column(
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: orderController.cancelQrisPayment,
+                                  icon: const Icon(Icons.close, size: 18),
+                                  label: const Text('Batalkan Pembayaran'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    side:
+                                        BorderSide(color: Colors.red.shade300),
+                                    foregroundColor: Colors.red.shade600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Get.snackbar(
+                                      'Info',
+                                      'Status pembayaran sedang dicek otomatis setiap 5 detik',
+                                      backgroundColor: Colors.blue,
+                                      colorText: Colors.white,
+                                      duration: const Duration(seconds: 2),
+                                      snackPosition: SnackPosition.TOP,
+                                      margin: const EdgeInsets.all(16),
+                                      borderRadius: 8,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('Cek Status Otomatis'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: orderController.cancelQrisPayment,
+                                  icon: const Icon(Icons.close, size: 18),
+                                  label: const Text('Batalkan'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    side:
+                                        BorderSide(color: Colors.red.shade300),
+                                    foregroundColor: Colors.red.shade600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Get.snackbar(
+                                      'Info',
+                                      'Status pembayaran sedang dicek otomatis setiap 5 detik',
+                                      backgroundColor: Colors.blue,
+                                      colorText: Colors.white,
+                                      duration: const Duration(seconds: 2),
+                                      snackPosition: SnackPosition.TOP,
+                                      margin: const EdgeInsets.all(16),
+                                      borderRadius: 8,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('Status Auto'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ],
+                ),
+              ),
+              SizedBox(height: isMobile ? 12 : 16),
+              Container(
+                padding: EdgeInsets.all(isMobile ? 10 : 12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: Colors.blue, size: isMobile ? 16 : 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Status pembayaran akan diperbarui otomatis setiap 1 detik',
+                        style: TextStyle(
+                            fontSize: isMobile ? 11 : 12, color: Colors.blue),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Status pembayaran akan diperbarui otomatis setiap 1 detik',
-                    style: TextStyle(fontSize: 12, color: Colors.blue),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/kitchen/kitchen_controller.dart';
 import 'package:pos/models/kitchen/kitchen_model.dart';
+import 'package:pos/screens/printer/BluetoothPrinterManager.dart';
 import 'package:pos/widgets/pagination_widget.dart'; // Import your pagination widget
 
 class KitchenScreen extends StatefulWidget {
@@ -616,6 +617,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
               Text('Status: ${kitchen.status}'),
               Text('Dish Status: ${kitchen.dishStatus}'),
               Text('Total: ${kitchen.formattedTotal}'),
+              Text(
+                  'Notes: ${kitchen.notes ?? '-'}'), // Show "-" if notes is null
               const SizedBox(height: 16),
               if (kitchen.tracking != null) ...[
                 const Text('Tracking Information:',
@@ -634,11 +637,171 @@ class _KitchenScreenState extends State<KitchenScreen> {
           ),
         ),
         actions: [
+          ElevatedButton.icon(
+            onPressed: () => _printOrderDetails(kitchen),
+            icon: const Icon(Icons.print),
+            label: const Text('Print'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Tutup'))
         ],
       ),
     );
+  }
+
+  void _printOrderDetails(KitchenModel kitchen) async {
+    try {
+      // Import BluetoothPrinterManager di atas file
+      final BluetoothPrinterManager printerManager = BluetoothPrinterManager();
+
+      // Check if printer is connected
+      if (!printerManager.isConnected) {
+        _showPrinterNotConnectedDialog();
+        return;
+      }
+
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Mencetak pesanan...'),
+            ],
+          ),
+        ),
+      );
+
+      // Generate print data
+      List<int> printData = _generateOrderPrintData(kitchen);
+
+      // Send to printer
+      bool success = await printerManager.printData(printData);
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (success) {
+        Get.snackbar(
+          'Print Berhasil',
+          'Pesanan ${kitchen.displayId} berhasil dicetak',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          'Print Gagal',
+          'Gagal mencetak pesanan ${kitchen.displayId}',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Terjadi kesalahan saat mencetak: $e',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  void _showPrinterNotConnectedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Printer Tidak Terhubung'),
+        content: const Text(
+            'Silakan hubungkan printer terlebih dahulu melalui menu pengaturan printer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<int> _generateOrderPrintData(KitchenModel kitchen) {
+    List<int> commands = [];
+
+    // Initialize printer
+    commands.addAll([0x1B, 0x40]); // ESC @
+
+    // Center align and bold title
+    commands.addAll([0x1B, 0x61, 0x01]); // Center align
+    commands.addAll([0x1D, 0x21, 0x11]); // Double size
+    commands.addAll('=== PESANAN DAPUR ===\n\n'.codeUnits);
+
+    // Reset formatting
+    commands.addAll([0x1D, 0x21, 0x00]); // Normal size
+    commands.addAll([0x1B, 0x61, 0x00]); // Left align
+
+    // Order details
+    commands.addAll('ID Pesanan: ${kitchen.displayId}\n'.codeUnits);
+    commands.addAll(
+        'Tanggal: ${kitchenController.formatDate(kitchen.createdAt)}\n'
+            .codeUnits);
+    commands.addAll('Customer: ${kitchen.customerName}\n'.codeUnits);
+    commands.addAll('Phone: ${kitchen.customerPhone}\n'.codeUnits);
+    commands.addAll('Meja: ${kitchen.tableNumber}\n'.codeUnits);
+    commands.addAll('Status: ${kitchen.status}\n'.codeUnits);
+    commands.addAll('Status Masakan: ${kitchen.dishStatus}\n'.codeUnits);
+    commands.addAll('Notes: ${kitchen.notes ?? '-'}\n'.codeUnits);
+    commands.addAll('--------------------------------\n'.codeUnits);
+
+    // Items header
+    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
+    commands.addAll('ITEMS:\n'.codeUnits);
+    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+
+    // List items
+    for (var item in kitchen.items) {
+      commands.addAll('${item.productName}\n'.codeUnits);
+      commands.addAll(
+          '  ${item.quantity}x @ Rp${item.unitPrice.toStringAsFixed(0)}\n'
+              .codeUnits);
+      if (item.note != null && item.note!.isNotEmpty) {
+        commands.addAll('  Note: ${item.note}\n'.codeUnits);
+      }
+      commands.addAll('\n'.codeUnits);
+    }
+
+    commands.addAll('--------------------------------\n'.codeUnits);
+
+    // Total
+    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
+    commands.addAll('TOTAL: ${kitchen.formattedTotal}\n'.codeUnits);
+    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+
+    // Footer
+    commands.addAll('\n\n'.codeUnits);
+    commands.addAll([0x1B, 0x61, 0x01]); // Center align
+    commands.addAll('Terima kasih!\n'.codeUnits);
+    commands.addAll('${DateTime.now().toString().split('.')[0]}\n'.codeUnits);
+
+    // Cut paper
+    commands.addAll('\n\n\n'.codeUnits);
+    commands.addAll([0x1D, 0x56, 0x00]); // Cut paper
+
+    return commands;
   }
 }
