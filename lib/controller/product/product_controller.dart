@@ -45,6 +45,8 @@ class ProductController extends GetxController {
   // Load products with pagination
   Future<void> loadProducts({bool refresh = false}) async {
     try {
+      if (isLoading.value && !refresh) return; // Prevent multiple calls
+
       if (refresh) {
         currentPage.value = 1;
         products.clear();
@@ -75,7 +77,8 @@ class ProductController extends GetxController {
       }
     } catch (e) {
       error.value = e.toString();
-      _showErrorSnackbar('Error loading products: ${e.toString()}');
+      print(
+          'Error loading products: $e'); // Use print instead of snackbar in init
     } finally {
       isLoading.value = false;
     }

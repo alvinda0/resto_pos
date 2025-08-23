@@ -22,7 +22,7 @@ import 'package:pos/screens/product/product_screen.dart';
 import 'package:pos/screens/recipe/recipe_screen.dart';
 import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/screens/dashboard/dashboard_screen.dart';
-import 'package:pos/screens/dashboard/promo_screen.dart';
+import 'package:pos/screens/promotion/promotion_screen.dart';
 import 'package:pos/screens/order/order_screen.dart';
 import 'package:pos/screens/category/category_screen.dart';
 import 'package:pos/screens/table/tables_screen.dart';

@@ -9,7 +9,7 @@ import 'package:pos/services/order/new_order_service.dart';
 class NewOrderController extends GetxController {
   final OrderService _orderService = OrderService.instance;
 
-  // Observable variables
+  // Observable variables - pastikan semua menggunakan .obs
   final RxBool isLoading = false.obs;
   final RxBool isProcessingPayment = false.obs;
   final RxString error = ''.obs;
@@ -20,7 +20,7 @@ class NewOrderController extends GetxController {
   // Timer for QRIS status checking
   Timer? _qrisStatusTimer;
 
-  // Order form data
+  // Order form data - semua observable
   final RxList<Map<String, dynamic>> orderItems = <Map<String, dynamic>>[].obs;
   final RxString customerName = ''.obs;
   final RxString customerPhone = ''.obs;
@@ -44,7 +44,10 @@ class NewOrderController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _initializeListeners();
+    // Delay initialization to avoid controller conflicts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeListeners();
+    });
   }
 
   @override
@@ -54,57 +57,107 @@ class NewOrderController extends GetxController {
     super.onClose();
   }
 
+  void resetControllerState() {
+    // Cancel any ongoing operations
+    _qrisStatusTimer?.cancel();
+
+    // Reset loading states
+    isLoading.value = false;
+    isProcessingPayment.value = false;
+    isQrisPaymentActive.value = false;
+
+    // Clear error
+    error.value = '';
+  }
+
   void _initializeListeners() {
-    // Listen to text controller changes
-    customerNameController
-        .addListener(() => customerName.value = customerNameController.text);
-    phoneController
-        .addListener(() => customerPhone.value = phoneController.text);
-    tableController.addListener(
-        () => tableNumber.value = int.tryParse(tableController.text) ?? 0);
-    notesController.addListener(() => notes.value = notesController.text);
-    promoController.addListener(() => promoCode.value = promoController.text);
-    cashAmountController.addListener(() {
-      cashAmount.value = double.tryParse(cashAmountController.text
-              .replaceAll(',', '')
-              .replaceAll('Rp', '')) ??
-          0.0;
-      calculateChange();
-    });
+    try {
+      // Listen to text controller changes
+      customerNameController.addListener(() {
+        customerName.value = customerNameController.text;
+      });
+
+      phoneController.addListener(() {
+        customerPhone.value = phoneController.text;
+      });
+
+      tableController.addListener(() {
+        tableNumber.value = int.tryParse(tableController.text) ?? 0;
+      });
+
+      notesController.addListener(() {
+        notes.value = notesController.text;
+      });
+
+      promoController.addListener(() {
+        promoCode.value = promoController.text;
+      });
+
+      cashAmountController.addListener(() {
+        String cleanText = cashAmountController.text
+            .replaceAll(',', '')
+            .replaceAll('.', '')
+            .replaceAll('Rp', '')
+            .replaceAll(' ', '');
+        cashAmount.value = double.tryParse(cleanText) ?? 0.0;
+        calculateChange();
+      });
+    } catch (e) {
+      print('Error setting up listeners: $e');
+    }
   }
 
   void _disposeControllers() {
-    customerNameController.dispose();
-    phoneController.dispose();
-    tableController.dispose();
-    notesController.dispose();
-    promoController.dispose();
-    cashAmountController.dispose();
-    changeController.dispose();
+    try {
+      customerNameController.dispose();
+      phoneController.dispose();
+      tableController.dispose();
+      notesController.dispose();
+      promoController.dispose();
+      cashAmountController.dispose();
+      changeController.dispose();
+    } catch (e) {
+      print('Error disposing controllers: $e');
+    }
   }
 
   // Calculate order total
   double get orderTotal {
-    return orderItems.fold(
-        0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
+    try {
+      return orderItems.fold(
+          0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
+    } catch (e) {
+      print('Error calculating order total: $e');
+      return 0.0;
+    }
   }
 
   // Calculate change
   void calculateChange() {
-    if (selectedPaymentMethod.value == 'Tunai' && cashAmount.value > 0) {
-      double change = cashAmount.value - orderTotal;
-      changeAmount.value = change >= 0 ? change : 0.0;
-      changeController.text = 'Rp${formatPrice(changeAmount.value.round())}';
-    } else {
-      changeAmount.value = 0.0;
-      changeController.text = 'Rp0';
+    try {
+      if (selectedPaymentMethod.value == 'Tunai' && cashAmount.value > 0) {
+        double change = cashAmount.value - orderTotal;
+        changeAmount.value = change >= 0 ? change : 0.0;
+        changeController.text = 'Rp${formatPrice(changeAmount.value.round())}';
+      } else {
+        changeAmount.value = 0.0;
+        changeController.text = 'Rp0';
+      }
+      update(); // Trigger UI update
+    } catch (e) {
+      print('Error calculating change: $e');
     }
   }
 
   // Format price helper
   String formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    try {
+      return price.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    } catch (e) {
+      print('Error formatting price: $e');
+      return price.toString();
+    }
   }
 
   // Add product to order
@@ -133,6 +186,7 @@ class NewOrderController extends GetxController {
 
       orderItems.refresh();
       calculateChange();
+      update(); // Trigger UI update
     } catch (e) {
       error.value = 'Failed to add product: $e';
       _showErrorSnackbar(error.value);
@@ -141,68 +195,93 @@ class NewOrderController extends GetxController {
 
   // Increase quantity
   void increaseQuantity(int index) {
-    if (index >= 0 && index < orderItems.length) {
-      orderItems[index]['quantity']++;
-      double unitPrice = orderItems[index]['price']?.toDouble() ?? 0.0;
-      orderItems[index]['totalPrice'] =
-          orderItems[index]['quantity'] * unitPrice;
-      orderItems.refresh();
-      calculateChange();
+    try {
+      if (index >= 0 && index < orderItems.length) {
+        orderItems[index]['quantity']++;
+        double unitPrice = orderItems[index]['price']?.toDouble() ?? 0.0;
+        orderItems[index]['totalPrice'] =
+            orderItems[index]['quantity'] * unitPrice;
+        orderItems.refresh();
+        calculateChange();
+        update(); // Trigger UI update
+      }
+    } catch (e) {
+      print('Error increasing quantity: $e');
     }
   }
 
   // Decrease quantity
   void decreaseQuantity(int index) {
-    if (index >= 0 && index < orderItems.length) {
-      if (orderItems[index]['quantity'] > 1) {
-        orderItems[index]['quantity']--;
-        double unitPrice = orderItems[index]['price']?.toDouble() ?? 0.0;
-        orderItems[index]['totalPrice'] =
-            orderItems[index]['quantity'] * unitPrice;
-      } else {
-        orderItems.removeAt(index);
+    try {
+      if (index >= 0 && index < orderItems.length) {
+        if (orderItems[index]['quantity'] > 1) {
+          orderItems[index]['quantity']--;
+          double unitPrice = orderItems[index]['price']?.toDouble() ?? 0.0;
+          orderItems[index]['totalPrice'] =
+              orderItems[index]['quantity'] * unitPrice;
+        } else {
+          orderItems.removeAt(index);
+        }
+        orderItems.refresh();
+        calculateChange();
+        update(); // Trigger UI update
       }
-      orderItems.refresh();
-      calculateChange();
+    } catch (e) {
+      print('Error decreasing quantity: $e');
     }
   }
 
   // Remove item
   void removeItem(int index) {
-    if (index >= 0 && index < orderItems.length) {
-      orderItems.removeAt(index);
-      orderItems.refresh();
-      calculateChange();
+    try {
+      if (index >= 0 && index < orderItems.length) {
+        orderItems.removeAt(index);
+        orderItems.refresh();
+        calculateChange();
+        update(); // Trigger UI update
+      }
+    } catch (e) {
+      print('Error removing item: $e');
     }
   }
 
   // Update payment method
   void updatePaymentMethod(String method) {
-    selectedPaymentMethod.value = method;
-    calculateChange();
+    try {
+      selectedPaymentMethod.value = method;
+      calculateChange();
+      update(); // Trigger UI update
+    } catch (e) {
+      print('Error updating payment method: $e');
+    }
   }
 
   // Validate order data
   bool validateOrder() {
-    error.value = '';
+    try {
+      error.value = '';
 
-    if (customerName.value.trim().isEmpty) {
-      error.value = 'Nama customer tidak boleh kosong';
+      if (customerName.value.trim().isEmpty) {
+        error.value = 'Nama customer tidak boleh kosong';
+        return false;
+      }
+
+      if (orderItems.isEmpty) {
+        error.value = 'Belum ada item pesanan';
+        return false;
+      }
+
+      if (selectedPaymentMethod.value == 'Tunai' &&
+          cashAmount.value < orderTotal) {
+        error.value = 'Jumlah pembayaran kurang dari total pesanan';
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      error.value = 'Error validating order: $e';
       return false;
     }
-
-    if (orderItems.isEmpty) {
-      error.value = 'Belum ada item pesanan';
-      return false;
-    }
-
-    if (selectedPaymentMethod.value == 'Tunai' &&
-        cashAmount.value < orderTotal) {
-      error.value = 'Jumlah pembayaran kurang dari total pesanan';
-      return false;
-    }
-
-    return true;
   }
 
   // Create order and process payment
@@ -215,6 +294,7 @@ class NewOrderController extends GetxController {
     try {
       isLoading.value = true;
       error.value = '';
+      update(); // Trigger UI update
 
       // Prepare order request
       final orderRequest = CreateOrderRequest(
@@ -249,6 +329,7 @@ class NewOrderController extends GetxController {
       _showErrorSnackbar('Gagal membuat pesanan: ${error.value}');
     } finally {
       isLoading.value = false;
+      update(); // Trigger UI update
     }
   }
 
@@ -256,6 +337,7 @@ class NewOrderController extends GetxController {
   Future<void> _processPayment(String orderId) async {
     try {
       isProcessingPayment.value = true;
+      update(); // Trigger UI update
 
       if (selectedPaymentMethod.value == 'QRIS') {
         // Handle QRIS payment
@@ -280,9 +362,11 @@ class NewOrderController extends GetxController {
       _showErrorSnackbar('Pembayaran gagal: ${error.value}');
     } finally {
       isProcessingPayment.value = false;
+      update(); // Trigger UI update
     }
   }
 
+  // Check QRIS payment status
   Future<void> checkQrisPaymentStatus(String orderId) async {
     try {
       final statusResponse =
@@ -305,6 +389,8 @@ class NewOrderController extends GetxController {
         // Still pending, show current status
         print('QRIS Payment Status: ${statusResponse.status}');
       }
+
+      update(); // Trigger UI update
     } catch (e) {
       print('Error checking QRIS status: $e');
       error.value = 'Error checking QRIS status: $e';
@@ -317,6 +403,7 @@ class NewOrderController extends GetxController {
       final qrisResponse = await _orderService.initiateQrisPayment(orderId);
       qrisPayment.value = qrisResponse;
       isQrisPaymentActive.value = true;
+      update(); // Trigger UI update
 
       // Start checking payment status
       _startQrisStatusCheck(orderId);
@@ -353,6 +440,7 @@ class NewOrderController extends GetxController {
           _showErrorSnackbar(error.value);
         }
         // If still pending, continue checking
+        update(); // Trigger UI update
       } catch (e) {
         print('Error checking QRIS status: $e');
       }
@@ -370,6 +458,7 @@ class NewOrderController extends GetxController {
           isQrisPaymentActive.value = false;
           error.value = 'QRIS payment expired';
           _showErrorSnackbar('QRIS payment expired');
+          update(); // Trigger UI update
         }
       });
     }
@@ -377,61 +466,79 @@ class NewOrderController extends GetxController {
 
   // Cancel QRIS payment
   void cancelQrisPayment() {
-    _qrisStatusTimer?.cancel();
-    isQrisPaymentActive.value = false;
-    qrisPayment.value = null;
+    try {
+      _qrisStatusTimer?.cancel();
+      isQrisPaymentActive.value = false;
+      qrisPayment.value = null;
+      update(); // Trigger UI update
+    } catch (e) {
+      print('Error canceling QRIS payment: $e');
+    }
   }
 
   // Reset form
   void resetForm() {
-    orderItems.clear();
-    customerName.value = '';
-    customerPhone.value = '';
-    tableNumber.value = 0;
-    notes.value = '';
-    promoCode.value = '';
-    referralCode.value = '';
-    selectedPaymentMethod.value = 'Tunai';
-    cashAmount.value = 0.0;
-    changeAmount.value = 0.0;
-    currentOrder.value = null;
-    qrisPayment.value = null;
-    isQrisPaymentActive.value = false;
-    error.value = '';
+    try {
+      orderItems.clear();
+      customerName.value = '';
+      customerPhone.value = '';
+      tableNumber.value = 0;
+      notes.value = '';
+      promoCode.value = '';
+      referralCode.value = '';
+      selectedPaymentMethod.value = 'Tunai';
+      cashAmount.value = 0.0;
+      changeAmount.value = 0.0;
+      currentOrder.value = null;
+      qrisPayment.value = null;
+      isQrisPaymentActive.value = false;
+      error.value = '';
 
-    // Clear controllers
-    customerNameController.clear();
-    phoneController.clear();
-    tableController.clear();
-    notesController.clear();
-    promoController.clear();
-    cashAmountController.clear();
-    changeController.clear();
+      // Clear controllers
+      customerNameController.clear();
+      phoneController.clear();
+      tableController.clear();
+      notesController.clear();
+      promoController.clear();
+      cashAmountController.clear();
+      changeController.clear();
 
-    _qrisStatusTimer?.cancel();
+      _qrisStatusTimer?.cancel();
+      update(); // Trigger UI update
+    } catch (e) {
+      print('Error resetting form: $e');
+    }
   }
 
   // Show success message
   void _showSuccessMessage(String message) {
-    Get.snackbar(
-      'Berhasil',
-      message,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 3),
-    );
+    try {
+      Get.snackbar(
+        'Berhasil',
+        message,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+    } catch (e) {
+      print('Error showing success message: $e');
+    }
   }
 
   // Show error message
   void _showErrorSnackbar(String message) {
-    Get.snackbar(
-      'Error',
-      message,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 3),
-    );
+    try {
+      Get.snackbar(
+        'Error',
+        message,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+    } catch (e) {
+      print('Error showing error message: $e');
+    }
   }
 }

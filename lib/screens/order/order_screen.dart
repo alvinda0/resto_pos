@@ -71,11 +71,19 @@ class _OrderScreenState extends State<OrderScreen> {
                   'Method'),
             ),
             const SizedBox(width: 8),
-            // Button New Order dengan ukuran lebih kecil
             SizedBox(
               height: 40,
               child: ElevatedButton(
-                onPressed: () => Get.toNamed('/neworders'),
+                onPressed: () {
+                  // Add loading check before navigation
+                  try {
+                    Get.toNamed('/neworders');
+                  } catch (e) {
+                    print('Navigation error: $e');
+                    // Alternative navigation
+                    Navigator.pushNamed(context, '/neworders');
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
@@ -140,7 +148,7 @@ class _OrderScreenState extends State<OrderScreen> {
       children: [
         Expanded(
           flex: 3,
-          child: _buildSearchField(isMobile: true),
+          child: _buildSearchField(isMobile: false), // Fix parameter
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -159,10 +167,17 @@ class _OrderScreenState extends State<OrderScreen> {
                 orderController.updateMethodFilter,
                 Icons.payment)),
         const SizedBox(width: 16),
-        // Tambahkan button New Order
         ElevatedButton.icon(
-          onPressed: () =>
-              Get.toNamed('/neworders'), // atau AppRoutes.toNewOrders()
+          onPressed: () {
+            // Add loading check before navigation
+            try {
+              Get.toNamed('/neworders');
+            } catch (e) {
+              print('Navigation error: $e');
+              // Alternative navigation
+              Navigator.pushNamed(context, '/neworders');
+            }
+          },
           icon: const Icon(Icons.add),
           label: const Text('New Order'),
           style: ElevatedButton.styleFrom(
