@@ -280,29 +280,14 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           return _buildQrisPaymentInterface();
         }
 
-        return Column(
+        // Use the same 3-column layout as desktop
+        return Row(
           children: [
-            Expanded(
-              flex: 3,
-              child: Row(
-                children: [
-                  Expanded(flex: 2, child: _buildAddProductSection()),
-                  Container(width: 1, color: Colors.grey.shade300),
-                  Expanded(flex: 1, child: _buildOrderSection()),
-                ],
-              ),
-            ),
-            Container(height: 1, color: Colors.grey.shade300),
-            Expanded(
-              flex: 2,
-              child: Row(
-                children: [
-                  Expanded(child: _buildCustomerDetailsCard()),
-                  Container(width: 1, color: Colors.grey.shade300),
-                  Expanded(child: _buildPaymentCard()),
-                ],
-              ),
-            ),
+            Expanded(flex: 1, child: _buildAddProductSection()),
+            Container(width: 1, color: Colors.grey.shade300),
+            Expanded(flex: 1, child: _buildOrderSection()),
+            Container(width: 1, color: Colors.grey.shade300),
+            Expanded(flex: 1, child: _buildCustomerPaymentSection()),
           ],
         );
       },
