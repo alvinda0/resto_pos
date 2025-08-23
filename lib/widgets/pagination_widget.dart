@@ -45,8 +45,8 @@ class PaginationWidget extends StatelessWidget {
 
         return Container(
           padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 16 : 24,
-            vertical: 16,
+            horizontal: isMobile ? 12 : 24,
+            vertical: isMobile ? 8 : 16,
           ),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -72,21 +72,29 @@ class PaginationWidget extends StatelessWidget {
     );
   }
 
-  // Layout untuk mobile
+  // Layout untuk mobile - SINGLE ROW
   Widget _buildMobileLayout() {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Baris pertama: Items count dan rows per page
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildItemsCountInfo(),
-            _buildRowsPerPageSelector(),
-          ],
+        // Kiri: Items count info (compact)
+        Flexible(
+          flex: 2,
+          child: _buildCompactItemsInfo(),
         ),
-        const SizedBox(height: 12),
-        // Baris kedua: Pagination controls
-        _buildPaginationControls(compact: true),
+
+        // Tengah: Pagination controls (sangat compact)
+        Flexible(
+          flex: 3,
+          child: _buildPaginationControls(compact: true),
+        ),
+
+        // Kanan: Rows per page (compact)
+        Flexible(
+          flex: 2,
+          child: _buildCompactRowsPerPageSelector(),
+        ),
       ],
     );
   }
@@ -136,6 +144,45 @@ class PaginationWidget extends StatelessWidget {
     );
   }
 
+  // Compact version untuk mobile
+  Widget _buildCompactRowsPerPageSelector() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: itemsPerPage,
+              isDense: true,
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 12,
+              ),
+              items: availablePageSizes.map((int size) {
+                return DropdownMenuItem<int>(
+                  value: size,
+                  child: Text('$size'),
+                );
+              }).toList(),
+              onChanged: (int? newValue) {
+                if (newValue != null) {
+                  onPageSizeChanged(newValue);
+                }
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildItemsCountInfo() {
     return Text(
       '$startIndex-$endIndex of $totalItems',
@@ -146,47 +193,73 @@ class PaginationWidget extends StatelessWidget {
     );
   }
 
+  // Compact version untuk mobile
+  Widget _buildCompactItemsInfo() {
+    return Text(
+      '$startIndex-$endIndex/$totalItems',
+      style: TextStyle(
+        color: Colors.grey.shade700,
+        fontSize: 12,
+      ),
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   Widget _buildPaginationControls({required bool compact}) {
     // Untuk mobile, batasi jumlah page numbers yang ditampilkan
     List<int> displayPageNumbers = pageNumbers;
 
-    if (compact && pageNumbers.length > 5) {
-      // Logic untuk menampilkan page numbers yang lebih sedikit di mobile
-      displayPageNumbers = _getCompactPageNumbers();
+    if (compact && pageNumbers.length > 3) {
+      // Logic untuk menampilkan page numbers yang sangat sedikit di mobile
+      displayPageNumbers = _getUltraCompactPageNumbers();
     }
+
+    final buttonSize = compact ? 24.0 : 32.0;
+    final iconSize = compact ? 16.0 : 20.0;
+    final fontSize = compact ? 12.0 : 14.0;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // Previous page button
-        IconButton(
-          onPressed: !hasPreviousPage ? null : onPreviousPage,
-          icon: const Icon(Icons.chevron_left),
-          iconSize: 20,
-          padding: const EdgeInsets.all(4),
-          constraints: const BoxConstraints(
-            minWidth: 32,
-            minHeight: 32,
+        InkWell(
+          onTap: !hasPreviousPage ? null : onPreviousPage,
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            width: buttonSize,
+            height: buttonSize,
+            decoration: BoxDecoration(
+              color:
+                  !hasPreviousPage ? Colors.grey.shade100 : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(
+              Icons.chevron_left,
+              size: iconSize,
+              color: !hasPreviousPage
+                  ? Colors.grey.shade400
+                  : Colors.grey.shade700,
+            ),
           ),
-          tooltip: 'Previous page',
         ),
 
-        const SizedBox(width: 4),
+        const SizedBox(width: 2),
 
-        // Page numbers
+        // Page numbers (sangat terbatas untuk mobile)
         ...displayPageNumbers.map((pageNumber) {
           if (pageNumber == -1) {
             // Ellipsis
             return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              width: 32,
-              height: 32,
-              child: const Center(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              width: buttonSize,
+              height: buttonSize,
+              child: Center(
                 child: Text(
                   '...',
                   style: TextStyle(
                     color: Colors.grey,
-                    fontSize: 14,
+                    fontSize: fontSize,
                   ),
                 ),
               ),
@@ -201,14 +274,11 @@ class PaginationWidget extends StatelessWidget {
               onTap: isCurrentPage ? null : () => onPageSelected(pageNumber),
               borderRadius: BorderRadius.circular(4),
               child: Container(
-                width: 32,
-                height: 32,
+                width: buttonSize,
+                height: buttonSize,
                 decoration: BoxDecoration(
                   color: isCurrentPage ? Colors.red : Colors.transparent,
                   borderRadius: BorderRadius.circular(4),
-                  border: isCurrentPage
-                      ? null
-                      : Border.all(color: Colors.transparent),
                 ),
                 child: Center(
                   child: Text(
@@ -218,7 +288,7 @@ class PaginationWidget extends StatelessWidget {
                           isCurrentPage ? Colors.white : Colors.grey.shade700,
                       fontWeight:
                           isCurrentPage ? FontWeight.w600 : FontWeight.normal,
-                      fontSize: 14,
+                      fontSize: fontSize,
                     ),
                   ),
                 ),
@@ -227,59 +297,56 @@ class PaginationWidget extends StatelessWidget {
           );
         }),
 
-        const SizedBox(width: 4),
+        const SizedBox(width: 2),
 
         // Next page button
-        IconButton(
-          onPressed: !hasNextPage ? null : onNextPage,
-          icon: const Icon(Icons.chevron_right),
-          iconSize: 20,
-          padding: const EdgeInsets.all(4),
-          constraints: const BoxConstraints(
-            minWidth: 32,
-            minHeight: 32,
+        InkWell(
+          onTap: !hasNextPage ? null : onNextPage,
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            width: buttonSize,
+            height: buttonSize,
+            decoration: BoxDecoration(
+              color: !hasNextPage ? Colors.grey.shade100 : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(
+              Icons.chevron_right,
+              size: iconSize,
+              color: !hasNextPage ? Colors.grey.shade400 : Colors.grey.shade700,
+            ),
           ),
-          tooltip: 'Next page',
         ),
       ],
     );
   }
 
-  // Generate compact page numbers untuk mobile
-  List<int> _getCompactPageNumbers() {
-    if (pageNumbers.length <= 5) return pageNumbers;
-
+  // Generate ultra compact page numbers untuk mobile (maksimal 3 angka)
+  List<int> _getUltraCompactPageNumbers() {
     List<int> result = [];
     int totalPages = pageNumbers.last;
 
-    if (currentPage <= 3) {
-      // Tampilkan: 1, 2, 3, 4, ..., last
-      result.addAll([1, 2, 3, 4]);
-      if (totalPages > 5) {
-        result.addAll([-1, totalPages]); // -1 untuk ellipsis
-      } else if (totalPages == 5) {
-        result.add(5);
-      }
-    } else if (currentPage >= totalPages - 2) {
-      // Tampilkan: 1, ..., last-3, last-2, last-1, last
-      result.addAll([1, -1]);
-      for (int i = totalPages - 3; i <= totalPages; i++) {
-        result.add(i);
-      }
+    if (totalPages <= 3) {
+      return pageNumbers;
+    }
+
+    if (currentPage <= 2) {
+      // Tampilkan: 1, 2, ..., last
+      result.addAll([1, 2, -1, totalPages]);
+    } else if (currentPage >= totalPages - 1) {
+      // Tampilkan: 1, ..., last-1, last
+      result.addAll([1, -1, totalPages - 1, totalPages]);
     } else {
-      // Tampilkan: 1, ..., current-1, current, current+1, ..., last
-      result.addAll([
-        1,
-        -1,
-        currentPage - 1,
-        currentPage,
-        currentPage + 1,
-        -1,
-        totalPages
-      ]);
+      // Tampilkan: 1, ..., current, ..., last
+      result.addAll([1, -1, currentPage, -1, totalPages]);
     }
 
     return result;
+  }
+
+  // Alternatif: hanya tampilkan current page untuk mobile yang sangat kecil
+  List<int> _getMinimalPageNumbers() {
+    return [currentPage];
   }
 }
 
@@ -312,7 +379,7 @@ class _PaginationExampleState extends State<PaginationExample> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Responsive Pagination')),
+      appBar: AppBar(title: Text('Compact Mobile Pagination')),
       body: Column(
         children: [
           Expanded(
@@ -342,7 +409,7 @@ class _PaginationExampleState extends State<PaginationExample> {
             onPageSizeChanged: (newSize) {
               setState(() {
                 itemsPerPage = newSize;
-                currentPage = 1; // Reset ke halaman pertama
+                currentPage = 1;
               });
             },
             onPreviousPage: () {

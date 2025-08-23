@@ -15,47 +15,6 @@ class ReportScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text(
-          'Laporan',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          Obx(() => Container(
-                margin: const EdgeInsets.only(right: 16),
-                child: ElevatedButton.icon(
-                  onPressed: controller.isExporting
-                      ? null
-                      : () => controller.showExportModal(), // Changed this line
-                  icon: controller.isExporting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.download, size: 18),
-                  label: Text(
-                      controller.isExporting ? 'Exporting...' : 'Export Excel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              )),
-        ],
-      ),
       body: Column(
         children: [
           _buildHeader(controller),
@@ -117,6 +76,37 @@ class ReportScreen extends StatelessWidget {
                 controller.selectedTab == 'rekap',
                 () => controller.switchTab('rekap'),
               ),
+
+              // Spacer untuk mendorong button ke kanan
+              const Spacer(),
+
+              // Export button - hanya muncul saat tab Rekap aktif
+              if (controller.selectedTab == 'rekap')
+                ElevatedButton.icon(
+                  onPressed: controller.isExporting
+                      ? null
+                      : () => controller.showExportModal(),
+                  icon: controller.isExporting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.download, size: 18),
+                  label: Text(
+                      controller.isExporting ? 'Exporting...' : 'Export Excel'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
             ],
           )),
     );

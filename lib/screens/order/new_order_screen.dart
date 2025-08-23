@@ -160,12 +160,6 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       ),
       child: Row(
         children: [
-          const Expanded(
-            child: Text(
-              'BAYAR PESANAN',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ),
           // Show order summary in header for mobile
           LayoutBuilder(
             builder: (context, constraints) {

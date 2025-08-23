@@ -13,12 +13,6 @@ class AssetScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('Manajemen Aset'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0.5,
-      ),
       body: Column(
         children: [
           // Header with search and buttons
@@ -28,238 +22,17 @@ class AssetScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Manajemen Aset',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    // Search field
-                    Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: TextField(
-                          controller: controller.searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Cari aset...',
-                            hintStyle: TextStyle(color: Colors.grey.shade500),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Colors.grey.shade500,
-                              size: 20,
-                            ),
-                            suffixIcon: Obx(
-                                () => controller.searchQuery.value.isNotEmpty
-                                    ? IconButton(
-                                        icon: Icon(
-                                          Icons.clear,
-                                          color: Colors.grey.shade500,
-                                          size: 20,
-                                        ),
-                                        onPressed: () {
-                                          controller.searchController.clear();
-                                          controller.searchAssets('');
-                                        },
-                                      )
-                                    : const SizedBox.shrink()),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                          ),
-                          onChanged: (value) {
-                            controller.searchAssets(value);
-                          },
-                          onSubmitted: (value) {
-                            controller.searchAssets(value);
-                          },
-                        ),
-                      ),
-                    ),
+                // Mobile layout adjustments
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 768;
 
-                    const SizedBox(width: 8),
-
-                    // Filter buttons
-                    _buildFilterButton(
-                      'Jenis',
-                      controller.selectedType.value.isEmpty
-                          ? 'Semua Jenis'
-                          : controller.selectedType.value.replaceAll('_', ' '),
-                      () => _showTypeFilter(context, controller),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterButton(
-                      'Kategori',
-                      controller.selectedCategory.value.isEmpty
-                          ? 'Semua Kategori'
-                          : controller.selectedCategory.value,
-                      () => _showCategoryFilter(context, controller),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterButton(
-                      'Status',
-                      controller.selectedStatus.value.isEmpty
-                          ? 'Semua Status'
-                          : controller.selectedStatus.value,
-                      () => _showStatusFilter(context, controller),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // Clear filters button
-                    Container(
-                      height: 40,
-                      child: IconButton(
-                        onPressed: controller.clearFilters,
-                        icon: Icon(
-                          Icons.clear_all,
-                          color: Colors.grey.shade600,
-                        ),
-                        style: IconButton.styleFrom(
-                          side: BorderSide(color: Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // Selection mode button
-                    Obx(() => !controller.isSelectionMode.value
-                        ? Container(
-                            height: 40,
-                            child: IconButton(
-                              onPressed: controller.toggleSelectionMode,
-                              icon: Icon(
-                                Icons.checklist,
-                                color: Colors.grey.shade600,
-                              ),
-                              style: IconButton.styleFrom(
-                                side: BorderSide(color: Colors.grey.shade300),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          )
-                        : Row(
-                            children: [
-                              Text(
-                                '${controller.selectedAssetIds.length} dipilih',
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                height: 40,
-                                child: IconButton(
-                                  onPressed: controller.deleteSelectedAssets,
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  style: IconButton.styleFrom(
-                                    side: const BorderSide(color: Colors.red),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                height: 40,
-                                child: IconButton(
-                                  onPressed: controller.clearSelection,
-                                  icon: Icon(
-                                    Icons.close,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  style: IconButton.styleFrom(
-                                    side:
-                                        BorderSide(color: Colors.grey.shade300),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )),
-
-                    const SizedBox(width: 8),
-
-                    // Refresh button
-                    Container(
-                      height: 40,
-                      child: Obx(() => IconButton(
-                            onPressed: controller.isLoading.value
-                                ? null
-                                : () => controller.refresh(),
-                            icon: controller.isLoading.value
-                                ? SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.refresh,
-                                    color: Colors.grey.shade600,
-                                  ),
-                            style: IconButton.styleFrom(
-                              side: BorderSide(color: Colors.grey.shade300),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          )),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // Add asset button
-                    Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: () =>
-                            _showAddEditDialog(context, controller),
-                        icon: const Icon(
-                          Icons.add,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          'Tambah Aset',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                        ),
-                      ),
-                    ),
-                  ],
+                    if (isMobile) {
+                      return _buildMobileHeader(controller);
+                    } else {
+                      return _buildDesktopHeader(controller);
+                    }
+                  },
                 ),
               ],
             ),
@@ -267,313 +40,858 @@ class AssetScreen extends StatelessWidget {
 
           // Content area
           Expanded(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  // Table header
-                  Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey.shade200),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 768;
+
+                return Container(
+                  margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      // Table header (desktop only)
+                      if (!isMobile) _buildTableHeader(controller),
+
+                      // Content
+                      Expanded(
+                        child: Obx(() {
+                          if (controller.isLoading.value &&
+                              controller.assets.isEmpty) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          if (controller.errorMessage.value.isNotEmpty &&
+                              controller.assets.isEmpty) {
+                            return _buildErrorState(controller);
+                          }
+
+                          if (controller.assets.isEmpty) {
+                            return _buildEmptyState(controller);
+                          }
+
+                          // Switch between mobile cards and desktop table
+                          if (isMobile) {
+                            return _buildMobileCardList(controller, context);
+                          } else {
+                            return _buildDesktopTable(controller, context);
+                          }
+                        }),
                       ),
+
+                      // Pagination
+                      Obx(() {
+                        if (controller.totalItems.value == 0) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final paginationData = controller.paginationData;
+                        return PaginationWidget(
+                          currentPage: controller.currentPage.value,
+                          totalItems: controller.totalItems.value,
+                          itemsPerPage: controller.itemsPerPage.value,
+                          availablePageSizes: controller.availablePageSizes,
+                          startIndex: paginationData['startIndex'],
+                          endIndex: paginationData['endIndex'],
+                          hasPreviousPage: paginationData['hasPreviousPage'],
+                          hasNextPage: paginationData['hasNextPage'],
+                          pageNumbers: paginationData['pageNumbers'],
+                          onPageSizeChanged: controller.changePageSize,
+                          onPreviousPage: controller.previousPage,
+                          onNextPage: controller.nextPage,
+                          onPageSelected: controller.goToPage,
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileHeader(AssetController controller) {
+    return Column(
+      children: [
+        // Search field with Add button
+        Row(
+          children: [
+            // Search field
+            Expanded(
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TextField(
+                  controller: controller.searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Cari aset...',
+                    hintStyle: TextStyle(color: Colors.grey.shade500),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.grey.shade500,
+                      size: 20,
                     ),
-                    child: Row(
-                      children: [
-                        // Selection column
-                        Obx(() => controller.isSelectionMode.value
-                            ? Container(
-                                width: 60,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: Checkbox(
-                                  value: controller.selectedAssetIds.length ==
-                                          controller.assets.length &&
-                                      controller.assets.isNotEmpty,
-                                  onChanged: (value) {
-                                    if (value == true) {
-                                      for (var asset in controller.assets) {
-                                        if (!controller.selectedAssetIds
-                                            .contains(asset.id)) {
-                                          controller.toggleSelection(asset.id);
-                                        }
-                                      }
-                                    } else {
-                                      controller.clearSelection();
-                                    }
-                                  },
+                    suffixIcon:
+                        Obx(() => controller.searchQuery.value.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: Colors.grey.shade500,
+                                  size: 20,
                                 ),
+                                onPressed: () {
+                                  controller.searchController.clear();
+                                  controller.searchAssets('');
+                                },
                               )
                             : const SizedBox.shrink()),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    controller.searchAssets(value);
+                  },
+                  onSubmitted: (value) {
+                    controller.searchAssets(value);
+                  },
+                ),
+              ),
+            ),
 
-                        // NAMA ASET column
-                        Expanded(
-                          flex: 3,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              children: [
-                                const Text(
-                                  'NAMA ASET',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 12,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.keyboard_arrow_up,
-                                  size: 16,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ],
-                            ),
-                          ),
+            const SizedBox(width: 8),
+
+            // Add asset button
+            Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () => _showAddEditDialog(Get.context!, controller),
+                icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                label: const Text(
+                  'Tambah',
+                  style: TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Filter row
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFilterButton(
+                'Jenis',
+                controller.selectedType.value.isEmpty
+                    ? 'Semua'
+                    : controller.selectedType.value.replaceAll('_', ' '),
+                () => _showTypeFilter(Get.context!, controller),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterButton(
+                'Kategori',
+                controller.selectedCategory.value.isEmpty
+                    ? 'Semua'
+                    : controller.selectedCategory.value,
+                () => _showCategoryFilter(Get.context!, controller),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterButton(
+                'Status',
+                controller.selectedStatus.value.isEmpty
+                    ? 'Semua'
+                    : controller.selectedStatus.value,
+                () => _showStatusFilter(Get.context!, controller),
+              ),
+              const SizedBox(width: 8),
+              _buildRefreshButton(controller),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopHeader(AssetController controller) {
+    return Row(
+      children: [
+        // Search field
+        Expanded(
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextField(
+              controller: controller.searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari aset...',
+                hintStyle: TextStyle(color: Colors.grey.shade500),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Colors.grey.shade500,
+                  size: 20,
+                ),
+                suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear,
+                          color: Colors.grey.shade500,
+                          size: 20,
                         ),
-                        // JENIS & KATEGORI column
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Text(
-                              'JENIS & KATEGORI',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: Colors.black87,
-                              ),
-                            ),
+                        onPressed: () {
+                          controller.searchController.clear();
+                          controller.searchAssets('');
+                        },
+                      )
+                    : const SizedBox.shrink()),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+              onChanged: (value) {
+                controller.searchAssets(value);
+              },
+              onSubmitted: (value) {
+                controller.searchAssets(value);
+              },
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 8),
+
+        // Filter buttons
+        _buildFilterButton(
+          'Jenis',
+          controller.selectedType.value.isEmpty
+              ? 'Semua Jenis'
+              : controller.selectedType.value.replaceAll('_', ' '),
+          () => _showTypeFilter(Get.context!, controller),
+        ),
+        const SizedBox(width: 8),
+        _buildFilterButton(
+          'Kategori',
+          controller.selectedCategory.value.isEmpty
+              ? 'Semua Kategori'
+              : controller.selectedCategory.value,
+          () => _showCategoryFilter(Get.context!, controller),
+        ),
+        const SizedBox(width: 8),
+        _buildFilterButton(
+          'Status',
+          controller.selectedStatus.value.isEmpty
+              ? 'Semua Status'
+              : controller.selectedStatus.value,
+          () => _showStatusFilter(Get.context!, controller),
+        ),
+
+        const SizedBox(width: 8),
+
+        // Clear filters button
+        _buildIconButton(Icons.clear_all, controller.clearFilters),
+        const SizedBox(width: 8),
+
+        // Selection mode button
+        Obx(() => !controller.isSelectionMode.value
+            ? _buildIconButton(Icons.checklist, controller.toggleSelectionMode)
+            : Row(
+                children: [
+                  Text(
+                    '${controller.selectedAssetIds.length} dipilih',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildIconButton(
+                      Icons.delete, controller.deleteSelectedAssets,
+                      color: Colors.red),
+                  const SizedBox(width: 8),
+                  _buildIconButton(Icons.close, controller.clearSelection),
+                ],
+              )),
+
+        const SizedBox(width: 8),
+
+        // Refresh button
+        _buildRefreshButton(controller),
+
+        const SizedBox(width: 8),
+
+        // Add asset button
+        Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: ElevatedButton.icon(
+            onPressed: () => _showAddEditDialog(Get.context!, controller),
+            icon: const Icon(Icons.add, size: 16, color: Colors.white),
+            label: const Text('Tambah Aset',
+                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIconButton(IconData icon, VoidCallback onPressed,
+      {Color? color}) {
+    return Container(
+      height: 40,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, color: color ?? Colors.grey.shade600),
+        style: IconButton.styleFrom(
+          side: BorderSide(color: color ?? Colors.grey.shade300),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRefreshButton(AssetController controller) {
+    return Container(
+      height: 40,
+      child: Obx(() => IconButton(
+            onPressed:
+                controller.isLoading.value ? null : () => controller.refresh(),
+            icon: controller.isLoading.value
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.grey.shade600,
+                    ),
+                  )
+                : Icon(
+                    Icons.refresh,
+                    color: Colors.grey.shade600,
+                  ),
+            style: IconButton.styleFrom(
+              side: BorderSide(color: Colors.grey.shade300),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          )),
+    );
+  }
+
+  Widget _buildTableHeader(AssetController controller) {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Selection column
+          Obx(() => controller.isSelectionMode.value
+              ? Container(
+                  width: 60,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Checkbox(
+                    value: controller.selectedAssetIds.length ==
+                            controller.assets.length &&
+                        controller.assets.isNotEmpty,
+                    onChanged: (value) {
+                      if (value == true) {
+                        for (var asset in controller.assets) {
+                          if (!controller.selectedAssetIds.contains(asset.id)) {
+                            controller.toggleSelection(asset.id);
+                          }
+                        }
+                      } else {
+                        controller.clearSelection();
+                      }
+                    },
+                  ),
+                )
+              : const SizedBox.shrink()),
+
+          // Table headers
+          Expanded(
+            flex: 3,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Text(
+                    'NAMA ASET',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.keyboard_arrow_up,
+                    size: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Text(
+                'JENIS & KATEGORI',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Text(
+                'SKU',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Text(
+                'HARGA',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Text(
+                'NILAI BUKU',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Text(
+                'STATUS',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Text(
+                'AKSI',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileCardList(
+      AssetController controller, BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: controller.assets.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final asset = controller.assets[index];
+        return _buildAssetCard(asset, controller, context);
+      },
+    );
+  }
+
+  Widget _buildAssetCard(
+      Asset asset, AssetController controller, BuildContext context) {
+    final bookValue = controller.calculateBookValue(asset);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: InkWell(
+        onTap: () => controller.isSelectionMode.value
+            ? controller.toggleSelection(asset.id)
+            : _showAssetDetails(context, asset, controller),
+        onLongPress: () {
+          controller.isSelectionMode.value = true;
+          controller.toggleSelection(asset.id);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row
+              Row(
+                children: [
+                  // Selection checkbox
+                  Obx(() => controller.isSelectionMode.value
+                      ? Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Checkbox(
+                            value:
+                                controller.selectedAssetIds.contains(asset.id),
+                            onChanged: (value) =>
+                                controller.toggleSelection(asset.id),
                           ),
-                        ),
-                        // SKU column
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Text(
-                              'SKU',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: Colors.black87,
-                              ),
-                            ),
+                        )
+                      : const SizedBox.shrink()),
+
+                  // Asset icon
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _getAssetColor(asset.type).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getAssetIcon(asset.type),
+                      color: _getAssetColor(asset.type),
+                      size: 20,
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  // Asset name and category
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          asset.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        // HARGA column
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Text(
-                              'HARGA',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // NILAI BUKU column
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Text(
-                              'NILAI BUKU',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // STATUS column
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Text(
-                              'STATUS',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // AKSI column
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: const Text(
-                              'AKSI',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: Colors.black87,
-                              ),
-                            ),
+                        const SizedBox(height: 4),
+                        Text(
+                          asset.category,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Table content
-                  Expanded(
-                    child: Obx(() {
-                      if (controller.isLoading.value &&
-                          controller.assets.isEmpty) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
-                      }
-
-                      if (controller.errorMessage.value.isNotEmpty &&
-                          controller.assets.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 48,
-                                color: Colors.red.shade300,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Terjadi Kesalahan',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey.shade700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                controller.errorMessage.value,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () => controller.refresh(),
-                                child: const Text('Coba Lagi'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      if (controller.assets.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inventory_2_outlined,
-                                size: 48,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                controller.searchQuery.value.isNotEmpty
-                                    ? 'Tidak ada aset yang cocok'
-                                    : 'Tidak ada aset',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                controller.searchQuery.value.isNotEmpty
-                                    ? 'Coba ubah kata kunci pencarian'
-                                    : 'Mulai dengan menambahkan aset pertama Anda',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              if (controller.searchQuery.value.isNotEmpty)
-                                OutlinedButton(
-                                  onPressed: () {
-                                    controller.searchController.clear();
-                                    controller.searchAssets('');
-                                  },
-                                  child: const Text('Hapus Filter'),
-                                )
-                              else
-                                ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _showAddEditDialog(context, controller),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Tambah Aset'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        itemCount: controller.assets.length,
-                        itemBuilder: (context, index) {
-                          final asset = controller.assets[index];
-                          return _buildAssetRow(
-                              asset, index, controller, context);
-                        },
-                      );
-                    }),
+                  // Status badge
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(asset.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      asset.status,
+                      style: TextStyle(
+                        color: _getStatusColor(asset.status),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
 
-                  // Pagination
-                  Obx(() {
-                    if (controller.totalItems.value == 0) {
-                      return const SizedBox.shrink();
-                    }
-
-                    final paginationData = controller.paginationData;
-                    return PaginationWidget(
-                      currentPage: controller.currentPage.value,
-                      totalItems: controller.totalItems.value,
-                      itemsPerPage: controller.itemsPerPage.value,
-                      availablePageSizes: controller.availablePageSizes,
-                      startIndex: paginationData['startIndex'],
-                      endIndex: paginationData['endIndex'],
-                      hasPreviousPage: paginationData['hasPreviousPage'],
-                      hasNextPage: paginationData['hasNextPage'],
-                      pageNumbers: paginationData['pageNumbers'],
-                      onPageSizeChanged: controller.changePageSize,
-                      onPreviousPage: controller.previousPage,
-                      onNextPage: controller.nextPage,
-                      onPageSelected: controller.goToPage,
-                    );
-                  }),
+                  // Menu button
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: Colors.grey.shade600,
+                      size: 20,
+                    ),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'edit':
+                          _showAddEditDialog(context, controller, asset: asset);
+                          break;
+                        case 'delete':
+                          _showDeleteConfirmation(context, controller, asset);
+                          break;
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: 8),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline,
+                                size: 18, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Hapus', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
+
+              const SizedBox(height: 16),
+
+              // Asset details
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCardDetailItem('SKU', asset.sku),
+                  ),
+                  Expanded(
+                    child: _buildCardDetailItem(
+                        'Jenis', asset.type.replaceAll('_', ' ')),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCardDetailItem(
+                        'Harga', controller.formatCurrency(asset.cost)),
+                  ),
+                  Expanded(
+                    child: _buildCardDetailItem('Nilai Buku',
+                        controller.formatCurrency(bookValue.round())),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Akuisisi: ${_formatDate(asset.acquisitionDate)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardDetailItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopTable(AssetController controller, BuildContext context) {
+    return ListView.builder(
+      itemCount: controller.assets.length,
+      itemBuilder: (context, index) {
+        final asset = controller.assets[index];
+        return _buildAssetRow(asset, index, controller, context);
+      },
+    );
+  }
+
+  Widget _buildErrorState(AssetController controller) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 48,
+            color: Colors.red.shade300,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Terjadi Kesalahan',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade700,
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            controller.errorMessage.value,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => controller.refresh(),
+            child: const Text('Coba Lagi'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AssetController controller) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 48,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            controller.searchQuery.value.isNotEmpty
+                ? 'Tidak ada aset yang cocok'
+                : 'Tidak ada aset',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            controller.searchQuery.value.isNotEmpty
+                ? 'Coba ubah kata kunci pencarian'
+                : 'Mulai dengan menambahkan aset pertama Anda',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (controller.searchQuery.value.isNotEmpty)
+            OutlinedButton(
+              onPressed: () {
+                controller.searchController.clear();
+                controller.searchAssets('');
+              },
+              child: const Text('Hapus Filter'),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: () => _showAddEditDialog(Get.context!, controller),
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Aset'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+            ),
         ],
       ),
     );

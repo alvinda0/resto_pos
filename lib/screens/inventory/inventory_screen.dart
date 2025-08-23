@@ -43,9 +43,19 @@ class InventoryScreen extends StatelessWidget {
 
               return Column(
                 children: [
-                  // Data Table
+                  // Content - Responsive Layout
                   Expanded(
-                    child: _buildDataTable(controller),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 768) {
+                          // Mobile Layout - Card View
+                          return _buildMobileCardView(controller);
+                        } else {
+                          // Desktop Layout - Table View
+                          return _buildDataTable(controller);
+                        }
+                      },
+                    ),
                   ),
 
                   // Pagination
@@ -77,31 +87,69 @@ class InventoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Manajemen Bahan',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => CreateInventoryDialog.show(controller),
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text('Tambah Bahan',
-                style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 768) {
+            // Mobile Header Layout
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Manajemen Bahan',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    // Mobile - Only + icon
+                    FloatingActionButton(
+                      onPressed: () => CreateInventoryDialog.show(controller),
+                      mini: true,
+                      backgroundColor: Colors.blue.shade600,
+                      child:
+                          const Icon(Icons.add, color: Colors.white, size: 20),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          } else {
+            // Desktop Header Layout
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Manajemen Bahan',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => CreateInventoryDialog.show(controller),
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: const Text('Tambah Bahan',
+                      style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+        },
       ),
     );
   }
@@ -110,91 +158,463 @@ class InventoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       color: Colors.white,
-      child: Row(
-        children: [
-          // Search Field
-          Expanded(
-            flex: 2,
-            child: TextField(
-              controller: controller.searchController,
-              onChanged: controller.onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Cari Bahan',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: controller.clearSearch,
-                      )
-                    : const SizedBox.shrink()),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.blue.shade600),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          // Status Filter
-          Expanded(
-            flex: 1,
-            child: Obx(() => Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 768) {
+            // Mobile Search and Filter Layout
+            return Column(
+              children: [
+                // Search Field
+                TextField(
+                  controller: controller.searchController,
+                  onChanged: controller.onSearchChanged,
+                  decoration: InputDecoration(
+                    hintText: 'Cari Bahan',
+                    prefixIcon:
+                        const Icon(Icons.search, color: Colors.grey, size: 20),
+                    suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear,
+                                color: Colors.grey, size: 20),
+                            onPressed: controller.clearSearch,
+                          )
+                        : const SizedBox.shrink()),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.blue.shade600),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    isDense: true,
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: controller.statusFilter.value,
-                      hint: const Text('Filter Status'),
-                      isExpanded: true,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'all', child: Text('Semua Status')),
-                        DropdownMenuItem(
-                            value: 'available', child: Text('Tersedia')),
-                        DropdownMenuItem(
-                            value: 'low_stock', child: Text('Stok Rendah')),
-                        DropdownMenuItem(
-                            value: 'out_of_stock', child: Text('Stok Habis')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          controller.onStatusFilterChanged(value);
-                        }
-                      },
+                ),
+
+                const SizedBox(height: 12),
+
+                // Filter Row
+                Row(
+                  children: [
+                    // Status Filter - Compact
+                    Expanded(
+                      flex: 2,
+                      child: Obx(() => Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: controller.statusFilter.value,
+                                hint: const Text('Status',
+                                    style: TextStyle(fontSize: 13)),
+                                isExpanded: true,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                style: const TextStyle(
+                                    fontSize: 13, color: Colors.black87),
+                                items: const [
+                                  DropdownMenuItem(
+                                      value: 'all', child: Text('Semua')),
+                                  DropdownMenuItem(
+                                      value: 'available',
+                                      child: Text('Tersedia')),
+                                  DropdownMenuItem(
+                                      value: 'low_stock',
+                                      child: Text('Stok Rendah')),
+                                  DropdownMenuItem(
+                                      value: 'out_of_stock',
+                                      child: Text('Habis')),
+                                ],
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    controller.onStatusFilterChanged(value);
+                                  }
+                                },
+                              ),
+                            ),
+                          )),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Refresh Button - Compact
+                    Container(
+                      height: 40,
+                      child: ElevatedButton(
+                        onPressed: controller.refreshInventories,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          minimumSize: const Size(40, 40),
+                        ),
+                        child: const Icon(Icons.refresh, size: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          } else {
+            // Desktop Search and Filter Layout
+            return Row(
+              children: [
+                // Search Field
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: controller.searchController,
+                    onChanged: controller.onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Cari Bahan',
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.grey),
+                              onPressed: controller.clearSearch,
+                            )
+                          : const SizedBox.shrink()),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.blue.shade600),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                   ),
-                )),
-          ),
+                ),
 
-          const SizedBox(width: 16),
+                const SizedBox(width: 16),
 
-          // Refresh Button
-          ElevatedButton.icon(
-            onPressed: controller.refreshInventories,
-            icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Refresh'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
+                // Status Filter
+                Expanded(
+                  flex: 1,
+                  child: Obx(() => Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: controller.statusFilter.value,
+                            hint: const Text('Filter Status'),
+                            isExpanded: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 'all', child: Text('Semua Status')),
+                              DropdownMenuItem(
+                                  value: 'available', child: Text('Tersedia')),
+                              DropdownMenuItem(
+                                  value: 'low_stock',
+                                  child: Text('Stok Rendah')),
+                              DropdownMenuItem(
+                                  value: 'out_of_stock',
+                                  child: Text('Stok Habis')),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                controller.onStatusFilterChanged(value);
+                              }
+                            },
+                          ),
+                        ),
+                      )),
+                ),
+
+                const SizedBox(width: 16),
+
+                // Refresh Button
+                ElevatedButton.icon(
+                  onPressed: controller.refreshInventories,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Refresh'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade600,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+        },
       ),
+    );
+  }
+
+  Widget _buildMobileCardView(InventoryController controller) {
+    return Stack(
+      children: [
+        ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: controller.inventories.length,
+          itemBuilder: (context, index) {
+            final inventory = controller.inventories[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Row - Name and Actions
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            inventory.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          icon: Icon(Icons.more_vert,
+                              color: Colors.grey.shade600, size: 20),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'edit':
+                                EditInventoryDialog.show(controller, inventory);
+                                break;
+                              case 'delete':
+                                controller.deleteInventory(inventory);
+                                break;
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit,
+                                      color: Colors.orange, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Edit'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete,
+                                      color: Colors.red, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Hapus'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Info Grid
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Stok',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                inventory.stockDisplay,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Min. Stok',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                inventory.minimumStockDisplay,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Harga/Unit',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                inventory.formattedPrice,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Vendor',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                inventory.vendorName.isEmpty
+                                    ? '-'
+                                    : inventory.vendorName,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Status Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Status Bayar',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              _buildStatusBadge(
+                                inventory.paymentStatusDisplay,
+                                _getPaymentStatusColor(
+                                    inventory.paymentStatusDisplay),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Status Stok',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              _buildStatusBadge(
+                                inventory.statusDisplay,
+                                _getInventoryStatusColor(inventory),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+
+        // Loading overlay for operations
+        Obx(() {
+          if (controller.isOperationLoading.value) {
+            return Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        }),
+      ],
     );
   }
 
