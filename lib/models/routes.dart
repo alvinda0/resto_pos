@@ -9,6 +9,7 @@ import 'package:pos/screens/employee/employee_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/payroll/payroll_screen.dart';
 import 'package:pos/screens/points/points_screen.dart';
+import 'package:pos/screens/printer/printer_screen.dart';
 import 'package:pos/screens/redemption/redemption_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
@@ -281,8 +282,8 @@ class AppRoutes {
       ),
       GetPage(
         name: settingsLogsViewer,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Logs'), settingsLogsViewer),
+        page: () =>
+            _wrapWithMainLayout(BluetoothPrinterPage(), settingsLogsViewer),
       ),
 
       // Legacy Routes (for backward compatibility)

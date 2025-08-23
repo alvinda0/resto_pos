@@ -8,6 +8,7 @@ import 'package:pos/screens/splash_screen/splash_screen.dart';
 import 'package:pos/services/auth_service.dart';
 import 'package:pos/services/tables/tables_qr_code_service.dart';
 import 'package:pos/storage_service.dart';
+import 'package:pos/screens/printer/BluetoothPrinterManager.dart'; // Add this import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,10 +30,23 @@ Future<void> initServices() async {
 
     // Initialize services with lazy loading to avoid conflicts
     Get.lazyPut(() => QrCodeService());
+
     // Initialize auth controller
     Get.put(AuthController());
     Get.lazyPut<CategoryController>(() => CategoryController());
-  } catch (e) {}
+
+    // Initialize Bluetooth Printer Manager untuk auto reconnect
+    // This will attempt to reconnect to saved printer if available
+    try {
+      await BluetoothPrinterManager().initialize();
+      print('BluetoothPrinterManager initialized successfully');
+    } catch (e) {
+      print('BluetoothPrinterManager initialization failed: $e');
+      // Don't throw error, let app continue without printer functionality
+    }
+  } catch (e) {
+    print('Service initialization error: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {

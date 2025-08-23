@@ -94,7 +94,7 @@ class _MainLayoutState extends State<MainLayout> {
       MenuItem(Icons.account_balance, 'Konfigurasi Pajak'),
       MenuItem(Icons.qr_code, 'Konfigurasi QRIS'),
       MenuItem(Icons.key, 'Ganti Password'),
-      MenuItem(Icons.description, 'Logs'),
+      MenuItem(Icons.description, 'printer'),
     ]),
   ];
 
@@ -276,7 +276,7 @@ class _MainLayoutState extends State<MainLayout> {
         _selectedSubIndex = 3;
         _expandedMenuIndex = 7;
         break;
-      case '/settings/logs-viewer':
+      case '/settings/printer':
         _selectedIndex = 7;
         _selectedSubIndex = 4;
         _expandedMenuIndex = 7;
