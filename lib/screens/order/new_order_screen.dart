@@ -376,12 +376,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               }
 
               return GridView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.75,
+                  crossAxisCount: 4, // 4 produk per baris di mobile
+                  crossAxisSpacing: 8, // Spacing kecil
+                  mainAxisSpacing: 8, // Spacing kecil
+                  childAspectRatio: 0.75, // Produk kecil dan compact
                 ),
                 itemCount: controller.products.length,
                 itemBuilder: (context, index) =>
@@ -571,18 +571,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         int crossAxisCount;
         double childAspectRatio;
 
-        if (constraints.maxWidth < 300) {
-          crossAxisCount = 1;
-          childAspectRatio = 1.2;
-        } else if (constraints.maxWidth < 500) {
-          crossAxisCount = 2;
-          childAspectRatio = 0.8;
-        } else if (constraints.maxWidth < 800) {
-          crossAxisCount = 3;
-          childAspectRatio = 0.8;
-        } else {
-          crossAxisCount = 2;
+        if (constraints.maxWidth < 400) {
+          crossAxisCount = 3; // 3 produk per baris untuk layar kecil
           childAspectRatio = 0.75;
+        } else if (constraints.maxWidth < 600) {
+          crossAxisCount = 4; // 4 produk per baris untuk layar menengah
+          childAspectRatio = 0.8;
+        } else if (constraints.maxWidth < 900) {
+          crossAxisCount = 5; // 5 produk per baris untuk layar besar
+          childAspectRatio = 0.85;
+        } else {
+          crossAxisCount = 5; // 5 produk per baris untuk layar extra besar
+          childAspectRatio = 0.9;
         }
 
         return GetBuilder<ProductController>(
@@ -591,8 +591,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             return GridView.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisSpacing: 8, // Spacing kecil
+                mainAxisSpacing: 8, // Spacing kecil
                 childAspectRatio: childAspectRatio,
               ),
               itemCount: controller.products.length,
@@ -609,111 +609,135 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   Widget _buildResponsiveProductCard(Product product) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        bool isSmallCard = constraints.maxWidth < 120;
+        bool isSmallCard =
+            constraints.maxWidth < 100; // Threshold untuk card kecil
 
-        return Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 3,
-                offset: const Offset(0, 1),
+        return GestureDetector(
+          onTap: product.isAvailable
+              ? () => orderController.addProductToOrder(product)
+              : null,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: product.isAvailable
+                    ? Colors.grey.shade300
+                    : Colors.grey.shade400,
               ),
-            ],
-            color: Colors.white,
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                flex: isSmallCard ? 2 : 3,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(12)),
-                  ),
-                  child: ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: product.imageUrl != null
-                        ? Image.network(
-                            product.imageUrl!,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Icon(
-                                Icons.fastfood,
-                                size: isSmallCard ? 20 : 30,
-                                color: Colors.grey.shade400,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+              color: product.isAvailable ? Colors.white : Colors.grey.shade100,
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 3, // Area gambar
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: product.isAvailable
+                          ? Colors.grey.shade200
+                          : Colors.grey.shade300,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(8)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(8)),
+                      child: Stack(
+                        children: [
+                          product.imageUrl != null
+                              ? Image.network(
+                                  product.imageUrl!,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                  color:
+                                      product.isAvailable ? null : Colors.grey,
+                                  colorBlendMode: product.isAvailable
+                                      ? null
+                                      : BlendMode.saturation,
+                                  errorBuilder: (_, __, ___) => Center(
+                                    child: Icon(
+                                      Icons.fastfood,
+                                      size: isSmallCard ? 20 : 24,
+                                      color: product.isAvailable
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade500,
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: Icon(
+                                    Icons.fastfood,
+                                    size: isSmallCard ? 20 : 24,
+                                    color: product.isAvailable
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade500,
+                                  ),
+                                ),
+                          // Overlay untuk produk habis
+                          if (!product.isAvailable)
+                            Container(
+                              color: Colors.black.withOpacity(0.3),
+                              child: const Center(
+                                child: Text(
+                                  'HABIS',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 8,
+                                  ),
+                                ),
                               ),
                             ),
-                          )
-                        : Center(
-                            child: Icon(
-                              Icons.fastfood,
-                              size: isSmallCard ? 20 : 30,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: EdgeInsets.all(isSmallCard ? 6 : 8),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text(
-                        product.name,
-                        style: TextStyle(
-                          fontSize: isSmallCard ? 10 : 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                      Text(
-                        'Rp${orderController.formatPrice(product.basePrice)}',
-                        style: TextStyle(
-                          fontSize: isSmallCard ? 9 : 11,
-                          color: Colors.orange.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(
-                        width: double.infinity,
-                        height: isSmallCard ? 24 : 28,
-                        child: ElevatedButton(
-                          onPressed: product.isAvailable
-                              ? () => orderController.addProductToOrder(product)
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                product.isAvailable ? Colors.blue : Colors.grey,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: product.isAvailable ? 2 : 0,
+                Expanded(
+                  flex: 2, // Area text
+                  child: Padding(
+                    padding: EdgeInsets.all(isSmallCard ? 4 : 6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          product.name,
+                          style: TextStyle(
+                            fontSize: isSmallCard ? 9 : 10,
+                            fontWeight: FontWeight.bold,
+                            color: product.isAvailable
+                                ? Colors.black
+                                : Colors.grey.shade600,
                           ),
-                          child: Text(
-                            product.isAvailable ? 'Tambah' : 'Habis',
-                            style: TextStyle(fontSize: isSmallCard ? 9 : 10),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Rp${orderController.formatPrice(product.basePrice)}',
+                          style: TextStyle(
+                            fontSize: isSmallCard ? 8 : 9,
+                            color: product.isAvailable
+                                ? Colors.orange.shade600
+                                : Colors.grey.shade500,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
