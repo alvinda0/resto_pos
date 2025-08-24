@@ -1,7 +1,7 @@
-// services/payment_service.dart
 import 'dart:convert';
 import 'package:pos/http_client.dart';
 import 'package:pos/models/order/order_model.dart';
+import 'package:pos/models/order/qris_model.dart';
 import 'package:pos/models/payment/payment_model.dart';
 
 class PaymentService {
@@ -94,7 +94,70 @@ class PaymentService {
     }
   }
 
-  // Get order by ID - NEW METHOD
+  // Process QRIS payment
+  Future<QRISPaymentResult> processQRISPayment({
+    required String orderId,
+  }) async {
+    try {
+      print('Processing QRIS payment for order: $orderId');
+
+      final response = await _httpClient.post(
+        '/qris/orders/$orderId/payment',
+        {},
+      );
+
+      print('QRIS payment response status: ${response.statusCode}');
+      print('QRIS payment response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true) {
+          print('QRIS payment initiated successfully');
+          return QRISPaymentResult.fromJson(responseData['data']);
+        } else {
+          final errorMsg =
+              responseData['message'] ?? 'Failed to initiate QRIS payment';
+          print('QRIS payment API returned success=false: $errorMsg');
+          throw Exception(errorMsg);
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMsg = errorData['message'] ?? 'HTTP ${response.statusCode}';
+        print('QRIS payment HTTP error: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } catch (e) {
+      print('Error processing QRIS payment: $e');
+      rethrow;
+    }
+  }
+
+  // Check QRIS payment status
+  Future<QRISStatusResult> checkQRISStatus({
+    required String orderId,
+  }) async {
+    try {
+      final response = await _httpClient.get('/qris/orders/$orderId/status');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return QRISStatusResult.fromJson(responseData['data']);
+        } else {
+          throw Exception(
+              responseData['message'] ?? 'Failed to check QRIS status');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get order by ID
   Future<OrderModel> getOrderById(String orderId) async {
     try {
       print('Getting order by ID: $orderId');

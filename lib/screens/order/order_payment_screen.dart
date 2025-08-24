@@ -5,6 +5,7 @@ import 'package:pos/controller/product/product_controller.dart';
 import 'package:pos/models/order/order_model.dart';
 import 'package:pos/models/product/product_model.dart';
 import 'package:pos/controller/payment/payment_controller.dart';
+import 'package:pos/screens/order/qris_payment_screen.dart';
 
 class OrderDetailDialog extends StatefulWidget {
   final OrderModel order;
@@ -827,7 +828,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 ? null
                 : _processPayment,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: _getPaymentButtonColor(),
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(
                 vertical: isMobile ? 8 : 10,
@@ -856,15 +857,64 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       ),
                     ],
                   )
-                : Text(
-                    'Proses Pembayaran',
-                    style: TextStyle(
-                      fontSize: isMobile ? 10 : 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _getPaymentButtonIcon(),
+                        size: isMobile ? 16 : 18,
+                      ),
+                      SizedBox(width: isMobile ? 6 : 8),
+                      Text(
+                        _getPaymentButtonText(),
+                        style: TextStyle(
+                          fontSize: isMobile ? 10 : 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
           )),
     );
+  }
+
+  Color _getPaymentButtonColor() {
+    switch (selectedPaymentMethod) {
+      case 'QRIS':
+        return Colors.blue.shade600;
+      case 'Tunai':
+        return Colors.green.shade600;
+      case 'Debit':
+        return Colors.purple.shade600;
+      default:
+        return Colors.green;
+    }
+  }
+
+  IconData _getPaymentButtonIcon() {
+    switch (selectedPaymentMethod) {
+      case 'QRIS':
+        return Icons.qr_code;
+      case 'Tunai':
+        return Icons.payments;
+      case 'Debit':
+        return Icons.credit_card;
+      default:
+        return Icons.payment;
+    }
+  }
+
+  String _getPaymentButtonText() {
+    switch (selectedPaymentMethod) {
+      case 'QRIS':
+        return 'Bayar dengan QRIS';
+      case 'Tunai':
+        return 'Proses Pembayaran Tunai';
+      case 'Debit':
+        return 'Proses Pembayaran Debit';
+      default:
+        return 'Proses Pembayaran';
+    }
   }
 
   // Helper methods - keeping the original implementation
@@ -1050,6 +1100,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   void _processPayment() {
+    // Validation sama seperti sebelumnya
     if (customerNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1071,6 +1122,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         );
         return;
       }
+    }
+
+    if (selectedPaymentMethod == 'QRIS') {
+      _processQRISPayment();
+      return;
     }
 
     showDialog(
@@ -1114,6 +1170,44 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       ),
     );
   }
+
+  void _processQRISPayment() {
+    int tableNumber = int.tryParse(tableController.text) ?? 0;
+    if (tableNumber <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Nomor meja tidak valid'),
+            backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (currentOrderItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Pesanan tidak boleh kosong'),
+            backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    // Tutup dialog saat ini dan buka QRIS screen
+    Navigator.pop(context);
+
+    QRISPaymentScreen.show(
+      context,
+      order: widget.order,
+      customerName: customerNameController.text.trim(),
+      customerPhone: phoneController.text.trim(),
+      tableNumber: tableNumber,
+      notes: notesController.text.isEmpty ? null : notesController.text.trim(),
+      orderItems: List.from(currentOrderItems),
+      promoCode:
+          promoController.text.isEmpty ? null : promoController.text.trim(),
+    );
+  }
+
+// Method untuk payment normal (Tunai, Debit, etc)
 
   void _completePayment() async {
     print('=== Starting _completePayment ===');

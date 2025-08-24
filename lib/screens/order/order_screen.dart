@@ -518,7 +518,7 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   void _processPayment(OrderModel order) {
-    // Show the order detail as a popup instead of navigating
+    // Show the order detail as a popup first
     OrderDetailDialog.show(
       context,
       order,
