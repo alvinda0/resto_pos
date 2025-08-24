@@ -95,6 +95,8 @@ class AppRoutes {
   // Settings Routes (Pengaturan)
   static const String settingsThemes = '/settings/themes';
   static const String settingsTax = '/settings/tax';
+  static const String settingsPrinter = '/settings/printer'; // TAMBAHKAN INI
+
   static const String settingsCredentials = '/settings/credentials';
   static const String settingsLogsViewer = '/settings/logs-viewer';
 
@@ -281,9 +283,9 @@ class AppRoutes {
             const CredentialAccessScreen(), settingsCredentials),
       ),
       GetPage(
-        name: settingsLogsViewer,
+        name: settingsPrinter, // PERBAIKAN: route printer yang benar
         page: () =>
-            _wrapWithMainLayout(BluetoothPrinterPage(), settingsLogsViewer),
+            _wrapWithMainLayout(BluetoothPrinterPage(), settingsPrinter),
       ),
 
       // Legacy Routes (for backward compatibility)
@@ -365,6 +367,9 @@ class AppRoutes {
   // Settings navigation helpers (Pengaturan)
   static void toSettingsThemes() => Get.toNamed(settingsThemes);
   static void toSettingsTax() => Get.toNamed(settingsTax);
+  static void toSettingsPrinter() =>
+      Get.toNamed(settingsPrinter); // TAMBAHKAN INI
+
   static void toSettingsCredentials() => Get.toNamed(settingsCredentials);
   static void toSettingsLogsViewer() => Get.toNamed(settingsLogsViewer);
 

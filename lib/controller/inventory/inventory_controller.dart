@@ -11,7 +11,7 @@ class InventoryController extends GetxController {
   final RxList<InventoryModel> inventories = <InventoryModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isLoadingMore = false.obs;
-  final RxBool isOperationLoading = false.obs; // For CRUD operations
+  final RxBool isOperationLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
   // Pagination variables
@@ -104,7 +104,6 @@ class InventoryController extends GetxController {
       String errorMsg = e.toString().replaceAll('Exception: ', '');
       errorMessage.value = errorMsg;
 
-      // Show user-friendly error message
       Get.snackbar(
         'Error',
         errorMsg,
@@ -117,7 +116,6 @@ class InventoryController extends GetxController {
         icon: const Icon(Icons.error_outline, color: Colors.red),
       );
 
-      // Reset data on error
       if (inventories.isEmpty) {
         totalItems.value = 0;
         totalPages.value = 0;
@@ -139,7 +137,6 @@ class InventoryController extends GetxController {
   }
 
   void _debounceSearch() {
-    // Simple debounce implementation
     Future.delayed(const Duration(milliseconds: 500), () {
       if (searchController.text == searchQuery.value) {
         loadInventories();
@@ -207,7 +204,6 @@ class InventoryController extends GetxController {
 
   Future<bool> createInventory() async {
     try {
-      // Validate form data
       if (nameController.text.trim().isEmpty ||
           quantityController.text.trim().isEmpty ||
           unitController.text.trim().isEmpty ||
@@ -228,7 +224,6 @@ class InventoryController extends GetxController {
         return false;
       }
 
-      // Parse numeric values
       final double quantity = double.tryParse(quantityController.text) ?? 0;
       final double price = double.tryParse(priceController.text) ?? 0;
       final double minimumStock =
@@ -260,7 +255,6 @@ class InventoryController extends GetxController {
         vendorName: vendorNameController.text.trim(),
       );
 
-      // Show success message
       Get.snackbar(
         'Berhasil',
         'Inventory "${newInventory.name}" berhasil dibuat',
@@ -273,7 +267,6 @@ class InventoryController extends GetxController {
         icon: const Icon(Icons.check_circle_outline, color: Colors.green),
       );
 
-      // Clear form and refresh list
       clearFormControllers();
       await refreshInventories();
       return true;
@@ -298,7 +291,6 @@ class InventoryController extends GetxController {
 
   Future<bool> updateInventory(String id) async {
     try {
-      // Validate form data
       if (nameController.text.trim().isEmpty) {
         Get.snackbar(
           'Validasi Error',
@@ -316,7 +308,6 @@ class InventoryController extends GetxController {
 
       isOperationLoading.value = true;
 
-      // Parse numeric values (allow null for optional fields)
       double? quantity;
       double? price;
       double? minimumStock;
@@ -358,7 +349,6 @@ class InventoryController extends GetxController {
             : null,
       );
 
-      // Show success message
       Get.snackbar(
         'Berhasil',
         'Inventory "${updatedInventory.name}" berhasil diperbarui',
@@ -371,7 +361,6 @@ class InventoryController extends GetxController {
         icon: const Icon(Icons.check_circle_outline, color: Colors.green),
       );
 
-      // Clear form and refresh list
       clearFormControllers();
       await loadInventories(showLoading: false);
       return true;
@@ -395,7 +384,6 @@ class InventoryController extends GetxController {
   }
 
   Future<void> deleteInventory(InventoryModel inventory) async {
-    // Show confirmation dialog
     final bool? confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Konfirmasi Hapus'),
@@ -424,7 +412,6 @@ class InventoryController extends GetxController {
 
       await _inventoryService.deleteInventory(inventory.id);
 
-      // Show success message
       Get.snackbar(
         'Berhasil',
         'Inventory "${inventory.name}" berhasil dihapus',
@@ -437,7 +424,6 @@ class InventoryController extends GetxController {
         icon: const Icon(Icons.check_circle_outline, color: Colors.green),
       );
 
-      // Refresh list
       await loadInventories(showLoading: false);
     } catch (e) {
       String errorMsg = e.toString().replaceAll('Exception: ', '');
@@ -458,8 +444,6 @@ class InventoryController extends GetxController {
   }
 
   void showInventoryDetails(InventoryModel inventory) {
-    // Navigate to inventory details or show dialog
-    // This can be implemented based on your navigation requirements
     Get.snackbar(
       'Info',
       'Detail untuk ${inventory.name}',
@@ -468,7 +452,6 @@ class InventoryController extends GetxController {
   }
 
   void showInventoryActions(InventoryModel inventory) {
-    // Show bottom sheet or dialog with inventory actions
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(16),
@@ -484,10 +467,7 @@ class InventoryController extends GetxController {
               title: const Text('Edit Bahan'),
               onTap: () {
                 Get.back();
-                // Populate form with current data for editing
                 populateFormControllers(inventory);
-                // You can navigate to edit screen or show edit dialog here
-                // For example: Get.toNamed('/inventory/edit', arguments: inventory);
               },
             ),
             ListTile(
@@ -513,17 +493,11 @@ class InventoryController extends GetxController {
     );
   }
 
-  // Helper method to show create inventory form/dialog
   void showCreateInventoryForm() {
     clearFormControllers();
-    // You can navigate to create screen or show create dialog here
-    // For example: Get.toNamed('/inventory/create');
   }
 
-  // Helper method to show edit inventory form/dialog
   void showEditInventoryForm(InventoryModel inventory) {
     populateFormControllers(inventory);
-    // You can navigate to edit screen or show edit dialog here
-    // For example: Get.toNamed('/inventory/edit', arguments: inventory);
   }
 }

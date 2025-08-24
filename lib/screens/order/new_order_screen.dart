@@ -763,8 +763,16 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.05),
+                spreadRadius: 0,
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
           child: GetBuilder<NewOrderController>(
             init: orderController,
@@ -774,26 +782,32 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.receipt_long, color: Colors.green),
+                      Icon(Icons.receipt_long, color: Colors.green, size: 20),
                       SizedBox(width: 8),
-                      Text('Daftar Pesanan',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Daftar Pesanan',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ],
                   ),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade100,
+                      color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.shade200),
                     ),
                     child: Text(
-                      'Total: ${controller.orderItems.length} items',
+                      '${controller.orderItems.length} items',
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -811,15 +825,19 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shopping_cart_outlined,
-                              size: 48, color: Colors.grey),
+                          Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
                           SizedBox(height: 16),
                           Text(
                             'Belum ada pesanan',
                             style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey,
+                            ),
                           ),
                           SizedBox(height: 8),
                           Text(
@@ -833,37 +851,50 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   : Column(
                       children: [
                         Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: controller.orderItems.length,
-                            itemBuilder: (context, index) => _buildOrderItem(
-                                controller.orderItems[index], index),
+                          child: Container(
+                            color: Colors.grey.shade50,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: controller.orderItems.length,
+                              itemBuilder: (context, index) => _buildOrderItem(
+                                  controller.orderItems[index], index),
+                            ),
                           ),
                         ),
+                        // Footer dengan total
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: Colors.white,
                             border: Border(
-                                top: BorderSide(color: Colors.blue.shade100)),
+                              top: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 0,
+                                blurRadius: 4,
+                                offset: const Offset(0, -2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
+                              const Text(
                                 'Total Pesanan',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.blue.shade700,
+                                  color: Colors.black87,
                                 ),
                               ),
                               Text(
                                 'Rp${controller.formatPrice(controller.orderTotal.round())}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade800,
+                                  color: Color(0xFFFF8C00),
                                 ),
                               ),
                             ],
@@ -883,100 +914,126 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
         color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 2,
-            offset: const Offset(0, 1),
+            color: Colors.grey.withOpacity(0.08),
+            spreadRadius: 0,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
+          // Icon produk
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
             ),
-            child: Icon(Icons.fastfood, size: 18, color: Colors.blue.shade600),
+            child: Icon(
+              Icons.restaurant_menu,
+              size: 20,
+              color: Colors.blue.shade600,
+            ),
           ),
           const SizedBox(width: 12),
+          // Detail produk
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item['name'],
+                  item['name'] ?? '',
                   style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 13),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '${item['quantity']} x Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())}',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                    ),
-                    const Spacer(),
-                    Text(
-                      'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade600,
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())} per item',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  onPressed: () => orderController.decreaseQuantity(index),
-                  icon: const Icon(Icons.remove, size: 14),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    minimumSize: const Size(28, 28),
-                    padding: EdgeInsets.zero,
-                  ),
+          // Harga total
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFF8C00), // Orange color seperti gambar
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    item['quantity'].toString(),
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
+              ),
+              const SizedBox(height: 8),
+              // Quantity controls
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-                IconButton(
-                  onPressed: () => orderController.increaseQuantity(index),
-                  icon: const Icon(Icons.add, size: 14),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    minimumSize: const Size(28, 28),
-                    padding: EdgeInsets.zero,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: () => orderController.decreaseQuantity(index),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.remove,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 32),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${item['quantity'] ?? 0}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => orderController.increaseQuantity(index),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.add,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -989,20 +1046,21 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
         color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
+            color: Colors.grey.withOpacity(0.08),
+            spreadRadius: 0,
+            blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         children: [
+          // Header with icon and details
           Row(
             children: [
               Container(
@@ -1010,11 +1068,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.blue.shade200),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child:
-                    Icon(Icons.fastfood, size: 20, color: Colors.blue.shade600),
+                child: Icon(
+                  Icons.restaurant_menu,
+                  size: 20,
+                  color: Colors.blue.shade600,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1022,72 +1082,87 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item['name'],
+                      item['name'] ?? '',
                       style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())} per item',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
               ),
               Text(
                 'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade600,
+                  color: Color(0xFFFF8C00), // Orange color
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+          // Quantity controls centered
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: () => orderController.decreaseQuantity(index),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.remove,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () => orderController.decreaseQuantity(index),
-                      icon: const Icon(Icons.remove, size: 18),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        minimumSize: const Size(36, 36),
-                        padding: EdgeInsets.zero,
-                      ),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 40),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${item['quantity'] ?? 0}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        item['quantity'].toString(),
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => orderController.increaseQuantity(index),
-                      icon: const Icon(Icons.add, size: 18),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        minimumSize: const Size(36, 36),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                InkWell(
+                  onTap: () => orderController.increaseQuantity(index),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.add,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1629,90 +1704,55 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             ],
           ),
           const SizedBox(height: 16),
+
+          // Payment Methods Row
           GetBuilder<NewOrderController>(
             init: orderController,
             builder: (controller) {
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  bool isNarrow = constraints.maxWidth < 300;
+              return Row(
+                children: [
+                  // Tunai
+                  Expanded(
+                    child: _buildPaymentMethodButton(
+                      method: 'Tunai',
+                      icon: Icons.money,
+                      isSelected:
+                          controller.selectedPaymentMethod.value == 'Tunai',
+                      onTap: () => controller.updatePaymentMethod('Tunai'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
 
-                  if (isNarrow) {
-                    return Column(
-                      children: ['Tunai', 'QRIS', 'Debit'].map((method) {
-                        final isSelected =
-                            controller.selectedPaymentMethod.value == method;
-                        return Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ElevatedButton.icon(
-                            onPressed: () =>
-                                controller.updatePaymentMethod(method),
-                            icon: Icon(
-                              method == 'Tunai'
-                                  ? Icons.money
-                                  : method == 'QRIS'
-                                      ? Icons.qr_code
-                                      : Icons.credit_card,
-                              size: 18,
-                            ),
-                            label: Text(method),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isSelected
-                                  ? Colors.blue
-                                  : Colors.grey.shade200,
-                              foregroundColor:
-                                  isSelected ? Colors.white : Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  } else {
-                    return Row(
-                      children: ['Tunai', 'QRIS', 'Debit'].map((method) {
-                        final isSelected =
-                            controller.selectedPaymentMethod.value == method;
-                        return Expanded(
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 6),
-                            child: ElevatedButton.icon(
-                              onPressed: () =>
-                                  controller.updatePaymentMethod(method),
-                              icon: Icon(
-                                method == 'Tunai'
-                                    ? Icons.money
-                                    : method == 'QRIS'
-                                        ? Icons.qr_code
-                                        : Icons.credit_card,
-                                size: 16,
-                              ),
-                              label: Text(method),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isSelected
-                                    ? Colors.blue
-                                    : Colors.grey.shade200,
-                                foregroundColor:
-                                    isSelected ? Colors.white : Colors.black,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                minimumSize: const Size(0, 36),
-                                textStyle: const TextStyle(fontSize: 11),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  }
-                },
+                  // QRIS
+                  Expanded(
+                    child: _buildPaymentMethodButton(
+                      method: 'QRIS',
+                      icon: Icons.qr_code,
+                      isSelected:
+                          controller.selectedPaymentMethod.value == 'QRIS',
+                      onTap: () => controller.updatePaymentMethod('QRIS'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Debit
+                  Expanded(
+                    child: _buildPaymentMethodButton(
+                      method: 'Debit',
+                      icon: Icons.credit_card,
+                      isSelected:
+                          controller.selectedPaymentMethod.value == 'Debit',
+                      onTap: () => controller.updatePaymentMethod('Debit'),
+                    ),
+                  ),
+                ],
               );
             },
           ),
+
           const SizedBox(height: 16),
+
+          // Total Payment Section
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1751,7 +1791,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               },
             ),
           ),
+
           const SizedBox(height: 12),
+
+          // Cash Payment Input (if Tunai is selected)
           GetBuilder<NewOrderController>(
             init: orderController,
             builder: (controller) {
@@ -1803,6 +1846,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   : const SizedBox.shrink();
             },
           ),
+
+          // Process Payment Button
           GetBuilder<NewOrderController>(
             init: orderController,
             builder: (controller) {
@@ -1848,6 +1893,59 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodButton({
+    required String method,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.blue.shade300 : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.2),
+                    spreadRadius: 0,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              method,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

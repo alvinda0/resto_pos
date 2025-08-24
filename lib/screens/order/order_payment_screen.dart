@@ -201,30 +201,25 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   Widget _buildResponsiveLayout() {
-    if (isDesktop) {
-      return _buildThreeColumnLayout();
-    } else if (isTablet) {
-      return _buildTwoColumnLayout();
-    } else {
-      return _buildSingleColumnLayout();
-    }
-  }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isMobile = constraints.maxWidth < 768;
+        bool isTablet =
+            constraints.maxWidth >= 768 && constraints.maxWidth < 1200;
+        bool isDesktop = constraints.maxWidth >= 1200;
 
-  // Desktop: 3 columns (Add Product | Order List | Customer & Payment)
-  Widget _buildThreeColumnLayout() {
-    return Row(
-      children: [
-        Expanded(flex: 1, child: _buildAddProductSection()),
-        Container(width: 1, color: Colors.grey.shade300),
-        Expanded(flex: 1, child: _buildOrderSection()),
-        Container(width: 1, color: Colors.grey.shade300),
-        Expanded(flex: 1, child: _buildCustomerPaymentSection()),
-      ],
+        if (isMobile) {
+          return _buildEnhancedMobileLayout();
+        } else if (isTablet) {
+          return _buildTabletLayout();
+        } else {
+          return _buildDesktopLayout();
+        }
+      },
     );
   }
 
-  // Tablet: 2 columns (Left: Add Product & Order | Right: Customer & Payment)
-  Widget _buildTwoColumnLayout() {
+  Widget _buildTabletLayout() {
     return Row(
       children: [
         Expanded(
@@ -246,182 +241,91 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
-  // Mobile: Single column with tabs or scrollable sections
-  Widget _buildSingleColumnLayout() {
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          Container(
-            color: Colors.grey.shade100,
-            child: TabBar(
-              labelColor: Colors.blue,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.blue,
-              labelStyle:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              tabs: const [
-                Tab(text: 'Produk'),
-                Tab(text: 'Pesanan'),
-                Tab(text: 'Bayar'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildAddProductSection(),
-                _buildOrderSection(),
-                _buildCustomerPaymentSection(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddProductSection() {
-    return Column(
+  Widget _buildDesktopLayout() {
+    return Row(
       children: [
-        Container(
-          padding: EdgeInsets.all(isMobile ? 12 : 16),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-          ),
-          child: Text(
-            'Tambah Produk',
-            style: TextStyle(
-              fontSize: isMobile ? 14 : 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(isMobile ? 12 : 16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: productSearchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari produk...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 8 : 12,
-                      vertical: isMobile ? 6 : 8,
-                    ),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: Obx(() {
-                    if (productController.isLoading.value) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (productController.products.isEmpty) {
-                      return const Center(child: Text('Tidak ada produk'));
-                    }
-
-                    return GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: _getProductGridColumns(),
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        childAspectRatio: isMobile ? 0.8 : 0.75,
-                      ),
-                      itemCount: productController.products.length,
-                      itemBuilder: (context, index) =>
-                          _buildProductCard(productController.products[index]),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
-        ),
+        Expanded(flex: 1, child: _buildAddProductSection()),
+        Container(width: 1, color: Colors.grey.shade300),
+        Expanded(flex: 1, child: _buildOrderSection()),
+        Container(width: 1, color: Colors.grey.shade300),
+        Expanded(flex: 1, child: _buildCustomerPaymentSection()),
       ],
     );
   }
 
-  int _getProductGridColumns() {
-    if (isMobile) return 2;
-    if (isTablet) return 3;
-    return 2; // Desktop dalam kolom kecil
-  }
-
-  Widget _buildProductCard(Product product) {
+  Widget _buildAddProductSection() {
     return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(8)),
+          // Search bar
+          Container(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: TextField(
+              controller: productSearchController,
+              decoration: InputDecoration(
+                hintText: 'Cari produk...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                filled: true,
+                fillColor: Colors.grey.shade50,
               ),
-              child: product.imageUrl != null
-                  ? Image.network(product.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Center(child: Icon(Icons.fastfood, size: 30)))
-                  : const Center(child: Icon(Icons.fastfood, size: 30)),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(isMobile ? 6 : 8),
-            child: Column(
-              children: [
-                Text(
-                  product.name,
-                  style: TextStyle(
-                    fontSize: isMobile ? 10 : 12,
-                    fontWeight: FontWeight.bold,
+          // Products grid
+          Expanded(
+            child: Obx(() {
+              if (productController.isLoading.value &&
+                  productController.products.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Memuat produk...')
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'Rp${_formatPrice(product.basePrice)}',
-                  style: TextStyle(
-                    fontSize: isMobile ? 8 : 10,
-                    color: Colors.grey.shade600,
+                );
+              }
+
+              if (productController.products.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inventory_2_outlined,
+                          size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('Tidak ada produk',
+                          style: TextStyle(color: Colors.grey)),
+                    ],
                   ),
+                );
+              }
+
+              return GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isDesktop ? 3 : 2,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 0.8,
                 ),
-                SizedBox(height: isMobile ? 2 : 4),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: product.isAvailable
-                        ? () => _addProductToOrder(product)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          product.isAvailable ? Colors.blue : Colors.grey,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        vertical: isMobile ? 2 : 4,
-                      ),
-                      minimumSize: Size(0, isMobile ? 20 : 24),
-                    ),
-                    child: Text(
-                      product.isAvailable ? 'Tambah' : 'Habis',
-                      style: TextStyle(fontSize: isMobile ? 8 : 10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                itemCount: productController.products.length,
+                itemBuilder: (context, index) => _buildResponsiveProductCard(
+                    productController.products[index]),
+              );
+            }),
           ),
         ],
       ),
@@ -429,149 +333,174 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   Widget _buildOrderSection() {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(isMobile ? 12 : 16),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Daftar Pesanan',
-                style: TextStyle(
-                  fontSize: isMobile ? 14 : 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'Total: ${currentOrderItems.length} items',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: isMobile ? 10 : 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: currentOrderItems.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.shopping_cart_outlined,
-                        size: isMobile ? 40 : 60,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Belum ada pesanan',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: isMobile ? 12 : 14,
-                        ),
-                      ),
-                    ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Order header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Pesanan (${currentOrderItems.length} items)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700,
                   ),
-                )
-              : ListView.builder(
-                  padding: EdgeInsets.all(isMobile ? 12 : 16),
-                  itemCount: currentOrderItems.length,
-                  itemBuilder: (context, index) =>
-                      _buildOrderItem(currentOrderItems[index], index),
                 ),
-        ),
-      ],
+                Text(
+                  'Rp${_formatPrice(_calculateOrderTotal().round())}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Order items list
+          Expanded(
+            child: currentOrderItems.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.shopping_cart_outlined,
+                            size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'Belum ada pesanan',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Tambahkan produk untuk memulai',
+                          style: TextStyle(color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: currentOrderItems.length,
+                    itemBuilder: (context, index) =>
+                        _buildOrderItem(currentOrderItems[index], index),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildOrderItem(dynamic item, int index) {
     return Container(
-      margin: EdgeInsets.only(bottom: isMobile ? 6 : 8),
-      padding: EdgeInsets.all(isMobile ? 6 : 8),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: isMobile ? 24 : 30,
-            height: isMobile ? 24 : 30,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(6),
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.blue.shade200),
             ),
-            child: Icon(Icons.fastfood, size: isMobile ? 12 : 16),
+            child: Icon(Icons.fastfood, size: 24, color: Colors.blue.shade600),
           ),
-          SizedBox(width: isMobile ? 6 : 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _getItemName(item),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: isMobile ? 10 : 12,
-                  ),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 16),
                 ),
-                Row(
-                  children: [
-                    Text(
-                      '${_getItemQuantity(item)} x ${_getItemUnitPrice(item)}',
-                      style: TextStyle(
-                        fontSize: isMobile ? 8 : 10,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      _getItemTotalPrice(item),
-                      style: TextStyle(
-                        fontSize: isMobile ? 10 : 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  '${_getItemUnitPrice(item)} per item',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
               ],
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              IconButton(
-                onPressed: () => _decreaseQuantity(index),
-                icon: Icon(Icons.remove, size: isMobile ? 10 : 12),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.grey.shade200,
-                  minimumSize: Size(isMobile ? 20 : 24, isMobile ? 20 : 24),
-                  padding: EdgeInsets.zero,
+              Text(
+                _getItemTotalPrice(item),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade600,
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 2 : 4),
-                child: Text(
-                  _getItemQuantity(item).toString(),
-                  style: TextStyle(
-                    fontSize: isMobile ? 10 : 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-              ),
-              IconButton(
-                onPressed: () => _increaseQuantity(index),
-                icon: Icon(Icons.add, size: isMobile ? 10 : 12),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.grey.shade200,
-                  minimumSize: Size(isMobile ? 20 : 24, isMobile ? 20 : 24),
-                  padding: EdgeInsets.zero,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => _decreaseQuantity(index),
+                      icon: const Icon(Icons.remove, size: 16),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        minimumSize: const Size(32, 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        _getItemQuantity(item).toString(),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _increaseQuantity(index),
+                      icon: const Icon(Icons.add, size: 16),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        minimumSize: const Size(32, 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -583,236 +512,769 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   Widget _buildCustomerPaymentSection() {
     return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildCustomerDetailsCard(),
-          _buildPaymentCard(),
+          _buildEnhancedCustomerDetailsCard(),
+          const SizedBox(height: 16),
+          _buildEnhancedPaymentCard(),
         ],
       ),
     );
   }
 
-  Widget _buildCustomerDetailsCard() {
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 12 : 16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-      ),
+  Widget _buildEnhancedMobileLayout() {
+    return DefaultTabController(
+      length: 3,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Detail Customer',
-            style: TextStyle(
-              fontSize: isMobile ? 14 : 16,
-              fontWeight: FontWeight.bold,
+          Container(
+            color: Colors.white,
+            child: const TabBar(
+              labelColor: Colors.blue,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blue,
+              indicatorWeight: 3,
+              tabs: [
+                Tab(
+                    icon: Icon(Icons.add_shopping_cart, size: 20),
+                    text: "Produk"),
+                Tab(icon: Icon(Icons.receipt_long, size: 20), text: "Pesanan"),
+                Tab(icon: Icon(Icons.payment, size: 20), text: "Bayar"),
+              ],
             ),
           ),
-          SizedBox(height: isMobile ? 8 : 12),
-          if (isDesktop || isTablet) ...[
-            Row(
+          Expanded(
+            child: TabBarView(
               children: [
-                Expanded(
-                    child: _buildTextField(
-                        'Nama Customer', customerNameController)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildTextField('Nomor WA', phoneController)),
+                _buildMobileProductSection(),
+                _buildMobileOrderSection(),
+                _buildMobilePaymentSection(),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: _buildTextField('Nomor Meja', tableController)),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: _buildTextField('Catatan', notesController,
-                        hintText: 'Catatan')),
-              ],
-            ),
-          ] else ...[
-            _buildTextField('Nama Customer', customerNameController),
-            const SizedBox(height: 8),
-            _buildTextField('Nomor WA', phoneController),
-            const SizedBox(height: 8),
-            _buildTextField('Nomor Meja', tableController),
-            const SizedBox(height: 8),
-            _buildTextField('Catatan', notesController, hintText: 'Catatan'),
-          ],
-          const SizedBox(height: 8),
-          _buildTextField('Kode Promo', promoController,
-              hintText: 'Masukkan kode promo'),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {String? hintText}) {
+// 3. Add mobile-specific product section
+  Widget _buildMobileProductSection() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: isMobile ? 10 : 12,
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.white,
+          child: TextField(
+            controller: productSearchController,
+            decoration: InputDecoration(
+              hintText: 'Cari produk...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.blue, width: 2),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+            ),
           ),
         ),
-        SizedBox(height: isMobile ? 2 : 4),
-        TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: hintText,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 6 : 8,
-              vertical: isMobile ? 4 : 6,
-            ),
-            isDense: true,
-          ),
-          style: TextStyle(fontSize: isMobile ? 10 : 12),
+        Expanded(
+          child: Obx(() {
+            if (productController.isLoading.value &&
+                productController.products.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Memuat produk...')
+                  ],
+                ),
+              );
+            }
+
+            if (productController.products.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.inventory_2_outlined,
+                        size: 64, color: Colors.grey),
+                    SizedBox(height: 16),
+                    Text('Tidak ada produk',
+                        style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              );
+            }
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4, // 4 produk per baris di mobile
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: productController.products.length,
+              itemBuilder: (context, index) => _buildResponsiveProductCard(
+                  productController.products[index]),
+            );
+          }),
         ),
       ],
     );
   }
 
-  Widget _buildPaymentCard() {
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 12 : 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Pembayaran',
-            style: TextStyle(
-              fontSize: isMobile ? 14 : 16,
-              fontWeight: FontWeight.bold,
+// 4. Add mobile-specific order section
+  Widget _buildMobileOrderSection() {
+    if (currentOrderItems.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'Belum ada pesanan',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey),
             ),
+            SizedBox(height: 8),
+            Text(
+              'Tambahkan produk untuk memulai',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            border: Border(bottom: BorderSide(color: Colors.blue.shade100)),
           ),
-          SizedBox(height: isMobile ? 8 : 12),
-          // Payment method buttons
-          isDesktop || isTablet
-              ? Row(
-                  children: paymentMethods.map((method) {
-                    final isSelected = selectedPaymentMethod == method;
-                    return Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 4),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedPaymentMethod = method;
-                              _calculateChange();
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                isSelected ? Colors.blue : Colors.grey.shade200,
-                            foregroundColor:
-                                isSelected ? Colors.white : Colors.black,
-                            padding: EdgeInsets.symmetric(
-                              vertical: isMobile ? 4 : 6,
-                            ),
-                            minimumSize: Size(0, isMobile ? 24 : 30),
-                          ),
-                          child: Text(
-                            method,
-                            style: TextStyle(fontSize: isMobile ? 8 : 10),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                )
-              : Column(
-                  children: paymentMethods.map((method) {
-                    final isSelected = selectedPaymentMethod == method;
-                    return Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 4),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            selectedPaymentMethod = method;
-                            _calculateChange();
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isSelected ? Colors.blue : Colors.grey.shade200,
-                          foregroundColor:
-                              isSelected ? Colors.white : Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        child: Text(method),
-                      ),
-                    );
-                  }).toList(),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total: ${currentOrderItems.length} items',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blue.shade700,
                 ),
-          SizedBox(height: isMobile ? 8 : 12),
-          // Total section
+              ),
+              Text(
+                'Rp${_formatPrice(_calculateOrderTotal().round())}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade800,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: currentOrderItems.length,
+            itemBuilder: (context, index) =>
+                _buildMobileOrderItem(currentOrderItems[index], index),
+          ),
+        ),
+      ],
+    );
+  }
+
+// 5. Add mobile-specific order item
+  Widget _buildMobileOrderItem(dynamic item, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
           Container(
-            padding: EdgeInsets.all(isMobile ? 6 : 8),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(6)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Icon(Icons.fastfood, size: 20, color: Colors.blue.shade600),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Total',
-                  style: TextStyle(
-                    fontSize: isMobile ? 12 : 14,
-                    fontWeight: FontWeight.bold,
+                  _getItemName(item),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_getItemUnitPrice(item)} per item',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _getItemTotalPrice(item),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => _decreaseQuantity(index),
+                      icon: const Icon(Icons.remove, size: 14),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        minimumSize: const Size(28, 28),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        _getItemQuantity(item).toString(),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _increaseQuantity(index),
+                      icon: const Icon(Icons.add, size: 14),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        minimumSize: const Size(28, 28),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+// 5. Add mobile-specific order item
+  Widget _buildMobilePaymentSection() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildEnhancedCustomerDetailsCard(),
+          const SizedBox(height: 16),
+          _buildEnhancedPaymentCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResponsiveProductCard(Product product) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isSmallCard = constraints.maxWidth < 100;
+
+        return GestureDetector(
+          onTap: product.isAvailable ? () => _addProductToOrder(product) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: product.isAvailable
+                    ? Colors.grey.shade300
+                    : Colors.grey.shade400,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+              color: product.isAvailable ? Colors.white : Colors.grey.shade100,
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: product.isAvailable
+                          ? Colors.grey.shade200
+                          : Colors.grey.shade300,
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(8)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(8)),
+                      child: Stack(
+                        children: [
+                          product.imageUrl != null
+                              ? Image.network(
+                                  product.imageUrl!,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                  color:
+                                      product.isAvailable ? null : Colors.grey,
+                                  colorBlendMode: product.isAvailable
+                                      ? null
+                                      : BlendMode.saturation,
+                                  errorBuilder: (_, __, ___) => Center(
+                                    child: Icon(
+                                      Icons.fastfood,
+                                      size: isSmallCard ? 20 : 24,
+                                      color: product.isAvailable
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade500,
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: Icon(
+                                    Icons.fastfood,
+                                    size: isSmallCard ? 20 : 24,
+                                    color: product.isAvailable
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade500,
+                                  ),
+                                ),
+                          if (!product.isAvailable)
+                            Container(
+                              color: Colors.black.withOpacity(0.3),
+                              child: const Center(
+                                child: Text(
+                                  'HABIS',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 8,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                Text(
-                  'Rp${_formatPrice(_calculateOrderTotal().round())}',
-                  style: TextStyle(
-                    fontSize: isMobile ? 12 : 14,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: EdgeInsets.all(isSmallCard ? 4 : 6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          product.name,
+                          style: TextStyle(
+                            fontSize: isSmallCard ? 9 : 10,
+                            fontWeight: FontWeight.bold,
+                            color: product.isAvailable
+                                ? Colors.black
+                                : Colors.grey.shade600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Rp${_formatPrice(product.basePrice)}',
+                          style: TextStyle(
+                            fontSize: isSmallCard ? 8 : 9,
+                            color: product.isAvailable
+                                ? Colors.orange.shade600
+                                : Colors.grey.shade500,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          // Cash payment fields
+        );
+      },
+    );
+  }
+
+// 8. Enhanced customer details card with better responsiveness
+  Widget _buildEnhancedCustomerDetailsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.person_outline, color: Colors.blue.shade600),
+              const SizedBox(width: 8),
+              const Text('Detail Customer',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              bool isMobileForm = constraints.maxWidth < 400;
+
+              if (isMobileForm) {
+                return Column(
+                  children: [
+                    _buildResponsiveTextField(
+                        'Nama Customer', customerNameController),
+                    const SizedBox(height: 12),
+                    _buildResponsiveTextField('Nomor WA', phoneController,
+                        keyboardType: TextInputType.phone),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _buildResponsiveTextField(
+                                'Nomor Meja', tableController,
+                                keyboardType: TextInputType.number)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: _buildResponsiveTextField(
+                                'Catatan', notesController,
+                                hintText: 'Optional')),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildResponsiveTextField('Kode Promo', promoController,
+                        hintText: 'Masukkan kode promo (optional)'),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _buildResponsiveTextField(
+                                'Nama Customer', customerNameController)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _buildResponsiveTextField(
+                                'Nomor WA', phoneController,
+                                keyboardType: TextInputType.phone)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _buildResponsiveTextField(
+                                'Nomor Meja', tableController,
+                                keyboardType: TextInputType.number)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _buildResponsiveTextField(
+                                'Catatan', notesController,
+                                hintText: 'Optional')),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildResponsiveTextField('Kode Promo', promoController,
+                        hintText: 'Masukkan kode promo (optional)'),
+                  ],
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+// 9. Enhanced responsive text field with proper keyboard types
+  Widget _buildResponsiveTextField(
+      String label, TextEditingController controller,
+      {String? hintText, TextInputType? keyboardType}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isCompact = constraints.maxWidth < 200;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: isCompact ? 11 : 13,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            SizedBox(height: isCompact ? 4 : 6),
+            TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 8 : 12,
+                  vertical: isCompact ? 8 : 10,
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+              ),
+              style: TextStyle(fontSize: isCompact ? 11 : 13),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+// 10. Enhanced payment card
+  Widget _buildEnhancedPaymentCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.payment, color: Colors.green.shade600),
+              const SizedBox(width: 8),
+              const Text('Pembayaran',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Payment method buttons in row - FIXED SECTION
+          Row(
+            children: paymentMethods.map((method) {
+              final isSelected = selectedPaymentMethod == method;
+              return Expanded(
+                child: Container(
+                  margin: EdgeInsets.only(
+                    right: method != paymentMethods.last ? 8 : 0,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        selectedPaymentMethod = method;
+                        _calculateChange();
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          isSelected ? Colors.blue : Colors.grey.shade200,
+                      foregroundColor: isSelected ? Colors.white : Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: isSelected ? 2 : 0,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          method == 'Tunai'
+                              ? Icons.money
+                              : method == 'QRIS'
+                                  ? Icons.qr_code
+                                  : Icons.credit_card,
+                          size: 20,
+                          color: isSelected ? Colors.white : Colors.black54,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          method,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          // END FIXED SECTION
+
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.green.shade50, Colors.green.shade100],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Pembayaran',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                Text(
+                  'Rp${_formatPrice(_calculateOrderTotal().round())}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           if (selectedPaymentMethod == 'Tunai') ...[
-            _buildTextField('Jumlah Pembayaran', cashAmountController,
-                hintText: 'Jumlah uang cash'),
-            const SizedBox(height: 8),
+            _buildResponsiveTextField(
+              'Jumlah Pembayaran',
+              cashAmountController,
+              hintText: 'Masukkan jumlah uang cash',
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Kembalian',
                   style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: isMobile ? 10 : 12,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
                   ),
                 ),
-                SizedBox(height: isMobile ? 2 : 4),
+                const SizedBox(height: 6),
                 TextField(
                   controller: changeController,
                   readOnly: true,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6)),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 6 : 8,
-                      vertical: isMobile ? 4 : 6,
-                    ),
-                    fillColor: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    fillColor: Colors.orange.shade50,
                     filled: true,
-                    isDense: true,
+                    prefixIcon: Icon(Icons.account_balance_wallet,
+                        color: Colors.orange.shade600, size: 20),
                   ),
-                  style: TextStyle(fontSize: isMobile ? 10 : 12),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700,
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: isMobile ? 8 : 12),
+            const SizedBox(height: 16),
           ],
           _buildPaymentButton(),
         ],

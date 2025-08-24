@@ -4,6 +4,8 @@ import 'package:pos/controller/kitchen/kitchen_controller.dart';
 import 'package:pos/models/kitchen/kitchen_model.dart';
 import 'package:pos/screens/printer/BluetoothPrinterManager.dart';
 import 'package:pos/widgets/pagination_widget.dart'; // Import your pagination widget
+import 'package:pos/controller/inventory/inventory_controller.dart';
+import 'package:pos/models/inventory/inventory_model.dart';
 
 class KitchenScreen extends StatefulWidget {
   const KitchenScreen({super.key});
@@ -14,6 +16,41 @@ class KitchenScreen extends StatefulWidget {
 
 class _KitchenScreenState extends State<KitchenScreen> {
   final KitchenController kitchenController = Get.put(KitchenController());
+  final InventoryController inventoryController =
+      Get.put(InventoryController());
+
+  @override
+  void initState() {
+    super.initState();
+    // Check for low stock when kitchen screen opens
+    _checkLowStockOnInit();
+  }
+
+  void _checkLowStockOnInit() {
+    // Add a small delay to ensure the screen is fully built
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _checkAndShowLowStockPopup();
+    });
+  }
+
+  Future<void> _checkAndShowLowStockPopup() async {
+    try {
+      // Load inventory data to check for low stock
+      await inventoryController.loadInventories(showLoading: false);
+
+      // Get low stock items
+      final lowStockItems = inventoryController.inventories
+          .where((item) => item.isLowStock)
+          .toList();
+
+      if (lowStockItems.isNotEmpty) {
+        _showLowStockPopup(lowStockItems);
+      }
+    } catch (e) {
+      // Silently handle error - don't show error popup in kitchen
+      debugPrint('Error checking low stock: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +79,159 @@ class _KitchenScreenState extends State<KitchenScreen> {
         border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
       ),
       child: isDesktop ? _buildDesktopFilters() : _buildMobileFilters(),
+    );
+  }
+
+  void _showLowStockPopup(List<InventoryModel> lowStockItems) {
+    if (!mounted) return;
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.amber.shade700,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Peringatan Stok Bahan',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Container(
+          width: double.maxFinite,
+          constraints: const BoxConstraints(maxHeight: 400, maxWidth: 500),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Terdapat ${lowStockItems.length} bahan dengan stok menipis atau habis:',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: lowStockItems.length,
+                  itemBuilder: (context, index) {
+                    final item = lowStockItems[index];
+                    final isOutOfStock = item.quantity == 0;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isOutOfStock
+                            ? Colors.red.shade50
+                            : Colors.orange.shade50,
+                        border: Border.all(
+                          color: isOutOfStock
+                              ? Colors.red.shade200
+                              : Colors.orange.shade200,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                isOutOfStock
+                                    ? Icons.inventory_2_outlined
+                                    : Icons.warning_outlined,
+                                size: 16,
+                                color: isOutOfStock
+                                    ? Colors.red.shade600
+                                    : Colors.orange.shade600,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  item.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: isOutOfStock
+                                        ? Colors.red.shade800
+                                        : Colors.orange.shade800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Stok: ${item.quantity} ${item.unit}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              Text(
+                                'Min: ${item.minimumStock} ${item.unit}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (item.vendorName.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Vendor: ${item.vendorName}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Tutup'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              // Navigate to inventory management
+              Get.toNamed('/material');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Kelola Stok'),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
     );
   }
 
