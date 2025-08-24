@@ -11,6 +11,7 @@ import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/payroll/payroll_screen.dart';
 import 'package:pos/screens/points/points_screen.dart';
 import 'package:pos/screens/printer/printer_screen.dart';
+import 'package:pos/screens/profit/profit_screen.dart';
 import 'package:pos/screens/redemption/redemption_screen.dart';
 import 'package:pos/screens/referral/referral_screen.dart';
 import 'package:pos/screens/rewards/rewards_screen.dart';
@@ -202,8 +203,8 @@ class AppRoutes {
       ),
       GetPage(
         name: reportProfit,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Keuntungan'), reportProfit),
+        page: () =>
+            _wrapWithMainLayout(const ProfitReportScreen(), reportProfit),
       ),
 
       // Employee Routes (Karyawan)
