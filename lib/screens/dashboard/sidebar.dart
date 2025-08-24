@@ -70,14 +70,14 @@ class _MainLayoutState extends State<MainLayout> {
 
     // KEUANGAN
     MenuItem(Icons.account_balance_wallet, 'Keuangan', subItems: [
-      MenuItem(Icons.trending_up, 'Pendapatan', permissionKey: 'income'),
+      // MenuItem(Icons.trending_up, 'Pendapatan', permissionKey: 'income'),
       MenuItem(Icons.receipt_long, 'Laporan Transaksi',
           permissionKey: 'reports'),
       MenuItem(Icons.account_balance_wallet, 'Dompet', permissionKey: 'wallet'),
       MenuItem(Icons.receipt_long, 'Tagihan', permissionKey: 'bills'),
       MenuItem(Icons.analytics, 'Keuntungan', permissionKey: 'profit'),
-      MenuItem(Icons.account_balance_wallet, 'Pencairan',
-          permissionKey: 'disbursement'),
+      // MenuItem(Icons.account_balance_wallet, 'Pencairan',
+      //     permissionKey: 'disbursement'),
     ]),
 
     // MANAJEMEN SDM
@@ -112,7 +112,7 @@ class _MainLayoutState extends State<MainLayout> {
       MenuItem(Icons.account_balance, 'Konfigurasi Pajak',
           permissionKey: 'tax_config'),
       MenuItem(Icons.qr_code, 'Konfigurasi QRIS', permissionKey: 'qris_config'),
-      MenuItem(Icons.key, 'Ganti Password', permissionKey: 'change_password'),
+      // MenuItem(Icons.key, 'Ganti Password', permissionKey: 'change_password'),
       MenuItem(Icons.description, 'Printer', permissionKey: 'printer'),
     ]),
   ];
