@@ -1,14 +1,23 @@
-// layouts/main_layout.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos/controller/auth/auth_controller.dart';
+import 'package:pos/controller/auth/permission_controller.dart';
+import 'package:pos/services/auth_service.dart';
 
 class MenuItem {
   final IconData icon;
   final String title;
   final List<MenuItem>? subItems;
   final bool isExpanded;
+  final String? permissionKey;
 
-  MenuItem(this.icon, this.title, {this.subItems, this.isExpanded = false});
+  MenuItem(
+    this.icon,
+    this.title, {
+    this.subItems,
+    this.isExpanded = false,
+    this.permissionKey,
+  });
 }
 
 class MainLayout extends StatefulWidget {
@@ -34,73 +43,91 @@ class _MainLayoutState extends State<MainLayout> {
   static bool _isMobileSidebarOpen = false;
   static bool _hasInitializedRoute = false;
 
-  // Menu yang dikelompokkan berdasarkan kategori
-  final List<MenuItem> _menuItems = [
+  final PermissionController _permissionController =
+      PermissionController.instance;
+
+  // Menu yang dikelompokkan berdasarkan kategori dengan permission keys
+  final List<MenuItem> _allMenuItems = [
     // DASHBOARD
-    MenuItem(Icons.dashboard, 'Dashboard'),
+    MenuItem(Icons.dashboard, 'Dashboard', permissionKey: 'dashboard'),
 
     // OPERASIONAL
     MenuItem(Icons.store, 'Operasional', subItems: [
-      MenuItem(Icons.table_restaurant, 'Meja'),
-      MenuItem(Icons.shopping_cart, 'Pesanan'),
-      MenuItem(Icons.restaurant, 'Dapur'),
-      MenuItem(Icons.percent, 'Promo'),
+      MenuItem(Icons.table_restaurant, 'Meja', permissionKey: 'tables'),
+      MenuItem(Icons.shopping_cart, 'Pesanan', permissionKey: 'orders'),
+      MenuItem(Icons.restaurant, 'Dapur', permissionKey: 'kitchen'),
+      MenuItem(Icons.percent, 'Promo', permissionKey: 'promos'),
     ]),
 
     // PRODUK & INVENTORI
     MenuItem(Icons.inventory_2, 'Produk & Inventori', subItems: [
-      MenuItem(Icons.layers, 'Produk'),
-      MenuItem(Icons.category, 'Kategori'),
-      MenuItem(Icons.kitchen, 'Bahan'),
-      MenuItem(Icons.restaurant_menu, 'Resep'),
-      MenuItem(Icons.inventory, 'Aset'),
+      MenuItem(Icons.layers, 'Produk', permissionKey: 'products'),
+      MenuItem(Icons.category, 'Kategori', permissionKey: 'categories'),
+      MenuItem(Icons.kitchen, 'Bahan', permissionKey: 'materials'),
+      MenuItem(Icons.restaurant_menu, 'Resep', permissionKey: 'recipes'),
+      MenuItem(Icons.inventory, 'Aset', permissionKey: 'assets'),
     ]),
 
     // KEUANGAN
     MenuItem(Icons.account_balance_wallet, 'Keuangan', subItems: [
-      MenuItem(Icons.trending_up, 'Pendapatan'),
-      MenuItem(Icons.receipt_long, 'Laporan Transaksi'),
-      MenuItem(Icons.account_balance_wallet, 'Dompet'),
-      MenuItem(Icons.receipt_long, 'Tagihan'),
-      MenuItem(Icons.analytics, 'Keuntungan'),
-      MenuItem(Icons.account_balance_wallet, 'Pencairan'),
+      MenuItem(Icons.trending_up, 'Pendapatan', permissionKey: 'income'),
+      MenuItem(Icons.receipt_long, 'Laporan Transaksi',
+          permissionKey: 'reports'),
+      MenuItem(Icons.account_balance_wallet, 'Dompet', permissionKey: 'wallet'),
+      MenuItem(Icons.receipt_long, 'Tagihan', permissionKey: 'bills'),
+      MenuItem(Icons.analytics, 'Keuntungan', permissionKey: 'profit'),
+      MenuItem(Icons.account_balance_wallet, 'Pencairan',
+          permissionKey: 'disbursement'),
     ]),
 
     // MANAJEMEN SDM
     MenuItem(Icons.people, 'Manajemen SDM', subItems: [
-      MenuItem(Icons.person, 'Data Karyawan'),
-      MenuItem(Icons.payment, 'Pembayaran Karyawan'),
-      MenuItem(Icons.person_add, 'Role'),
-      MenuItem(Icons.account_circle, 'Akun'),
+      MenuItem(Icons.person, 'Data Karyawan', permissionKey: 'employees'),
+      MenuItem(Icons.payment, 'Pembayaran Karyawan',
+          permissionKey: 'employee_payments'),
+      MenuItem(Icons.person_add, 'Role', permissionKey: 'roles'),
+      MenuItem(Icons.account_circle, 'Akun', permissionKey: 'accounts'),
     ]),
 
     // PELANGGAN & LOYALTY
     MenuItem(Icons.people_alt, 'Pelanggan & Loyalty', subItems: [
-      MenuItem(Icons.people, 'Data Pelanggan'),
-      MenuItem(Icons.card_giftcard, 'Hadiah Poin'),
-      MenuItem(Icons.history, 'Riwayat Penukaran'),
-      MenuItem(Icons.tune, 'Konfigurasi Poin'),
+      MenuItem(Icons.people, 'Data Pelanggan', permissionKey: 'customers'),
+      MenuItem(Icons.card_giftcard, 'Hadiah Poin',
+          permissionKey: 'point_rewards'),
+      MenuItem(Icons.history, 'Riwayat Penukaran',
+          permissionKey: 'redemption_history'),
+      MenuItem(Icons.tune, 'Konfigurasi Poin', permissionKey: 'point_config'),
     ]),
 
     // REFERRAL & PARTNERSHIP
     MenuItem(Icons.share, 'Referral', subItems: [
-      MenuItem(Icons.person_add, 'Kelola Referral'),
-      MenuItem(Icons.attach_money, 'Pencairan Referral'),
+      MenuItem(Icons.person_add, 'Kelola Referral', permissionKey: 'referrals'),
+      MenuItem(Icons.attach_money, 'Pencairan Referral',
+          permissionKey: 'referral_withdraw'),
     ]),
 
     // PENGATURAN SISTEM
     MenuItem(Icons.settings, 'Pengaturan', subItems: [
-      MenuItem(Icons.palette, 'Tema'),
-      MenuItem(Icons.account_balance, 'Konfigurasi Pajak'),
-      MenuItem(Icons.qr_code, 'Konfigurasi QRIS'),
-      MenuItem(Icons.key, 'Ganti Password'),
-      MenuItem(Icons.description, 'printer'),
+      MenuItem(Icons.palette, 'Tema', permissionKey: 'themes'),
+      MenuItem(Icons.account_balance, 'Konfigurasi Pajak',
+          permissionKey: 'tax_config'),
+      MenuItem(Icons.qr_code, 'Konfigurasi QRIS', permissionKey: 'qris_config'),
+      MenuItem(Icons.key, 'Ganti Password', permissionKey: 'change_password'),
+      MenuItem(Icons.description, 'Printer', permissionKey: 'printer'),
     ]),
   ];
+
+  // Filtered menu items based on permissions
+  List<MenuItem> get _menuItems {
+    return _filterMenuItems(_allMenuItems);
+  }
 
   @override
   void initState() {
     super.initState();
+    // Initialize permission controller
+    Get.put(PermissionController());
+
     // Hanya set initial route sekali saja
     if (!_hasInitializedRoute) {
       _setInitialRoute();
@@ -108,179 +135,164 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
+  /// Filter menu items based on user permissions
+  List<MenuItem> _filterMenuItems(List<MenuItem> items) {
+    List<MenuItem> filteredItems = [];
+
+    for (MenuItem item in items) {
+      bool hasAccess = _checkMenuAccess(item);
+
+      if (item.subItems != null && item.subItems!.isNotEmpty) {
+        // Filter sub items
+        List<MenuItem> filteredSubItems = _filterMenuItems(item.subItems!);
+
+        // Only show parent if it has accessible sub items
+        if (filteredSubItems.isNotEmpty) {
+          filteredItems.add(MenuItem(
+            item.icon,
+            item.title,
+            subItems: filteredSubItems,
+            isExpanded: item.isExpanded,
+            permissionKey: item.permissionKey,
+          ));
+        }
+      } else if (hasAccess) {
+        // Regular menu item - add if user has access
+        filteredItems.add(item);
+      }
+    }
+
+    return filteredItems;
+  }
+
+  /// Check if user has access to a menu item
+  bool _checkMenuAccess(MenuItem item) {
+    // If no permission key is specified, allow access
+    if (item.permissionKey == null || item.permissionKey!.isEmpty) {
+      return true;
+    }
+
+    // Special case for change password - everyone should be able to change password
+    if (item.permissionKey == 'change_password') {
+      return true;
+    }
+
+    // Get required permissions for this menu
+    final requiredPermissions =
+        _permissionController.menuPermissions[item.permissionKey];
+
+    if (requiredPermissions == null || requiredPermissions.isEmpty) {
+      return true; // No specific permissions required
+    }
+
+    // Check if user has any of the required permissions
+    return _permissionController.hasAnyPermission(requiredPermissions);
+  }
+
   void _setInitialRoute() {
     final currentRoute = Get.currentRoute;
 
-    switch (currentRoute) {
-      case '/dashboard':
-        _selectedIndex = 0;
-        _selectedSubIndex = null;
-        _expandedMenuIndex = null;
-        break;
+    // Find the matching route in filtered menu items
+    _findAndSetRoute(currentRoute, _menuItems);
+  }
 
-      // OPERASIONAL
-      case '/tables':
-        _selectedIndex = 1;
-        _selectedSubIndex = 0;
-        _expandedMenuIndex = 1;
-        break;
-      case '/orders':
-        _selectedIndex = 1;
-        _selectedSubIndex = 1;
-        _expandedMenuIndex = 1;
-        break;
-      case '/kitchen':
-        _selectedIndex = 1;
-        _selectedSubIndex = 2;
-        _expandedMenuIndex = 1;
-        break;
-      case '/promos':
-        _selectedIndex = 1;
-        _selectedSubIndex = 3;
-        _expandedMenuIndex = 1;
-        break;
+  void _findAndSetRoute(String currentRoute, List<MenuItem> menuItems) {
+    for (int i = 0; i < menuItems.length; i++) {
+      final item = menuItems[i];
 
-      // PRODUK & INVENTORI
-      case '/product':
-        _selectedIndex = 2;
-        _selectedSubIndex = 0;
-        _expandedMenuIndex = 2;
-        break;
-      case '/categories':
-        _selectedIndex = 2;
-        _selectedSubIndex = 1;
-        _expandedMenuIndex = 2;
-        break;
-      case '/material':
-        _selectedIndex = 2;
-        _selectedSubIndex = 2;
-        _expandedMenuIndex = 2;
-        break;
-      case '/recipe':
-        _selectedIndex = 2;
-        _selectedSubIndex = 3;
-        _expandedMenuIndex = 2;
-        break;
-      case '/assets':
-        _selectedIndex = 2;
-        _selectedSubIndex = 4;
-        _expandedMenuIndex = 2;
-        break;
+      if (item.subItems != null && item.subItems!.isNotEmpty) {
+        for (int j = 0; j < item.subItems!.length; j++) {
+          final subItem = item.subItems![j];
+          String routeName =
+              _getRouteForMenuItem(item.permissionKey, subItem.permissionKey);
 
-      // KEUANGAN
-      case '/income':
-        _selectedIndex = 3;
-        _selectedSubIndex = 0;
-        _expandedMenuIndex = 3;
-        break;
-      case '/report':
-        _selectedIndex = 3;
-        _selectedSubIndex = 1;
-        _expandedMenuIndex = 3;
-        break;
-      case '/wallet':
-        _selectedIndex = 3;
-        _selectedSubIndex = 2;
-        _expandedMenuIndex = 3;
-        break;
-      case '/report/bills':
-        _selectedIndex = 3;
-        _selectedSubIndex = 3;
-        _expandedMenuIndex = 3;
-        break;
-      case '/report/profit':
-        _selectedIndex = 3;
-        _selectedSubIndex = 4;
-        _expandedMenuIndex = 3;
-        break;
-      case '/disbursement':
-        _selectedIndex = 3;
-        _selectedSubIndex = 5;
-        _expandedMenuIndex = 3;
-        break;
+          if (routeName == currentRoute) {
+            _selectedIndex = i;
+            _selectedSubIndex = j;
+            _expandedMenuIndex = i;
+            return;
+          }
+        }
+      } else {
+        String routeName = _getRouteForMenuItem(item.permissionKey, null);
+        if (routeName == currentRoute) {
+          _selectedIndex = i;
+          _selectedSubIndex = null;
+          _expandedMenuIndex = null;
+          return;
+        }
+      }
+    }
+  }
 
-      // MANAJEMEN SDM
-      case '/employees':
-        _selectedIndex = 4;
-        _selectedSubIndex = 0;
-        _expandedMenuIndex = 4;
-        break;
-      case '/employees/payment':
-        _selectedIndex = 4;
-        _selectedSubIndex = 1;
-        _expandedMenuIndex = 4;
-        break;
-      case '/manage-account':
-        _selectedIndex = 4;
-        _selectedSubIndex = 2;
-        _expandedMenuIndex = 4;
-        break;
-      case '/account':
-        _selectedIndex = 4;
-        _selectedSubIndex = 3;
-        _expandedMenuIndex = 4;
-        break;
+  String _getRouteForMenuItem(String? parentKey, String? subKey) {
+    final key = subKey ?? parentKey;
 
-      // PELANGGAN & LOYALTY
-      case '/customers':
-        _selectedIndex = 5;
-        _selectedSubIndex = 0;
-        _expandedMenuIndex = 5;
-        break;
-      case '/points/rewards':
-        _selectedIndex = 5;
-        _selectedSubIndex = 1;
-        _expandedMenuIndex = 5;
-        break;
-      case '/points/redemptions-history':
-        _selectedIndex = 5;
-        _selectedSubIndex = 2;
-        _expandedMenuIndex = 5;
-        break;
-      case '/points/configuration':
-        _selectedIndex = 5;
-        _selectedSubIndex = 3;
-        _expandedMenuIndex = 5;
-        break;
-
-      // REFERRAL
-      case '/referral':
-        _selectedIndex = 6;
-        _selectedSubIndex = 0;
-        _expandedMenuIndex = 6;
-        break;
-      case '/withdraw':
-        _selectedIndex = 6;
-        _selectedSubIndex = 1;
-        _expandedMenuIndex = 6;
-        break;
-
-      // PENGATURAN
-      case '/settings/themes':
-        _selectedIndex = 7;
-        _selectedSubIndex = 0;
-        _expandedMenuIndex = 7;
-        break;
-      case '/settings/tax':
-        _selectedIndex = 7;
-        _selectedSubIndex = 1;
-        _expandedMenuIndex = 7;
-        break;
-      case '/settings/credentials':
-        _selectedIndex = 7;
-        _selectedSubIndex = 2;
-        _expandedMenuIndex = 7;
-        break;
-      case '/password':
-        _selectedIndex = 7;
-        _selectedSubIndex = 3;
-        _expandedMenuIndex = 7;
-        break;
-      case '/settings/printer':
-        _selectedIndex = 7;
-        _selectedSubIndex = 4;
-        _expandedMenuIndex = 7;
-        break;
+    switch (key) {
+      case 'dashboard':
+        return '/dashboard';
+      case 'tables':
+        return '/tables';
+      case 'orders':
+        return '/orders';
+      case 'kitchen':
+        return '/kitchen';
+      case 'promos':
+        return '/promos';
+      case 'products':
+        return '/product';
+      case 'categories':
+        return '/categories';
+      case 'materials':
+        return '/material';
+      case 'recipes':
+        return '/recipe';
+      case 'assets':
+        return '/assets';
+      case 'income':
+        return '/income';
+      case 'reports':
+        return '/report';
+      case 'wallet':
+        return '/wallet';
+      case 'bills':
+        return '/report/bills';
+      case 'profit':
+        return '/report/profit';
+      case 'disbursement':
+        return '/disbursement';
+      case 'employees':
+        return '/employees';
+      case 'employee_payments':
+        return '/employees/payment';
+      case 'roles':
+        return '/manage-account';
+      case 'accounts':
+        return '/account';
+      case 'customers':
+        return '/customers';
+      case 'point_rewards':
+        return '/points/rewards';
+      case 'redemption_history':
+        return '/points/redemptions-history';
+      case 'point_config':
+        return '/points/configuration';
+      case 'referrals':
+        return '/referral';
+      case 'referral_withdraw':
+        return '/withdraw';
+      case 'themes':
+        return '/settings/themes';
+      case 'tax_config':
+        return '/settings/tax';
+      case 'qris_config':
+        return '/settings/credentials';
+      case 'change_password':
+        return '/password';
+      case 'printer':
+        return '/settings/printer';
+      default:
+        return '/dashboard';
     }
   }
 
@@ -327,135 +339,20 @@ class _MainLayoutState extends State<MainLayout> {
       }
     });
 
-    // Navigate using GetX routing
+    final menuItems = _menuItems;
     String routeName = '/dashboard';
 
-    if (subIndex != null) {
-      switch (index) {
-        case 1: // Operasional
-          switch (subIndex) {
-            case 0:
-              routeName = '/tables';
-              break;
-            case 1:
-              routeName = '/orders';
-              break;
-            case 2:
-              routeName = '/kitchen';
-              break;
-            case 3:
-              routeName = '/promos';
-              break;
-          }
-          break;
-        case 2: // Produk & Inventori
-          switch (subIndex) {
-            case 0:
-              routeName = '/product';
-              break;
-            case 1:
-              routeName = '/categories';
-              break;
-            case 2:
-              routeName = '/material';
-              break;
-            case 3:
-              routeName = '/recipe';
-              break;
-            case 4:
-              routeName = '/assets';
-              break;
-          }
-          break;
-        case 3: // Keuangan
-          switch (subIndex) {
-            case 0:
-              routeName = '/income';
-              break;
-            case 1:
-              routeName = '/report';
-              break;
-            case 2:
-              routeName = '/wallet';
-              break;
-            case 3:
-              routeName = '/report/bills';
-              break;
-            case 4:
-              routeName = '/report/profit';
-              break;
-            case 5:
-              routeName = '/disbursement';
-              break;
-          }
-          break;
-        case 4: // Manajemen SDM
-          switch (subIndex) {
-            case 0:
-              routeName = '/employees';
-              break;
-            case 1:
-              routeName = '/employees/payment';
-              break;
-            case 2:
-              routeName = '/manage-account';
-              break;
-            case 3:
-              routeName = '/account';
-              break;
-          }
-          break;
-        case 5: // Pelanggan & Loyalty
-          switch (subIndex) {
-            case 0:
-              routeName = '/customers';
-              break;
-            case 1:
-              routeName = '/points/rewards';
-              break;
-            case 2:
-              routeName = '/points/redemptions-history';
-              break;
-            case 3:
-              routeName = '/points/configuration';
-              break;
-          }
-          break;
-        case 6: // Referral
-          switch (subIndex) {
-            case 0:
-              routeName = '/referral';
-              break;
-            case 1:
-              routeName = '/withdraw';
-              break;
-          }
-          break;
-        case 7: // Pengaturan
-          switch (subIndex) {
-            case 0:
-              routeName = '/settings/themes';
-              break;
-            case 1:
-              routeName = '/settings/tax';
-              break;
-            case 2:
-              routeName = '/settings/credentials';
-              break;
-            case 3:
-              routeName = '/password';
-              break;
-            case 4:
-              routeName = '/settings/logs-viewer';
-              break;
-          }
-          break;
-      }
-    } else {
-      switch (index) {
-        case 0:
-          routeName = '/dashboard';
-          break;
+    if (index < menuItems.length) {
+      final selectedItem = menuItems[index];
+
+      if (subIndex != null &&
+          selectedItem.subItems != null &&
+          subIndex < selectedItem.subItems!.length) {
+        final subItem = selectedItem.subItems![subIndex];
+        routeName = _getRouteForMenuItem(
+            selectedItem.permissionKey, subItem.permissionKey);
+      } else {
+        routeName = _getRouteForMenuItem(selectedItem.permissionKey, null);
       }
     }
 
@@ -697,186 +594,269 @@ class _MainLayoutState extends State<MainLayout> {
     final showExpanded = isMobile ? _isMobileSidebarOpen : _isSidebarExpanded;
     final sidebarWidth = isMobile ? 280.0 : (showExpanded ? 250.0 : 90.0);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      width: sidebarWidth,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.deepPurple.shade700,
-            Colors.deepPurple.shade800,
-          ],
-        ),
-        boxShadow: isMobile
-            ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(2, 0),
-                ),
-              ]
-            : null,
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            height: 80,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                if (showExpanded) ...[
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'POS System',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _toggleSidebar,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        isMobile
-                            ? Icons.close
-                            : (showExpanded
-                                ? Icons.chevron_left
-                                : Icons.chevron_right),
-                        color: Colors.white70,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
+    return Obx(() {
+      if (_permissionController.isLoading) {
+        return Container(
+          width: sidebarWidth,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.deepPurple.shade700,
+                Colors.deepPurple.shade800,
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          child: const Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+            ),
+          ),
+        );
+      }
 
-          // Menu Items
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  ...List.generate(_menuItems.length, (index) {
-                    final item = _menuItems[index];
-                    final isExpanded = _expandedMenuIndex == index;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildMenuItem(item, index),
-                        if (item.subItems != null && isExpanded && showExpanded)
-                          _buildSubmenuList(item.subItems!, index),
-                      ],
-                    );
-                  }),
-                  const SizedBox(height: 20),
-                ],
+      // Jika tidak ada menu yang dapat diakses, tampilkan pesan
+      if (_menuItems.isEmpty) {
+        return Container(
+          width: sidebarWidth,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.deepPurple.shade700,
+                Colors.deepPurple.shade800,
+              ],
+            ),
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'No accessible menu items',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
+        );
+      }
 
-          // Logout Button
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Container(
-                  height: 1,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        Colors.white24,
-                        Colors.transparent,
-                      ],
-                    ),
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        width: sidebarWidth,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.deepPurple.shade700,
+              Colors.deepPurple.shade800,
+            ],
+          ),
+          boxShadow: isMobile
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(2, 0),
                   ),
-                ),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Get.defaultDialog(
-                        title: 'Konfirmasi Logout',
-                        middleText: 'Apakah Anda yakin ingin keluar?',
-                        textConfirm: 'Logout',
-                        textCancel: 'Batal',
-                        confirmTextColor: Colors.white,
-                        onConfirm: () {
-                          Get.back(); // Close dialog
-                          Get.offAllNamed('/login');
-                        },
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 44),
-                      padding: EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: showExpanded ? 16 : 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade400.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: Colors.red.shade400.withOpacity(0.3),
-                          width: 1,
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              height: 80,
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  if (showExpanded) ...[
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'POS Shao Kao',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: showExpanded
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.logout,
-                                  color: Colors.white70,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Logout',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const Icon(
-                              Icons.logout,
-                              color: Colors.white70,
-                              size: 20,
-                            ),
+                    ),
+                  ],
+                  const SizedBox(width: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _toggleSidebar,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          isMobile
+                              ? Icons.close
+                              : (showExpanded
+                                  ? Icons.chevron_left
+                                  : Icons.chevron_right),
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 16),
+
+            // Menu Items
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    ...List.generate(_menuItems.length, (index) {
+                      final item = _menuItems[index];
+                      final isExpanded = _expandedMenuIndex == index;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildMenuItem(item, index),
+                          if (item.subItems != null &&
+                              isExpanded &&
+                              showExpanded)
+                            _buildSubmenuList(item.subItems!, index),
+                        ],
+                      );
+                    }),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+
+            // Logout Button
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Container(
+                    height: 1,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.white24,
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Get.defaultDialog(
+                          title: 'Konfirmasi Logout',
+                          middleText: 'Apakah Anda yakin ingin keluar?',
+                          textConfirm: 'Logout',
+                          textCancel: 'Batal',
+                          confirmTextColor: Colors.white,
+                          onConfirm: () async {
+                            Get.back(); // Close dialog
+
+                            // Gunakan AuthController untuk logout
+                            try {
+                              if (Get.isRegistered<AuthController>()) {
+                                final authController = AuthController.instance;
+                                await authController.logout();
+                              } else {
+                                // Manual logout jika AuthController tidak terdaftar
+                                final authService = AuthService.instance;
+                                await authService.logout();
+
+                                if (Get.isRegistered<PermissionController>()) {
+                                  final permissionController =
+                                      PermissionController.instance;
+                                  permissionController.clearPermissions();
+                                  Get.delete<PermissionController>();
+                                }
+
+                                Get.offAllNamed('/login');
+                              }
+                            } catch (e) {
+                              Get.snackbar(
+                                'Error',
+                                'Error during logout: ${e.toString()}',
+                                snackPosition: SnackPosition.TOP,
+                                backgroundColor: Colors.red,
+                                colorText: Colors.white,
+                              );
+                            }
+                          },
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: showExpanded ? 16 : 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.red.shade400.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: showExpanded
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.logout,
+                                    color: Colors.white70,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Icon(
+                                Icons.logout,
+                                color: Colors.white70,
+                                size: 20,
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   @override
@@ -917,7 +897,7 @@ class _MainLayoutState extends State<MainLayout> {
                             ),
                             const Expanded(
                               child: Text(
-                                'POS System',
+                                'POS Shao Kao',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,

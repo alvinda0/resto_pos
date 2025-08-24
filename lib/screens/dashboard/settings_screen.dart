@@ -433,13 +433,13 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('POS System v1.0.0'),
+            Text('Shao Kao v1.0.0'),
             SizedBox(height: 8),
             Text(
                 'Aplikasi Point of Sale untuk membantu mengelola bisnis Anda.'),
             SizedBox(height: 16),
             Text('Dikembangkan dengan Flutter'),
-            Text('© 2024 POS System'),
+            Text('© 2025 Shao Kao'),
           ],
         ),
         actions: [

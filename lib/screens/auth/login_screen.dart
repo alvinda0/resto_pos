@@ -34,7 +34,7 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'POS Login',
+                'Shao Kao',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
