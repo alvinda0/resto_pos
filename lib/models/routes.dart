@@ -5,6 +5,7 @@ import 'package:pos/screens/account/account_screen.dart';
 import 'package:pos/screens/api_key/api_key_screen.dart';
 import 'package:pos/screens/assets/assets_screen.dart';
 import 'package:pos/screens/customer/customer_screen.dart';
+import 'package:pos/screens/debt/debt_screen.dart';
 import 'package:pos/screens/employee/employee_screen.dart';
 import 'package:pos/screens/order/new_order_screen.dart';
 import 'package:pos/screens/payroll/payroll_screen.dart';
@@ -197,8 +198,7 @@ class AppRoutes {
       ),
       GetPage(
         name: reportBills,
-        page: () => _wrapWithMainLayout(
-            const PlaceholderScreen(title: 'Tagihan'), reportBills),
+        page: () => _wrapWithMainLayout(DebtScreen(), reportBills),
       ),
       GetPage(
         name: reportProfit,
