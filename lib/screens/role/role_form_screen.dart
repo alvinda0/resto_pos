@@ -36,18 +36,6 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          isEditing ? 'Edit Role' : 'Tambah Role',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 1,
-      ),
       body: Column(
         children: [
           Expanded(

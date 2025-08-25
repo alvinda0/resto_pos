@@ -19,103 +19,22 @@ class RoleScreen extends StatelessWidget {
         children: [
           // Header Section
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(
+                MediaQuery.of(context).size.width > 600 ? 24 : 16),
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(
                 bottom: BorderSide(color: Colors.grey, width: 0.2),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Title and Search
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Daftar Role',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: 300,
-                        child: TextField(
-                          controller: controller.searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Cari Role',
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Colors.grey.shade600,
-                              size: 20,
-                            ),
-                            suffixIcon: Obx(
-                                () => controller.searchQuery.value.isNotEmpty
-                                    ? IconButton(
-                                        onPressed: controller.clearSearch,
-                                        icon: Icon(
-                                          Icons.clear,
-                                          color: Colors.grey.shade600,
-                                          size: 20,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink()),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Colors.blue),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Add Role Button
-                ElevatedButton.icon(
-                  onPressed: () => AppRoutes.toRoleForm(),
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text(
-                    'Tambah Role',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: _buildHeader(context, controller),
           ),
 
           // Table Section
           Expanded(
             child: Container(
-              margin: const EdgeInsets.all(24),
+              margin: EdgeInsets.all(
+                  MediaQuery.of(context).size.width > 600 ? 24 : 16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -151,13 +70,17 @@ class RoleScreen extends StatelessWidget {
                                 color: Colors.red.shade300,
                               ),
                               const SizedBox(height: 16),
-                              Text(
-                                controller.error.value,
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 16,
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  controller.error.value,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 16,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 16),
                               ElevatedButton(
@@ -171,38 +94,45 @@ class RoleScreen extends StatelessWidget {
 
                       if (controller.roles.isEmpty) {
                         return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.admin_panel_settings_outlined,
-                                size: 64,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                controller.searchQuery.value.isNotEmpty
-                                    ? 'Tidak ada role yang ditemukan untuk "${controller.searchQuery.value}"'
-                                    : 'Belum ada role yang ditambahkan',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 16,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.admin_panel_settings_outlined,
+                                  size: 64,
+                                  color: Colors.grey.shade400,
                                 ),
-                              ),
-                              if (controller.searchQuery.value.isEmpty) ...[
                                 const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () => _navigateToCreateRole(),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Tambah Role Pertama'),
+                                Text(
+                                  controller.searchQuery.value.isNotEmpty
+                                      ? 'Tidak ada role yang ditemukan untuk "${controller.searchQuery.value}"'
+                                      : 'Belum ada role yang ditambahkan',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 16,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
+                                if (controller.searchQuery.value.isEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () => _navigateToCreateRole(),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Tambah Role Pertama'),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         );
                       }
 
-                      return _buildDataTable(controller);
+                      // Responsive Table
+                      return MediaQuery.of(context).size.width > 800
+                          ? _buildDesktopTable(controller)
+                          : _buildMobileTable(controller);
                     }),
                   ),
 
@@ -233,7 +163,114 @@ class RoleScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDataTable(RoleController controller) {
+  Widget _buildHeader(BuildContext context, RoleController controller) {
+    final isDesktop = MediaQuery.of(context).size.width > 600;
+
+    if (isDesktop) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Title and Search
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 300,
+                  child: _buildSearchField(controller),
+                ),
+              ],
+            ),
+          ),
+          // Add Role Button
+          _buildAddButton(),
+        ],
+      );
+    } else {
+      return Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Role Management',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              _buildAddButton(isCompact: true),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildSearchField(controller),
+        ],
+      );
+    }
+  }
+
+  Widget _buildSearchField(RoleController controller) {
+    return TextField(
+      controller: controller.searchController,
+      decoration: InputDecoration(
+        hintText: 'Cari Role',
+        prefixIcon: Icon(
+          Icons.search,
+          color: Colors.grey.shade600,
+          size: 20,
+        ),
+        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+            ? IconButton(
+                onPressed: controller.clearSearch,
+                icon: Icon(
+                  Icons.clear,
+                  color: Colors.grey.shade600,
+                  size: 20,
+                ),
+              )
+            : const SizedBox.shrink()),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.blue),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton({bool isCompact = false}) {
+    return ElevatedButton.icon(
+      onPressed: () => AppRoutes.toRoleForm(),
+      icon: const Icon(Icons.add, color: Colors.white),
+      label: Text(
+        isCompact ? 'Tambah' : 'Tambah Role',
+        style: const TextStyle(color: Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue,
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 12 : 20,
+          vertical: 12,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopTable(RoleController controller) {
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -435,49 +472,7 @@ class RoleScreen extends StatelessWidget {
                           ),
                           tooltip: 'Opsi',
                           itemBuilder: (BuildContext context) {
-                            List<PopupMenuEntry<String>> items = [
-                              const PopupMenuItem<String>(
-                                value: 'view',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.visibility,
-                                        size: 16, color: Colors.blue),
-                                    SizedBox(width: 8),
-                                    Text('Lihat Detail'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem<String>(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit,
-                                        size: 16, color: Colors.green),
-                                    SizedBox(width: 8),
-                                    Text('Edit'),
-                                  ],
-                                ),
-                              ),
-                            ];
-
-                            // Hanya tampilkan opsi hapus jika bukan role sistem
-                            if (!role.isSystem) {
-                              items.add(
-                                const PopupMenuItem<String>(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete,
-                                          size: 16, color: Colors.red),
-                                      SizedBox(width: 8),
-                                      Text('Hapus'),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return items;
+                            return _buildPopupMenuItems(role);
                           },
                         ),
                       ),
@@ -498,6 +493,304 @@ class RoleScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildMobileTable(RoleController controller) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: 800, // Minimum width untuk menampung semua kolom
+        child: Column(
+          children: [
+            // Table Header
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 50,
+                      child: Text(
+                        'No.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 140,
+                      child: Text(
+                        'Nama Role',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 160,
+                      child: Text(
+                        'Deskripsi',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        'Posisi',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        'Izin',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 80,
+                      child: Text(
+                        'Jml Akun',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 80,
+                      child: Text(
+                        'Aksi',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Table Rows
+            Expanded(
+              child: ListView.builder(
+                itemCount: controller.roles.length,
+                itemBuilder: (context, index) {
+                  final role = controller.roles[index];
+                  final rowNumber = controller.startIndex + index;
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 50,
+                            child: Text(
+                              '$rowNumber',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 140,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  role.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black87,
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (role.isSystem) ...[
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'System',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        color: Colors.orange.shade700,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: 160,
+                            child: Text(
+                              role.description,
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 60,
+                            child: Text(
+                              '${role.position}',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 60,
+                            child: Text(
+                              '${role.permissions.length}',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              '${role.userCount}',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: PopupMenuButton<String>(
+                              onSelected: (value) =>
+                                  _handleRoleAction(role, value),
+                              icon: Icon(
+                                Icons.more_vert,
+                                color: Colors.grey.shade600,
+                                size: 16,
+                              ),
+                              tooltip: 'Opsi',
+                              itemBuilder: (BuildContext context) {
+                                return _buildPopupMenuItems(role);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Loading More Indicator
+            Obx(() => controller.isLoadingMore.value
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  )
+                : const SizedBox.shrink()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<PopupMenuEntry<String>> _buildPopupMenuItems(Role role) {
+    List<PopupMenuEntry<String>> items = [
+      const PopupMenuItem<String>(
+        value: 'view',
+        child: Row(
+          children: [
+            Icon(Icons.visibility, size: 16, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Lihat Detail'),
+          ],
+        ),
+      ),
+      const PopupMenuItem<String>(
+        value: 'edit',
+        child: Row(
+          children: [
+            Icon(Icons.edit, size: 16, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Edit'),
+          ],
+        ),
+      ),
+    ];
+
+    // Hanya tampilkan opsi hapus jika bukan role sistem
+    if (!role.isSystem) {
+      items.add(
+        const PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, size: 16, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Hapus'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return items;
   }
 
   void _navigateToCreateRole() {
@@ -522,7 +815,9 @@ class RoleScreen extends StatelessWidget {
     Get.dialog(
       Dialog(
         child: Container(
-          width: 500,
+          width: MediaQuery.of(Get.context!).size.width > 600
+              ? 500
+              : MediaQuery.of(Get.context!).size.width * 0.9,
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -536,10 +831,10 @@ class RoleScreen extends StatelessWidget {
                     size: 28,
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Text(
                       'Detail Role',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -566,7 +861,6 @@ class RoleScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     Get.back();
-                    // Perbaikan: gunakan route dengan arguments
                     Get.toNamed(AppRoutes.roleform, arguments: role);
                   },
                   child: const Text('Edit Role'),
@@ -678,7 +972,7 @@ class RoleScreen extends StatelessWidget {
                 onPressed: controller.isSubmitting.value
                     ? null
                     : () async {
-                        Get.back(); // Close dialog first
+                        Get.back();
                         await controller.deleteRole(role.id);
                       },
                 style: ElevatedButton.styleFrom(

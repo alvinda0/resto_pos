@@ -12,36 +12,13 @@ class EmployeeScreen extends StatelessWidget {
     final EmployeeController controller = Get.put(EmployeeController());
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text(
-          'Employee Management',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.red,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () => _showEmployeeDialog(context, controller),
-            icon: const Icon(Icons.add, color: Colors.white),
-            tooltip: 'Add Employee',
-          ),
-          IconButton(
-            onPressed: () => controller.refreshData(),
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Search Bar
-          _buildSearchBar(controller),
+          // Bilah Pencarian dengan Tombol Aksi
+          _buildSearchBarWithActions(controller),
 
-          // Content Area
+          // Area Konten
           Expanded(
             child: Container(
               margin: const EdgeInsets.all(16),
@@ -59,7 +36,7 @@ class EmployeeScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // Table Header with Title
+                  // Header Tabel dengan Judul
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -77,7 +54,7 @@ class EmployeeScreen extends StatelessWidget {
                         const Icon(Icons.people, color: Colors.red, size: 20),
                         const SizedBox(width: 8),
                         const Text(
-                          'Employee List',
+                          'Daftar Karyawan',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -86,7 +63,7 @@ class EmployeeScreen extends StatelessWidget {
                         ),
                         const Spacer(),
                         Obx(() => Text(
-                              '${controller.totalItems.value} employees',
+                              '${controller.totalItems.value} karyawan',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade600,
@@ -96,7 +73,7 @@ class EmployeeScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // Table Content
+                  // Konten Tabel
                   Expanded(
                     child: Obx(() {
                       if (controller.isLoading.value) {
@@ -113,7 +90,7 @@ class EmployeeScreen extends StatelessWidget {
                     }),
                   ),
 
-                  // Pagination
+                  // Paginasi
                   Obx(() => PaginationWidget(
                         currentPage: controller.currentPage.value,
                         totalItems: controller.totalItems.value,
@@ -138,12 +115,13 @@ class EmployeeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchBar(EmployeeController controller) {
+  Widget _buildSearchBarWithActions(EmployeeController controller) {
     return Container(
       padding: const EdgeInsets.all(16),
       color: Colors.white,
       child: Row(
         children: [
+          // Field Pencarian
           Expanded(
             child: Container(
               height: 40,
@@ -156,7 +134,7 @@ class EmployeeScreen extends StatelessWidget {
                 controller: controller.searchController,
                 onChanged: controller.onSearchChanged,
                 decoration: InputDecoration(
-                  hintText: 'Search employees...',
+                  hintText: 'Cari karyawan...',
                   hintStyle: TextStyle(color: Colors.grey.shade500),
                   prefixIcon:
                       Icon(Icons.search, color: Colors.grey.shade500, size: 20),
@@ -177,6 +155,39 @@ class EmployeeScreen extends StatelessWidget {
               ),
             ),
           ),
+
+          const SizedBox(width: 12),
+
+          // Tombol Tambah Karyawan
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: IconButton(
+              onPressed: () => _showEmployeeDialog(Get.context!, controller),
+              icon: const Icon(Icons.add, color: Colors.white, size: 20),
+              tooltip: 'Tambah Karyawan',
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Tombol Refresh
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: IconButton(
+              onPressed: () => controller.refreshData(),
+              icon: Icon(Icons.refresh, color: Colors.grey.shade600, size: 20),
+              tooltip: 'Segarkan',
+            ),
+          ),
         ],
       ),
     );
@@ -184,61 +195,72 @@ class EmployeeScreen extends StatelessWidget {
 
   Widget _buildEmployeeTable(EmployeeController controller) {
     return SingleChildScrollView(
-      child: Table(
-        columnWidths: const {
-          0: FlexColumnWidth(0.8),
-          1: FlexColumnWidth(2.5),
-          2: FlexColumnWidth(2.5),
-          3: FlexColumnWidth(2.0),
-          4: FlexColumnWidth(2.0),
-          5: FlexColumnWidth(1.5),
-          6: FlexColumnWidth(1.2),
-        },
-        children: [
-          // Table Header
-          TableRow(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade200),
-              ),
-            ),
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth:
+                MediaQuery.of(Get.context!).size.width - 32, // Minus margin
+          ),
+          child: Table(
+            columnWidths: const {
+              0: FixedColumnWidth(50), // No - width fixed
+              1: FixedColumnWidth(150), // Nama - width fixed
+              2: FixedColumnWidth(180), // Email - width fixed
+              3: FixedColumnWidth(120), // Telepon - width fixed
+              4: FixedColumnWidth(120), // Jabatan - width fixed
+              5: FixedColumnWidth(100), // Gaji - width fixed
+              6: FixedColumnWidth(80), // Aksi - width fixed
+            },
             children: [
-              _buildTableHeaderCell('No'),
-              _buildTableHeaderCell('Name'),
-              _buildTableHeaderCell('Email'),
-              _buildTableHeaderCell('Phone'),
-              _buildTableHeaderCell('Position'),
-              _buildTableHeaderCell('Salary'),
-              _buildTableHeaderCell('Actions'),
+              // Header Tabel
+              TableRow(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade200),
+                  ),
+                ),
+                children: [
+                  _buildTableHeaderCell('No'),
+                  _buildTableHeaderCell('Nama'),
+                  _buildTableHeaderCell('Email'),
+                  _buildTableHeaderCell('Telepon'),
+                  _buildTableHeaderCell('Jabatan'),
+                  _buildTableHeaderCell('Gaji'),
+                  _buildTableHeaderCell('Aksi'),
+                ],
+              ),
+
+              // Baris Tabel
+              ...controller.employees.asMap().entries.map((entry) {
+                final index = entry.key;
+                final employee = entry.value;
+                final globalIndex = controller.startIndex + index;
+
+                return TableRow(
+                  decoration: BoxDecoration(
+                    color: index.isEven ? Colors.white : Colors.grey.shade100,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade100),
+                    ),
+                  ),
+                  children: [
+                    _buildTableCell('$globalIndex'),
+                    _buildTableCell(employee.name),
+                    _buildTableCell(employee.email),
+                    _buildTableCell(employee.phone),
+                    _buildTableCell(employee.position),
+                    _buildTableCell(
+                        controller.formatSalary(employee.baseSalary)),
+                    _buildActionCell(employee, controller),
+                  ],
+                );
+              }),
             ],
           ),
-
-          // Table Rows
-          ...controller.employees.asMap().entries.map((entry) {
-            final index = entry.key;
-            final employee = entry.value;
-            final globalIndex = controller.startIndex + index;
-
-            return TableRow(
-              decoration: BoxDecoration(
-                color: index.isEven ? Colors.white : Colors.grey.shade100,
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey.shade100),
-                ),
-              ),
-              children: [
-                _buildTableCell('$globalIndex'),
-                _buildTableCell(employee.name),
-                _buildTableCell(employee.email),
-                _buildTableCell(employee.phone),
-                _buildTableCell(employee.position),
-                _buildTableCell(controller.formatSalary(employee.baseSalary)),
-                _buildActionCell(employee, controller),
-              ],
-            );
-          }),
-        ],
+        ),
       ),
     );
   }
@@ -266,6 +288,8 @@ class EmployeeScreen extends StatelessWidget {
           fontSize: 13,
           color: Colors.black87,
         ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
       ),
     );
   }
@@ -273,43 +297,64 @@ class EmployeeScreen extends StatelessWidget {
   Widget _buildActionCell(Employee employee, EmployeeController controller) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Edit Button
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: IconButton(
-              onPressed: () => _showEmployeeDialog(Get.context!, controller,
-                  employee: employee),
-              icon: Icon(Icons.edit, size: 14, color: Colors.blue.shade600),
-              padding: EdgeInsets.zero,
-              tooltip: 'Edit Employee',
+      child: PopupMenuButton<String>(
+        icon: Icon(
+          Icons.more_vert,
+          size: 18,
+          color: Colors.grey.shade600,
+        ),
+        iconSize: 18,
+        padding: EdgeInsets.zero,
+        offset: const Offset(-10, 0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        itemBuilder: (BuildContext context) => [
+          PopupMenuItem<String>(
+            value: 'edit',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.edit,
+                  size: 16,
+                  color: Colors.blue.shade600,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Ubah',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 4),
-
-          // Delete Button
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: IconButton(
-              onPressed: () => controller.showDeleteConfirmation(employee),
-              icon: Icon(Icons.delete, size: 14, color: Colors.red.shade600),
-              padding: EdgeInsets.zero,
-              tooltip: 'Delete Employee',
+          PopupMenuItem<String>(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete,
+                  size: 16,
+                  color: Colors.red.shade600,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Hapus',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
             ),
           ),
         ],
+        onSelected: (String value) {
+          switch (value) {
+            case 'edit':
+              _showEmployeeDialog(Get.context!, controller, employee: employee);
+              break;
+            case 'delete':
+              controller.showDeleteConfirmation(employee);
+              break;
+          }
+        },
       ),
     );
   }
@@ -326,7 +371,7 @@ class EmployeeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'No employees found',
+            'Tidak ada karyawan ditemukan',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
@@ -335,7 +380,7 @@ class EmployeeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Start by adding your first employee',
+            'Mulai dengan menambahkan karyawan pertama Anda',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,
@@ -346,7 +391,7 @@ class EmployeeScreen extends StatelessWidget {
             onPressed: () => _showEmployeeDialog(
                 Get.context!, Get.find<EmployeeController>()),
             icon: const Icon(Icons.add),
-            label: const Text('Add Employee'),
+            label: const Text('Tambah Karyawan'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
@@ -378,7 +423,7 @@ class EmployeeScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Dialog Header
+              // Header Dialog
               Row(
                 children: [
                   Icon(
@@ -388,7 +433,7 @@ class EmployeeScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    isEdit ? 'Edit Employee' : 'Add New Employee',
+                    isEdit ? 'Ubah Karyawan' : 'Tambah Karyawan Baru',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -404,9 +449,9 @@ class EmployeeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Form Fields
+              // Field Formulir
               _buildFormField(
-                label: 'Name',
+                label: 'Nama',
                 controller: controller.nameController,
                 icon: Icons.person,
               ),
@@ -421,7 +466,7 @@ class EmployeeScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               _buildFormField(
-                label: 'Phone',
+                label: 'Telepon',
                 controller: controller.phoneController,
                 icon: Icons.phone,
                 keyboardType: TextInputType.phone,
@@ -429,14 +474,14 @@ class EmployeeScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               _buildFormField(
-                label: 'Position',
+                label: 'Jabatan',
                 controller: controller.positionController,
                 icon: Icons.work,
               ),
               const SizedBox(height: 16),
 
               _buildFormField(
-                label: 'Base Salary',
+                label: 'Gaji Pokok',
                 controller: controller.salaryController,
                 icon: Icons.attach_money,
                 keyboardType: TextInputType.number,
@@ -444,7 +489,7 @@ class EmployeeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              // Action Buttons
+              // Tombol Aksi
               Row(
                 children: [
                   Expanded(
@@ -454,7 +499,7 @@ class EmployeeScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         side: BorderSide(color: Colors.grey.shade300),
                       ),
-                      child: const Text('Cancel'),
+                      child: const Text('Batal'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -483,7 +528,7 @@ class EmployeeScreen extends StatelessWidget {
                                     }
                                   } catch (e) {
                                     // Error handling sudah ada di controller
-                                    print('Error in dialog: $e');
+                                    print('Error di dialog: $e');
                                   }
                                 }
                               : null,
@@ -502,7 +547,7 @@ class EmployeeScreen extends StatelessWidget {
                                         Colors.white),
                                   ),
                                 )
-                              : Text(isEdit ? 'Update' : 'Create'),
+                              : Text(isEdit ? 'Perbarui' : 'Buat'),
                         )),
                   ),
                 ],

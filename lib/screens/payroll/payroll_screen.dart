@@ -17,12 +17,6 @@ class _PayrollScreenState extends State<PayrollScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manajemen Payroll'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 1,
-      ),
       body: Column(
         children: [
           _buildHeader(),
@@ -38,55 +32,43 @@ class _PayrollScreenState extends State<PayrollScreen> {
       padding: const EdgeInsets.all(16),
       color: Colors.white,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          const Text(
-            'Daftar Payroll',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+          // Tombol Refresh
+          IconButton(
+            onPressed: () => controller.refreshData(),
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Muat Ulang',
           ),
-          Row(
-            children: [
-              // Tombol Refresh
-              IconButton(
-                onPressed: () => controller.refreshData(),
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Muat Ulang',
-              ),
-              const SizedBox(width: 8),
-              // Tombol Generate
-              Obx(() => ElevatedButton.icon(
-                    onPressed: controller.isGenerating.value
-                        ? null
-                        : () => _showGenerateDialog(),
-                    icon: controller.isGenerating.value
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.add),
-                    label: Text(controller.isGenerating.value
-                        ? 'Sedang Memproses...'
-                        : 'Buat Payroll'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  )),
-            ],
-          ),
+          const SizedBox(width: 8),
+          // Tombol Generate
+          Obx(() => ElevatedButton.icon(
+                onPressed: controller.isGenerating.value
+                    ? null
+                    : () => _showGenerateDialog(),
+                icon: controller.isGenerating.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(controller.isGenerating.value
+                    ? 'Sedang Memproses...'
+                    : 'Buat Payroll'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              )),
         ],
       ),
     );
