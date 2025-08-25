@@ -49,17 +49,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Referral',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-        ),
-      ),
       body: Column(
         children: [
-          // Header section with search and add button
           Container(
             color: Colors.white,
             padding: EdgeInsets.all(16),
@@ -149,6 +140,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
           ),
 
           // Table section
+          // Ganti bagian table section dengan code ini:
           Expanded(
             child: Container(
               margin: EdgeInsets.all(16),
@@ -166,66 +158,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
               ),
               child: Column(
                 children: [
-                  // Table header
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                            width: 30,
-                            child: Text('No.',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14))),
-                        Expanded(
-                            flex: 2,
-                            child: Text('Nama',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14))),
-                        Expanded(
-                            flex: 2,
-                            child: Text('Email',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14))),
-                        Expanded(
-                            flex: 2,
-                            child: Text('Phone',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14))),
-                        Expanded(
-                            flex: 2,
-                            child: Text('Kode Referral',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14))),
-                        Expanded(
-                            flex: 1,
-                            child: Text('Komisi',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14))),
-                        Expanded(
-                            flex: 1,
-                            child: Text('QR Code',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14))),
-                        Container(width: 30),
-                      ],
-                    ),
-                  ),
-
-                  // Table rows with Obx for reactive updates
+                  // Responsive table content
                   Expanded(
                     child: Obx(() {
                       if (_referralController.isLoading.value) {
@@ -280,135 +213,449 @@ class _ReferralScreenState extends State<ReferralScreen> {
                         );
                       }
 
-                      return ListView.builder(
-                        itemCount: filteredReferrals.length,
-                        itemBuilder: (context, index) {
-                          final referral = filteredReferrals[index];
-                          final globalIndex =
-                              (_referralController.currentPage.value - 1) *
-                                      _referralController.itemsPerPage.value +
-                                  index +
-                                  1;
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          bool isMobile = constraints.maxWidth < 768;
 
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 16),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                    color: Colors.grey[200]!, width: 1),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 30,
-                                  child: Text(
-                                    '$globalIndex',
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey[600]),
+                          if (isMobile) {
+                            // Mobile card view
+                            return ListView.builder(
+                              padding: EdgeInsets.all(16),
+                              itemCount: filteredReferrals.length,
+                              itemBuilder: (context, index) {
+                                final referral = filteredReferrals[index];
+                                final globalIndex = (_referralController
+                                                .currentPage.value -
+                                            1) *
+                                        _referralController.itemsPerPage.value +
+                                    index +
+                                    1;
+
+                                return Container(
+                                  margin: EdgeInsets.only(bottom: 12),
+                                  padding: EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border:
+                                        Border.all(color: Colors.grey[200]!),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withOpacity(0.05),
+                                        spreadRadius: 1,
+                                        blurRadius: 2,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    referral.customerName,
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    referral.customerEmail,
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey[700]),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    referral.customerPhone,
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey[700]),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    referral.code,
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey[700]),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        '${referral.commissionRate}${referral.commissionType == 'percentage' ? '%' : ''}',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.green[700]),
+                                      // Header row with number and menu
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[100],
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              '#$globalIndex',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ),
+                                          PopupMenuButton(
+                                            icon: Icon(Icons.more_vert,
+                                                color: Colors.grey[600],
+                                                size: 20),
+                                            itemBuilder: (context) => [
+                                              PopupMenuItem(
+                                                value: 'edit',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.edit, size: 16),
+                                                    SizedBox(width: 8),
+                                                    Text('Edit'),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuItem(
+                                                value: 'delete',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.delete,
+                                                        size: 16,
+                                                        color: Colors.red),
+                                                    SizedBox(width: 8),
+                                                    Text('Delete',
+                                                        style: TextStyle(
+                                                            color: Colors.red)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                            onSelected: (value) {
+                                              if (value == 'edit') {
+                                                _showEditReferralDialog(
+                                                    referral);
+                                              } else if (value == 'delete') {
+                                                _showDeleteConfirmation(
+                                                    referral);
+                                              }
+                                            },
+                                          ),
+                                        ],
                                       ),
+                                      SizedBox(height: 12),
+                                      // Customer name (main title)
                                       Text(
-                                        referral.commissionType == 'percentage'
-                                            ? 'Persen'
-                                            : 'Fixed',
+                                        referral.customerName,
                                         style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.grey[600]),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      // Contact info
+                                      _buildInfoRow(
+                                          Icons.email, referral.customerEmail),
+                                      SizedBox(height: 4),
+                                      _buildInfoRow(
+                                          Icons.phone, referral.customerPhone),
+                                      SizedBox(height: 8),
+                                      // Referral code and commission
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Container(
+                                              padding: EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue[50],
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Kode Referral',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    referral.code,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.blue[700],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: Container(
+                                              padding: EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green[50],
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Komisi',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '${referral.commissionRate}${referral.commissionType == 'percentage' ? '%' : ''}',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.green[700],
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    referral.commissionType ==
+                                                            'percentage'
+                                                        ? 'Persen'
+                                                        : 'Fixed',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 12),
+                                      // QR Code button
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            _showQRCodeDialog(referral);
+                                          },
+                                          icon: Icon(Icons.qr_code, size: 16),
+                                          label: Text('Lihat QR Code'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.blue[600],
+                                            side: BorderSide(
+                                                color: Colors.blue[200]!),
+                                            padding: EdgeInsets.symmetric(
+                                                vertical: 8),
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      _showQRCodeDialog(referral);
-                                    },
-                                    child: Text(
-                                      'Lihat',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.blue[600],
-                                        decoration: TextDecoration.underline,
-                                      ),
+                                );
+                              },
+                            );
+                          } else {
+                            // Desktop table view (original code)
+                            return Column(
+                              children: [
+                                // Table header
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(12),
+                                      topRight: Radius.circular(12),
                                     ),
                                   ),
-                                ),
-                                Container(
-                                  width: 30,
-                                  child: PopupMenuButton(
-                                    icon: Icon(Icons.more_vert,
-                                        color: Colors.grey[600], size: 20),
-                                    itemBuilder: (context) => [
-                                      PopupMenuItem(
-                                        value: 'edit',
-                                        child: Text('Edit'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Text('Delete'),
-                                      ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                          width: 30,
+                                          child: Text('No.',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14))),
+                                      Expanded(
+                                          flex: 2,
+                                          child: Text('Nama',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14))),
+                                      Expanded(
+                                          flex: 2,
+                                          child: Text('Email',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14))),
+                                      Expanded(
+                                          flex: 2,
+                                          child: Text('Phone',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14))),
+                                      Expanded(
+                                          flex: 2,
+                                          child: Text('Kode Referral',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14))),
+                                      Expanded(
+                                          flex: 1,
+                                          child: Text('Komisi',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14))),
+                                      Expanded(
+                                          flex: 1,
+                                          child: Text('QR Code',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14))),
+                                      Container(width: 30),
                                     ],
-                                    onSelected: (value) {
-                                      if (value == 'edit') {
-                                        _showEditReferralDialog(referral);
-                                      } else if (value == 'delete') {
-                                        _showDeleteConfirmation(referral);
-                                      }
+                                  ),
+                                ),
+
+                                // Table rows
+                                Expanded(
+                                  child: ListView.builder(
+                                    itemCount: filteredReferrals.length,
+                                    itemBuilder: (context, index) {
+                                      final referral = filteredReferrals[index];
+                                      final globalIndex = (_referralController
+                                                      .currentPage.value -
+                                                  1) *
+                                              _referralController
+                                                  .itemsPerPage.value +
+                                          index +
+                                          1;
+
+                                      return Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 20, vertical: 16),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            bottom: BorderSide(
+                                                color: Colors.grey[200]!,
+                                                width: 1),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 30,
+                                              child: Text(
+                                                '$globalIndex',
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[600]),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                referral.customerName,
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.w500),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                referral.customerEmail,
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                referral.customerPhone,
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                referral.code,
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    '${referral.commissionRate}${referral.commissionType == 'percentage' ? '%' : ''}',
+                                                    style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color:
+                                                            Colors.green[700]),
+                                                  ),
+                                                  Text(
+                                                    referral.commissionType ==
+                                                            'percentage'
+                                                        ? 'Persen'
+                                                        : 'Fixed',
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        color:
+                                                            Colors.grey[600]),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  _showQRCodeDialog(referral);
+                                                },
+                                                child: Text(
+                                                  'Lihat',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.blue[600],
+                                                    decoration: TextDecoration
+                                                        .underline,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              width: 30,
+                                              child: PopupMenuButton(
+                                                icon: Icon(Icons.more_vert,
+                                                    color: Colors.grey[600],
+                                                    size: 20),
+                                                itemBuilder: (context) => [
+                                                  PopupMenuItem(
+                                                    value: 'edit',
+                                                    child: Text('Edit'),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: 'delete',
+                                                    child: Text('Delete'),
+                                                  ),
+                                                ],
+                                                onSelected: (value) {
+                                                  if (value == 'edit') {
+                                                    _showEditReferralDialog(
+                                                        referral);
+                                                  } else if (value ==
+                                                      'delete') {
+                                                    _showDeleteConfirmation(
+                                                        referral);
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
                                     },
                                   ),
                                 ),
                               ],
-                            ),
-                          );
+                            );
+                          }
                         },
                       );
                     }),
@@ -438,6 +685,29 @@ class _ReferralScreenState extends State<ReferralScreen> {
               )),
         ],
       ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: Colors.grey[600],
+        ),
+        SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[700],
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 
