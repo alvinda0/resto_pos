@@ -1,13 +1,14 @@
 // lib/screens/qr_code_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos/controller/tables/tables_qr_code_controller.dart';
-import 'package:qr_flutter/qr_flutter.dart'; // Add this package
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:pos/models/tables/model_tables.dart';
+import 'dart:ui' as ui;
+import 'package:gal/gal.dart';
 
 class QRCodeScreen extends StatelessWidget {
-  const QRCodeScreen({Key? key}) : super(key: key);
+  const QRCodeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -46,124 +47,6 @@ class QRCodeScreen extends StatelessWidget {
               if (controller.isLoading.value && controller.qrCodes.isEmpty) {
                 return const Center(
                   child: CircularProgressIndicator(),
-                );
-              }
-
-              // Download QR Code functionality
-              Future<void> _downloadQRCode(
-                  BuildContext context, QRCode qrCode, String url) async {
-                try {
-                  // For web/desktop - copy URL to clipboard and show QR in new dialog
-                  await Clipboard.setData(ClipboardData(text: url));
-
-                  Get.snackbar(
-                    'Success',
-                    'QR Code URL copied to clipboard!\nYou can take a screenshot to save the QR code.',
-                    backgroundColor: Colors.green,
-                    colorText: Colors.white,
-                    snackPosition: SnackPosition.TOP,
-                    duration: const Duration(seconds: 4),
-                  );
-                } catch (e) {
-                  Get.snackbar(
-                    'Error',
-                    'Failed to copy URL: $e',
-                    backgroundColor: Colors.red,
-                    colorText: Colors.white,
-                    snackPosition: SnackPosition.TOP,
-                  );
-                }
-              }
-
-              // Show fullscreen QR for screenshot
-              void _showFullscreenQR(
-                  BuildContext context, QRCode qrCode, String url) {
-                showDialog(
-                  context: context,
-                  barrierColor: Colors.black87,
-                  builder: (context) => Dialog.fullscreen(
-                    backgroundColor: Colors.white,
-                    child: Scaffold(
-                      appBar: AppBar(
-                        title: Text('QR Code - Meja ${qrCode.tableNumber}'),
-                        backgroundColor: Colors.white,
-                        elevation: 0,
-                        leading: IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                      body: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Large QR Code for screenshot
-                            Container(
-                              padding: const EdgeInsets.all(40),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 20,
-                                    spreadRadius: 5,
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'MEJA ${qrCode.tableNumber}',
-                                    style: const TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  QrImageView(
-                                    data: url,
-                                    version: QrVersions.auto,
-                                    size: 400.0,
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                    errorCorrectionLevel: QrErrorCorrectLevel.M,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    'Scan untuk melihat menu',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 40),
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 40),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Tip: Ambil screenshot untuk menyimpan QR Code ini\nURL sudah di-copy ke clipboard',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 );
               }
 
@@ -356,6 +239,168 @@ class QRCodeScreen extends StatelessWidget {
     );
   }
 
+  // Function to generate QR code as image and save to gallery (Android)
+  Future<void> _downloadQRCode(BuildContext context, QRCode qrCode) async {
+    try {
+      // Show loading indicator
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(),
+        ),
+        barrierDismissible: false,
+      );
+
+      final completeUrl =
+          '${qrCode.menuUrl}&table_number=${qrCode.tableNumber}';
+
+      // Create a custom painter to generate high-quality QR image
+      final painter = QrPainter(
+        data: completeUrl,
+        version: QrVersions.auto,
+        eyeStyle: const QrEyeStyle(
+          eyeShape: QrEyeShape.square,
+          color: Colors.black,
+        ),
+        dataModuleStyle: const QrDataModuleStyle(
+          dataModuleShape: QrDataModuleShape.square,
+          color: Colors.black,
+        ),
+        color: Colors.black,
+        emptyColor: Colors.white,
+      );
+
+      // Create canvas and paint QR code
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+
+      // Set canvas size (800x800 for high quality)
+      const size = Size(800, 800);
+
+      // Paint white background
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()..color = Colors.white,
+      );
+
+      // Add table number text at the top
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: 'MEJA ${qrCode.tableNumber}',
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(
+          (size.width - textPainter.width) / 2,
+          20,
+        ),
+      );
+
+      // Add padding and paint QR code
+      const padding = 60.0;
+      final qrRect = Rect.fromLTWH(
+        padding,
+        padding + 70, // Account for title text
+        size.width - (padding * 2),
+        size.height -
+            (padding * 2) -
+            120, // Account for title and instruction text
+      );
+
+      // Create offset for QR code positioning
+      canvas.translate(qrRect.left, qrRect.top);
+      painter.paint(canvas, qrRect.size);
+      canvas.translate(-qrRect.left, -qrRect.top);
+
+      // Add instruction text at the bottom
+      final instructionPainter = TextPainter(
+        text: const TextSpan(
+          text: 'Scan untuk melihat menu',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 24,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+
+      instructionPainter.layout();
+      instructionPainter.paint(
+        canvas,
+        Offset(
+          (size.width - instructionPainter.width) / 2,
+          size.height - 50,
+        ),
+      );
+
+      // Convert to image
+      final picture = pictureRecorder.endRecording();
+      final image = await picture.toImage(
+        size.width.toInt(),
+        size.height.toInt(),
+      );
+
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final uint8List = byteData!.buffer.asUint8List();
+
+      // Check if Gal has access permissions
+      final hasAccess = await Gal.hasAccess();
+      if (!hasAccess) {
+        final requestGranted = await Gal.requestAccess();
+        if (!requestGranted) {
+          Get.back(); // Close loading
+          Get.snackbar(
+            'Permission Required',
+            'Gallery access permission is required to save QR code',
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+            snackPosition: SnackPosition.TOP,
+          );
+          return;
+        }
+      }
+
+      // Save to gallery using Gal
+      await Gal.putImageBytes(
+        uint8List,
+        name: 'QR_Code_Meja_${qrCode.tableNumber}',
+      );
+
+      // Close loading dialog
+      Get.back();
+
+      Get.snackbar(
+        'Success',
+        'QR Code berhasil disimpan ke Gallery',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 3),
+      );
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Get.isDialogOpen!) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Error saving QR Code: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+      );
+    }
+  }
+
   void _showQRCodeDialog(
       BuildContext context, QRCode qrCode, QRCodeController controller) {
     // Build the complete URL with table_number parameter
@@ -370,7 +415,6 @@ class QRCodeScreen extends StatelessWidget {
           width: 400,
           padding: const EdgeInsets.all(24),
           child: SingleChildScrollView(
-            // Add this line
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -457,7 +501,7 @@ class QRCodeScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: () => (),
+                    onPressed: () => _downloadQRCode(context, qrCode),
                     icon: const Icon(Icons.download, size: 20),
                     label: const Text(
                       'Download QR',
