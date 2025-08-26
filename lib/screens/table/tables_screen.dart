@@ -232,7 +232,6 @@ class QRCodeScreen extends StatelessWidget {
 
     return GestureDetector(
       onTap: () => _showQRCodeDialog(context, qrCode, controller),
-      onLongPress: () => _showDeleteConfirmation(context, qrCode, controller),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -249,15 +248,16 @@ class QRCodeScreen extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            // Show mini QR code or just table number
-            Expanded(
+            // Main content - perfectly centered
+            Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.only(
+                    top: 12), // Account for delete button space
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Table Number
                     Text(
@@ -289,6 +289,35 @@ class QRCodeScreen extends StatelessWidget {
                       ),
                     ],
                   ],
+                ),
+              ),
+            ),
+
+            // Delete icon positioned at top-right
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () =>
+                    _showDeleteConfirmation(context, qrCode, controller),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.8),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                 ),
               ),
             ),
