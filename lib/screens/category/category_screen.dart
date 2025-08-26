@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/category/category_controller.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/category/category_controller.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class CategoryManagementScreen extends StatelessWidget {
   const CategoryManagementScreen({Key? key}) : super(key: key);

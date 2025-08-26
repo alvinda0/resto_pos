@@ -18,7 +18,7 @@
 
 
     <application
-        android:label="pos"
+        android:label="Shao Kao"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

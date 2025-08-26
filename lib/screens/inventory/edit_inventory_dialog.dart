@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/inventory/inventory_controller.dart';
-import 'package:pos/models/inventory/inventory_model.dart';
+import 'package:shao_kao/controller/inventory/inventory_controller.dart';
+import 'package:shao_kao/models/inventory/inventory_model.dart';
 
 class EditInventoryDialog {
   static void show(InventoryController controller, InventoryModel inventory) {

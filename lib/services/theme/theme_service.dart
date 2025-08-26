@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:get/get.dart';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/theme/theme_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/theme/theme_model.dart';
 
 class ThemeService extends GetxService {
   static ThemeService get instance {

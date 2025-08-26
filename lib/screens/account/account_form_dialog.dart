@@ -1,9 +1,9 @@
 // dialogs/user_form_dialog.dart - INTEGRATED WITH ROLE CONTROLLER
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/account/account_controller.dart';
-import 'package:pos/controller/role/role_controller.dart';
-import 'package:pos/models/account/account_model.dart';
+import 'package:shao_kao/controller/account/account_controller.dart';
+import 'package:shao_kao/controller/role/role_controller.dart';
+import 'package:shao_kao/models/account/account_model.dart';
 
 class UserFormDialog {
   static void show({

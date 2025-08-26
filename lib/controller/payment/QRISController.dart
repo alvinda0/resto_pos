@@ -1,10 +1,10 @@
 // controller/payment/qris_controller.dart
 import 'dart:async';
 import 'package:get/get.dart';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/models/order/qris_model.dart';
-import 'package:pos/services/payment/payment_service.dart';
-import 'package:pos/services/payment/receipt_printer_service.dart';
+import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/models/order/qris_model.dart';
+import 'package:shao_kao/services/payment/payment_service.dart';
+import 'package:shao_kao/services/payment/receipt_printer_service.dart';
 
 class QRISController extends GetxController {
   final PaymentService _paymentService = PaymentService();

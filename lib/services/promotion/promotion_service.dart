@@ -1,7 +1,7 @@
 // promotion_service.dart - Fixed service
 import 'dart:convert';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/promotion/promotion_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/promotion/promotion_model.dart';
 
 class PromotionService {
   final HttpClient _httpClient = HttpClient.instance;

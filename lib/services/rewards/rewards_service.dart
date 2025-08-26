@@ -2,8 +2,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:pos/http_client.dart';
-import 'package:pos/models/rewards/rewards_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/rewards/rewards_model.dart';
 
 class RewardService {
   final HttpClient _httpClient = HttpClient.instance;

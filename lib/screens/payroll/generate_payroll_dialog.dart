@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/payroll/payroll_model.dart';
+import 'package:shao_kao/models/payroll/payroll_model.dart';
 
 class GeneratePayrollDialog {
   static void show(Function(PayrollGenerateRequest) onGenerate) {

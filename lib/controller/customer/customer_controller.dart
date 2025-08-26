@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/customer/customer_model.dart';
-import 'package:pos/services/customer/customer_service.dart';
+import 'package:shao_kao/models/customer/customer_model.dart';
+import 'package:shao_kao/services/customer/customer_service.dart';
 
 class CustomerController extends GetxController {
   final CustomerService _customerService = CustomerService.instance;

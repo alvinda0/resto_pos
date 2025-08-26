@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/promotion/promotion_model.dart';
-import 'package:pos/services/promotion/promotion_service.dart';
-import 'package:pos/storage_service.dart';
+import 'package:shao_kao/models/promotion/promotion_model.dart';
+import 'package:shao_kao/services/promotion/promotion_service.dart';
+import 'package:shao_kao/storage_service.dart';
 
 class PromotionController extends GetxController {
   final PromotionService _promotionService = PromotionService();

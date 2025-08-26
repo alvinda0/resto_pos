@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pos/models/dashboard/dashboard_model.dart';
+import 'package:shao_kao/models/dashboard/dashboard_model.dart';
 
 class TrendingMenuWidget extends StatelessWidget {
   final List<TrendingItem> trendingItems;

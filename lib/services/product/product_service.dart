@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:pos/http_client.dart';
-import 'package:pos/models/product/product_model.dart';
-import 'package:pos/storage_service.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/product/product_model.dart';
+import 'package:shao_kao/storage_service.dart';
 
 class ProductService extends GetxService {
   static ProductService get instance {

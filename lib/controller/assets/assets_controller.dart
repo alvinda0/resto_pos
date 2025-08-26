@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/assets/assets_model.dart';
-import 'package:pos/services/assets/assets_service.dart';
-import 'package:pos/storage_service.dart';
+import 'package:shao_kao/models/assets/assets_model.dart';
+import 'package:shao_kao/services/assets/assets_service.dart';
+import 'package:shao_kao/storage_service.dart';
 
 class AssetController extends GetxController {
   final AssetService _assetService = AssetService.instance;

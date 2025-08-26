@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/employee/employe_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/employee/employe_model.dart';
 
 class EmployeeService extends GetxService {
   static EmployeeService get instance {

@@ -1,8 +1,8 @@
 // controllers/tax_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/tax/tax_model.dart';
-import 'package:pos/services/tax/tax_service.dart';
+import 'package:shao_kao/models/tax/tax_model.dart';
+import 'package:shao_kao/services/tax/tax_service.dart';
 
 class TaxController extends GetxController {
   // Service instance - dibuat langsung tanpa injection

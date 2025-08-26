@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/withdraw/withdraw_controller.dart';
-import 'package:pos/models/withdraw/withdraw_model.dart';
+import 'package:shao_kao/controller/withdraw/withdraw_controller.dart';
+import 'package:shao_kao/models/withdraw/withdraw_model.dart';
 
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});

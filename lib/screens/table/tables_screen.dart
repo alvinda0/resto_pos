@@ -1,9 +1,9 @@
 // lib/screens/qr_code_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/tables/tables_qr_code_controller.dart';
+import 'package:shao_kao/controller/tables/tables_qr_code_controller.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:pos/models/tables/model_tables.dart';
+import 'package:shao_kao/models/tables/model_tables.dart';
 import 'dart:ui' as ui;
 import 'package:gal/gal.dart';
 

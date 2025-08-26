@@ -1,9 +1,9 @@
 // controller/payment/payment_controller.dart
 import 'package:get/get.dart';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/models/payment/payment_model.dart';
-import 'package:pos/services/payment/payment_service.dart';
-import 'package:pos/services/payment/receipt_printer_service.dart';
+import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/models/payment/payment_model.dart';
+import 'package:shao_kao/services/payment/payment_service.dart';
+import 'package:shao_kao/services/payment/receipt_printer_service.dart';
 
 class PaymentController extends GetxController {
   final PaymentService _paymentService = PaymentService();

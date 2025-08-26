@@ -2,9 +2,9 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:jwt_decode/jwt_decode.dart';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/auth/auth_model.dart' hide ApiResponse;
-import 'package:pos/storage_service.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/auth/auth_model.dart' hide ApiResponse;
+import 'package:shao_kao/storage_service.dart';
 
 import '../models/auth/user_model.dart';
 

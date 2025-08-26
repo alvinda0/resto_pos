@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:pos/http_client.dart';
-import 'package:pos/models/category/category_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/category/category_model.dart';
 
 class CategoryService {
   final HttpClient _httpClient = HttpClient.instance;

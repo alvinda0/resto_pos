@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/employee/employe_model.dart';
-import 'package:pos/services/employee/employee_service.dart';
+import 'package:shao_kao/models/employee/employe_model.dart';
+import 'package:shao_kao/services/employee/employee_service.dart';
 
 class EmployeeController extends GetxController {
   final EmployeeService _employeeService = EmployeeService.instance;

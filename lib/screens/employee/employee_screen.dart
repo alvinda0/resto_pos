@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/employee/employee_controller.dart';
-import 'package:pos/models/employee/employe_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/employee/employee_controller.dart';
+import 'package:shao_kao/models/employee/employe_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class EmployeeScreen extends StatelessWidget {
   const EmployeeScreen({Key? key}) : super(key: key);

@@ -1,7 +1,7 @@
 // screens/credential_access_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/api_key/api_key_controller.dart';
+import 'package:shao_kao/controller/api_key/api_key_controller.dart';
 
 class CredentialAccessScreen extends StatelessWidget {
   const CredentialAccessScreen({Key? key}) : super(key: key);

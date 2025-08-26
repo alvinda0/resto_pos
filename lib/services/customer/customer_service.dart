@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/customer/customer_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/customer/customer_model.dart';
 
 class CustomerService extends GetxService {
   static CustomerService get instance {

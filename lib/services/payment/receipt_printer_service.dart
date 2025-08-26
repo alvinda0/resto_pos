@@ -1,7 +1,7 @@
 // services/receipt_printer_service.dart - IMPROVED VERSION with chunking support
 import 'dart:convert';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/screens/printer/BluetoothPrinterManager.dart';
+import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart';
 
 class ReceiptPrinterService {
   static final ReceiptPrinterService _instance =

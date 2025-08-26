@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import 'package:pos/screens/printer/BluetoothPrinterManager.dart';
+import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart';
 
 class BluetoothPrinterPage extends StatefulWidget {
   @override

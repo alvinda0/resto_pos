@@ -1,10 +1,10 @@
 // lib/controllers/auth_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/auth/permission_controller.dart';
-import 'package:pos/screens/dashboard/dashboard_screen.dart';
-import 'package:pos/screens/dashboard/sidebar.dart';
-import 'package:pos/services/auth_service.dart';
+import 'package:shao_kao/controller/auth/permission_controller.dart';
+import 'package:shao_kao/screens/dashboard/dashboard_screen.dart';
+import 'package:shao_kao/screens/dashboard/sidebar.dart';
+import 'package:shao_kao/services/auth_service.dart';
 
 class AuthController extends GetxController {
   static AuthController get instance => Get.find<AuthController>();

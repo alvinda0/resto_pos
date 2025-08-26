@@ -1,8 +1,8 @@
 // controllers/order_controller.dart
 import 'dart:async';
 import 'package:get/get.dart';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/services/order/order_service.dart';
+import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/services/order/order_service.dart';
 
 class OrderController extends GetxController {
   final OrderService _orderService = OrderService();

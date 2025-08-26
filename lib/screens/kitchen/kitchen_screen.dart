@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/kitchen/kitchen_controller.dart';
-import 'package:pos/models/kitchen/kitchen_model.dart';
-import 'package:pos/screens/printer/BluetoothPrinterManager.dart';
-import 'package:pos/widgets/pagination_widget.dart'; // Import your pagination widget
-import 'package:pos/controller/inventory/inventory_controller.dart';
-import 'package:pos/models/inventory/inventory_model.dart';
+import 'package:shao_kao/controller/kitchen/kitchen_controller.dart';
+import 'package:shao_kao/models/kitchen/kitchen_model.dart';
+import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart'; // Import your pagination widget
+import 'package:shao_kao/controller/inventory/inventory_controller.dart';
+import 'package:shao_kao/models/inventory/inventory_model.dart';
 
 class KitchenScreen extends StatefulWidget {
   const KitchenScreen({super.key});

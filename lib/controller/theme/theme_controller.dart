@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:pos/models/theme/theme_model.dart' as ThemeModel;
-import 'package:pos/services/theme/theme_service.dart';
+import 'package:shao_kao/models/theme/theme_model.dart' as ThemeModel;
+import 'package:shao_kao/services/theme/theme_service.dart';
 
 class ThemeController extends GetxController {
   final ThemeService _themeService = ThemeService.instance;

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'dart:typed_data';
 import 'dart:convert';
-import 'package:pos/storage_service.dart';
+import 'package:shao_kao/storage_service.dart';
 
 // Import bluetooth package only on supported platforms
 import 'package:flutter_blue_plus/flutter_blue_plus.dart'

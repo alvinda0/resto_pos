@@ -1,8 +1,8 @@
 // services/kitchen_service.dart
 import 'dart:convert';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/kitchen/complete_order_model.dart';
-import 'package:pos/models/kitchen/kitchen_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/kitchen/complete_order_model.dart';
+import 'package:shao_kao/models/kitchen/kitchen_model.dart';
 
 class KitchenService {
   final HttpClient _httpClient = HttpClient.instance;

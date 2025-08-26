@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/points/points_model.dart';
-import 'package:pos/services/points/points_service.dart';
+import 'package:shao_kao/models/points/points_model.dart';
+import 'package:shao_kao/services/points/points_service.dart';
 
 class PointConfigController extends GetxController {
   final PointConfigService _pointConfigService = PointConfigService.instance;

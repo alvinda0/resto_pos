@@ -1,4 +1,4 @@
-name: pos
+name: shao_kao
 description: 'A new Flutter project.'
 publish_to: 'none'
 
@@ -41,8 +41,10 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: 'assets/icons/icons.png'
+  image_path: 'assets/icons/shaokao.png'
   min_sdk_android: 21
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/

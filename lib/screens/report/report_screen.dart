@@ -1,10 +1,10 @@
 // screens/transaction_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/transaction/transaction_controller.dart';
-import 'package:pos/models/transaction/transaction_model.dart';
+import 'package:shao_kao/controller/transaction/transaction_controller.dart';
+import 'package:shao_kao/models/transaction/transaction_model.dart';
 
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({Key? key}) : super(key: key);

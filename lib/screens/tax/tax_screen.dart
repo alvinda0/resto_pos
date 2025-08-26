@@ -1,9 +1,9 @@
 // screens/tax_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/tax/tax_controller.dart';
-import 'package:pos/models/tax/tax_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/tax/tax_controller.dart';
+import 'package:shao_kao/models/tax/tax_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class TaxScreen extends StatelessWidget {
   TaxScreen({Key? key}) : super(key: key);

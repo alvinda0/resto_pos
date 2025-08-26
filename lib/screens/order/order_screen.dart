@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/order/order_controller.dart';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/screens/order/invoice_screen.dart';
-import 'package:pos/screens/order/order_payment_screen.dart';
-import 'package:pos/controller/inventory/inventory_controller.dart';
-import 'package:pos/models/inventory/inventory_model.dart';
+import 'package:shao_kao/controller/order/order_controller.dart';
+import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/screens/order/invoice_screen.dart';
+import 'package:shao_kao/screens/order/order_payment_screen.dart';
+import 'package:shao_kao/controller/inventory/inventory_controller.dart';
+import 'package:shao_kao/models/inventory/inventory_model.dart';
 
 class OrderScreen extends StatefulWidget {
   const OrderScreen({super.key});

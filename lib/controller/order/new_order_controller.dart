@@ -2,10 +2,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/order/new_order_model.dart';
-import 'package:pos/models/product/product_model.dart';
-import 'package:pos/services/order/PrintServiceOrder.dart';
-import 'package:pos/services/order/new_order_service.dart';
+import 'package:shao_kao/models/order/new_order_model.dart';
+import 'package:shao_kao/models/product/product_model.dart';
+import 'package:shao_kao/services/order/PrintServiceOrder.dart';
+import 'package:shao_kao/services/order/new_order_service.dart';
 
 class NewOrderController extends GetxController {
   final OrderService _orderService = OrderService.instance;

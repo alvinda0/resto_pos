@@ -1,8 +1,8 @@
 // controllers/kitchen_controller.dart
 import 'dart:async';
 import 'package:get/get.dart';
-import 'package:pos/models/kitchen/kitchen_model.dart';
-import 'package:pos/services/kitchen/kitchen_service.dart';
+import 'package:shao_kao/models/kitchen/kitchen_model.dart';
+import 'package:shao_kao/services/kitchen/kitchen_service.dart';
 
 class KitchenController extends GetxController {
   final KitchenService _kitchenService = KitchenService();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pos/controller/order/order_controller.dart';
-import 'package:pos/models/order/order_model.dart';
+import 'package:shao_kao/controller/order/order_controller.dart';
+import 'package:shao_kao/models/order/order_model.dart';
 
 class InvoiceDialog extends StatelessWidget {
   final OrderModel order;

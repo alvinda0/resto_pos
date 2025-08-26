@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:pos/controller/product/product_controller.dart';
-import 'package:pos/controller/order/new_order_controller.dart';
-import 'package:pos/models/product/product_model.dart';
+import 'package:shao_kao/controller/product/product_controller.dart';
+import 'package:shao_kao/controller/order/new_order_controller.dart';
+import 'package:shao_kao/models/product/product_model.dart';
 
 class NewOrderScreen extends StatefulWidget {
   const NewOrderScreen({super.key});

@@ -1,8 +1,8 @@
 // controllers/api_key_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/api_key/api_key_model.dart';
-import 'package:pos/services/api_key/api_key_service.dart';
+import 'package:shao_kao/models/api_key/api_key_model.dart';
+import 'package:shao_kao/services/api_key/api_key_service.dart';
 
 class ApiKeyController extends GetxController {
   // Direct instantiation instead of dependency injection

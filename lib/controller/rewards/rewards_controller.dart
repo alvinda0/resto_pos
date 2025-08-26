@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:pos/models/rewards/rewards_model.dart';
-import 'package:pos/services/rewards/rewards_service.dart';
+import 'package:shao_kao/models/rewards/rewards_model.dart';
+import 'package:shao_kao/services/rewards/rewards_service.dart';
 
 class RewardController extends GetxController {
   final RewardService _rewardService = RewardService();

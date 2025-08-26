@@ -1,7 +1,7 @@
 // services/api_key_service.dart
 import 'dart:convert';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/api_key/api_key_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/api_key/api_key_model.dart';
 
 class ApiKeyService {
   // Singleton pattern instead of GetX service

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/role/role_controller.dart';
-import 'package:pos/models/role/role_model.dart';
+import 'package:shao_kao/controller/role/role_controller.dart';
+import 'package:shao_kao/models/role/role_model.dart';
 
 class RoleFormScreen extends StatefulWidget {
   final Role? role; // null untuk create, berisi data untuk edit

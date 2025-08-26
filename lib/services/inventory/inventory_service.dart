@@ -1,7 +1,7 @@
 // services/inventory_service.dart
 import 'dart:convert';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/inventory/inventory_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/inventory/inventory_model.dart';
 
 class InventoryService {
   static InventoryService? _instance;

@@ -2,9 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/rewards/rewards_controller.dart';
-import 'package:pos/models/rewards/rewards_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/rewards/rewards_controller.dart';
+import 'package:shao_kao/models/rewards/rewards_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 import 'dart:io';
 
 class RewardManagementScreen extends StatelessWidget {

@@ -2,8 +2,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/payment/QRISController.dart';
-import 'package:pos/models/order/order_model.dart';
+import 'package:shao_kao/controller/payment/QRISController.dart';
+import 'package:shao_kao/models/order/order_model.dart';
 
 class QRISPaymentScreen extends StatefulWidget {
   final OrderModel order;

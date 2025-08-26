@@ -1,8 +1,8 @@
 // controllers/withdrawal_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/withdraw/withdraw_model.dart';
-import 'package:pos/services/withdraw/withdraw_service.dart';
+import 'package:shao_kao/models/withdraw/withdraw_model.dart';
+import 'package:shao_kao/services/withdraw/withdraw_service.dart';
 
 class WithdrawalController extends GetxController {
   final WithdrawalService _withdrawalService = WithdrawalService();

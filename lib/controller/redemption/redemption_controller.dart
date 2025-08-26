@@ -1,8 +1,8 @@
 // controllers/redemption_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/redemption/redemption_model.dart';
-import 'package:pos/services/redemption/redemption_service.dart';
+import 'package:shao_kao/models/redemption/redemption_model.dart';
+import 'package:shao_kao/services/redemption/redemption_service.dart';
 
 class RedemptionController extends GetxController {
   final RedemptionService _redemptionService = RedemptionService.instance;

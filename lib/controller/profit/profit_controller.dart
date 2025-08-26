@@ -1,8 +1,8 @@
 // controllers/profit_report_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/profit/profit_model.dart';
-import 'package:pos/services/profit/profit_service.dart';
+import 'package:shao_kao/models/profit/profit_model.dart';
+import 'package:shao_kao/services/profit/profit_service.dart';
 
 class ProfitReportController extends GetxController
     with GetTickerProviderStateMixin {

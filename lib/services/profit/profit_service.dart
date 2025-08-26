@@ -5,8 +5,8 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/profit/profit_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/profit/profit_model.dart';
 
 class ProfitReportService extends GetxService {
   static ProfitReportService get instance {

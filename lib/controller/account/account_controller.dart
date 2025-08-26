@@ -2,8 +2,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/account/account_model.dart';
-import 'package:pos/services/account/account_service.dart';
+import 'package:shao_kao/models/account/account_model.dart';
+import 'package:shao_kao/services/account/account_service.dart';
 
 class UserController extends GetxController {
   final UserService _userService = UserService.instance;

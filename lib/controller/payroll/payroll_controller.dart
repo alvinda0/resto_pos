@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/payroll/payroll_model.dart';
-import 'package:pos/services/payroll/payroll_service.dart';
+import 'package:shao_kao/models/payroll/payroll_model.dart';
+import 'package:shao_kao/services/payroll/payroll_service.dart';
 
 class PayrollController extends GetxController {
   final PayrollService _payrollService = PayrollService.instance;

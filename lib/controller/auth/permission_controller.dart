@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:pos/services/auth_service.dart';
+import 'package:shao_kao/services/auth_service.dart';
 
 class PermissionController extends GetxService {
   static PermissionController get instance {

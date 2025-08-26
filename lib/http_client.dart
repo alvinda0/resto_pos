@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:pos/config/config.dart';
-import 'package:pos/models/routes.dart';
+import 'package:shao_kao/config/config.dart';
+import 'package:shao_kao/models/routes.dart';
 import 'storage_service.dart';
 
 class HttpClient extends GetxService {

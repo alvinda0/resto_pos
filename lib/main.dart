@@ -1,14 +1,14 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/category/category_controller.dart';
-import 'package:pos/models/routes.dart';
-import 'package:pos/controller/auth/auth_controller.dart';
-import 'package:pos/screens/splash_screen/splash_screen.dart';
-import 'package:pos/services/auth_service.dart';
-import 'package:pos/services/tables/tables_qr_code_service.dart';
-import 'package:pos/storage_service.dart';
-import 'package:pos/screens/printer/BluetoothPrinterManager.dart'; // Add this import
+import 'package:shao_kao/controller/category/category_controller.dart';
+import 'package:shao_kao/models/routes.dart';
+import 'package:shao_kao/controller/auth/auth_controller.dart';
+import 'package:shao_kao/screens/splash_screen/splash_screen.dart';
+import 'package:shao_kao/services/auth_service.dart';
+import 'package:shao_kao/services/tables/tables_qr_code_service.dart';
+import 'package:shao_kao/storage_service.dart';
+import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart'; // Add this import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

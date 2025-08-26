@@ -1,8 +1,8 @@
 // controllers/inventory_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/inventory/inventory_model.dart';
-import 'package:pos/services/inventory/inventory_service.dart';
+import 'package:shao_kao/models/inventory/inventory_model.dart';
+import 'package:shao_kao/services/inventory/inventory_service.dart';
 
 class InventoryController extends GetxController {
   final InventoryService _inventoryService = InventoryService.instance;

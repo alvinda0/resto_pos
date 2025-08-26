@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:pos/controller/product/product_controller.dart';
-import 'package:pos/controller/category/category_controller.dart';
-import 'package:pos/controller/recipe/recipe_controller.dart';
-import 'package:pos/models/product/product_model.dart';
+import 'package:shao_kao/controller/product/product_controller.dart';
+import 'package:shao_kao/controller/category/category_controller.dart';
+import 'package:shao_kao/controller/recipe/recipe_controller.dart';
+import 'package:shao_kao/models/product/product_model.dart';
 import 'dart:io';
 
 class EditProductDialog extends StatefulWidget {

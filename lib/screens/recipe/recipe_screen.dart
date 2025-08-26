@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/recipe/recipe_controller.dart';
-import 'package:pos/models/recipe/recipe_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/recipe/recipe_controller.dart';
+import 'package:shao_kao/models/recipe/recipe_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class RecipeManagementScreen extends StatelessWidget {
   const RecipeManagementScreen({Key? key}) : super(key: key);

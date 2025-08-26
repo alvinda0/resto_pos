@@ -1,8 +1,8 @@
 // services/redemption_service.dart
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/redemption/redemption_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/redemption/redemption_model.dart';
 
 class RedemptionService extends GetxService {
   final HttpClient _httpClient = HttpClient.instance;

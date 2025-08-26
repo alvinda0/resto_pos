@@ -1,9 +1,9 @@
 // screens/statistics_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/dashboard/statistics_controller.dart';
-import 'package:pos/models/dashboard/dashboard_model.dart';
-import 'package:pos/services/dashboard/dashboard_service.dart';
+import 'package:shao_kao/controller/dashboard/statistics_controller.dart';
+import 'package:shao_kao/models/dashboard/dashboard_model.dart';
+import 'package:shao_kao/services/dashboard/dashboard_service.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});

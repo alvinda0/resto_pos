@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/promotion/promotion_controller.dart';
-import 'package:pos/models/promotion/promotion_model.dart';
-import 'package:pos/services/promotion/promotion_service.dart';
-import 'package:pos/storage_service.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/promotion/promotion_controller.dart';
+import 'package:shao_kao/models/promotion/promotion_model.dart';
+import 'package:shao_kao/services/promotion/promotion_service.dart';
+import 'package:shao_kao/storage_service.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class PromoScreen extends StatefulWidget {
   const PromoScreen({super.key});

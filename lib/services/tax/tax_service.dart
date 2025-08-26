@@ -1,7 +1,7 @@
 // services/tax_service.dart
 import 'dart:convert';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/tax/tax_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/tax/tax_model.dart';
 
 class TaxService {
   late final HttpClient _httpClient;

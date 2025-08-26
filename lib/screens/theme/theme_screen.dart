@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/theme/theme_controller.dart';
-import 'package:pos/models/theme/theme_model.dart' as ThemeModel;
-import 'package:pos/screens/theme/theme_form_dialog.dart';
+import 'package:shao_kao/controller/theme/theme_controller.dart';
+import 'package:shao_kao/models/theme/theme_model.dart' as ThemeModel;
+import 'package:shao_kao/screens/theme/theme_form_dialog.dart';
 
 class ThemeScreen extends StatelessWidget {
   const ThemeScreen({super.key});

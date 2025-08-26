@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/splash/splash_controller.dart';
+import 'package:shao_kao/controller/splash/splash_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -63,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF8B5CF6), Color(0xFFA855F7), Color(0xFFC084FC)],
+            colors: [Color(0xFFFF8C00), Color(0xFFFF7F50), Color(0xFFFFA500)],
           ),
         ),
         child: Center(
@@ -92,10 +92,22 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: Icon(
-                          Icons.restaurant,
-                          size: 60,
-                          color: Color(0xFF8B5CF6),
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Image.asset(
+                            'assets/icons/shaokao.png',
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback jika gambar tidak ditemukan
+                              return Icon(
+                                Icons.restaurant,
+                                size: 60,
+                                color: Color(0xFFFF8C00),
+                              );
+                            },
+                          ),
                         ),
                       ),
                       SizedBox(height: 30),

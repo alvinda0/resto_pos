@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/transaction/transaction_model.dart';
-import 'package:pos/screens/report/export_tax_report_dialog.dart';
-import 'package:pos/services/transaction/transaction_service.dart';
+import 'package:shao_kao/models/transaction/transaction_model.dart';
+import 'package:shao_kao/screens/report/export_tax_report_dialog.dart';
+import 'package:shao_kao/services/transaction/transaction_service.dart';
 import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/order/order_controller.dart';
-import 'package:pos/controller/product/product_controller.dart';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/models/product/product_model.dart';
-import 'package:pos/controller/payment/payment_controller.dart';
-import 'package:pos/screens/order/qris_payment_screen.dart';
+import 'package:shao_kao/controller/order/order_controller.dart';
+import 'package:shao_kao/controller/product/product_controller.dart';
+import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/models/product/product_model.dart';
+import 'package:shao_kao/controller/payment/payment_controller.dart';
+import 'package:shao_kao/screens/order/qris_payment_screen.dart';
 
 class OrderDetailDialog extends StatefulWidget {
   final OrderModel order;

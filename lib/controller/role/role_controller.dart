@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/role/role_model.dart';
-import 'package:pos/services/role/role_service.dart';
+import 'package:shao_kao/models/role/role_model.dart';
+import 'package:shao_kao/services/role/role_service.dart';
 
 class RoleController extends GetxController {
   final RoleService _roleService = RoleService();

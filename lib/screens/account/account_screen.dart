@@ -1,11 +1,11 @@
 // screens/user_management_screen.dart - MOBILE RESPONSIVE VERSION
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/account/account_controller.dart';
-import 'package:pos/controller/role/role_controller.dart';
-import 'package:pos/models/account/account_model.dart';
-import 'package:pos/screens/account/account_form_dialog.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/account/account_controller.dart';
+import 'package:shao_kao/controller/role/role_controller.dart';
+import 'package:shao_kao/models/account/account_model.dart';
+import 'package:shao_kao/screens/account/account_form_dialog.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class UserManagementScreen extends StatelessWidget {
   const UserManagementScreen({Key? key}) : super(key: key);

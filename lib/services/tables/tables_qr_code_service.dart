@@ -1,8 +1,8 @@
 // lib/services/qr_code_service.dart
 import 'dart:convert';
 
-import 'package:pos/http_client.dart';
-import 'package:pos/models/tables/model_tables.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/tables/model_tables.dart';
 
 class QRCodeService {
   final HttpClient _httpClient = HttpClient.instance;

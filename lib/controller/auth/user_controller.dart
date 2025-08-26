@@ -1,6 +1,6 @@
 // lib/controllers/auth_controller.dart
 import 'package:get/get.dart';
-import 'package:pos/services/auth_service.dart';
+import 'package:shao_kao/services/auth_service.dart';
 
 import '../../models/auth/user_model.dart';
 

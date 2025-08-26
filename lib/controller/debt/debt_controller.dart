@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/debt/debt_model.dart';
-import 'package:pos/services/debt/debt_service.dart';
+import 'package:shao_kao/models/debt/debt_model.dart';
+import 'package:shao_kao/services/debt/debt_service.dart';
 
 class DebtController extends GetxController {
   final DebtService _debtService = DebtService.instance;

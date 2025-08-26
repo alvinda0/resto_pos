@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/debt/debt_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/debt/debt_model.dart';
 
 class DebtService extends GetxService {
   static DebtService get instance {

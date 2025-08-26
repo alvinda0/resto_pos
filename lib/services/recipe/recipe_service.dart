@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:pos/http_client.dart';
-import 'package:pos/models/recipe/recipe_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/recipe/recipe_model.dart';
 
 class RecipeService extends GetxService {
   static RecipeService get instance {

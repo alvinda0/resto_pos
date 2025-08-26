@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/assets/assets_controller.dart';
-import 'package:pos/models/assets/assets_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/assets/assets_controller.dart';
+import 'package:shao_kao/models/assets/assets_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class AssetScreen extends StatelessWidget {
   const AssetScreen({Key? key}) : super(key: key);

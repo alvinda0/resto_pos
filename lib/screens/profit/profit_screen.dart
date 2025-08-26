@@ -1,9 +1,9 @@
 // screens/profit_report_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/profit/profit_controller.dart';
-import 'package:pos/models/profit/profit_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/profit/profit_controller.dart';
+import 'package:shao_kao/models/profit/profit_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class ProfitReportScreen extends StatelessWidget {
   const ProfitReportScreen({Key? key}) : super(key: key);

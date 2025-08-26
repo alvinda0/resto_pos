@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import 'package:pos/screens/auth/login_screen.dart';
-import 'package:pos/screens/dashboard/dashboard_screen.dart'; // Import your dashboard screen
-import 'package:pos/screens/dashboard/sidebar.dart';
-import 'package:pos/services/auth_service.dart';
+import 'package:shao_kao/screens/auth/login_screen.dart';
+import 'package:shao_kao/screens/dashboard/dashboard_screen.dart'; // Import your dashboard screen
+import 'package:shao_kao/screens/dashboard/sidebar.dart';
+import 'package:shao_kao/services/auth_service.dart';
 
 class SplashController extends GetxController {
   /// Check authentication status and navigate accordingly

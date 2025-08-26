@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/role/role_controller.dart';
-import 'package:pos/models/role/role_model.dart';
-import 'package:pos/models/routes.dart';
-import 'package:pos/screens/role/role_form_screen.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/role/role_controller.dart';
+import 'package:shao_kao/models/role/role_model.dart';
+import 'package:shao_kao/models/routes.dart';
+import 'package:shao_kao/screens/role/role_form_screen.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class RoleScreen extends StatelessWidget {
   const RoleScreen({Key? key}) : super(key: key);

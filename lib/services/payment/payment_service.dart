@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:pos/http_client.dart';
-import 'package:pos/models/order/order_model.dart';
-import 'package:pos/models/order/qris_model.dart';
-import 'package:pos/models/payment/payment_model.dart';
+import 'package:shao_kao/http_client.dart';
+import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/models/order/qris_model.dart';
+import 'package:shao_kao/models/payment/payment_model.dart';
 
 class PaymentService {
   final HttpClient _httpClient = HttpClient.instance;

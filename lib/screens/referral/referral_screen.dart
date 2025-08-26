@@ -1,10 +1,10 @@
 import 'dart:convert'; // Add this import
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/referral/referral_controller.dart';
-import 'package:pos/controller/customer/customer_controller.dart'; // Add this import
-import 'package:pos/models/referral/referral_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/referral/referral_controller.dart';
+import 'package:shao_kao/controller/customer/customer_controller.dart'; // Add this import
+import 'package:shao_kao/models/referral/referral_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class ReferralScreen extends StatefulWidget {
   @override

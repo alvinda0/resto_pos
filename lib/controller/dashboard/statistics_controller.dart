@@ -1,7 +1,7 @@
 // controllers/statistics_controller.dart
 import 'package:get/get.dart';
-import 'package:pos/models/dashboard/dashboard_model.dart';
-import 'package:pos/services/dashboard/dashboard_service.dart';
+import 'package:shao_kao/models/dashboard/dashboard_model.dart';
+import 'package:shao_kao/services/dashboard/dashboard_service.dart';
 
 class StatisticsController extends GetxController {
   final StatisticsService _statisticsService = StatisticsService.instance;

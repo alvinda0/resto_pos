@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/auth/auth_controller.dart';
+import 'package:shao_kao/controller/auth/auth_controller.dart';
 
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
@@ -24,12 +24,13 @@ class LoginScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.deepPurple.withOpacity(0.1),
+                  color: Colors.orange.withOpacity(0.1),
                 ),
-                child: const Icon(
-                  Icons.store,
-                  size: 72,
-                  color: Colors.deepPurple,
+                child: Image.asset(
+                  'assets/icons/shaokao.png',
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 16),
@@ -91,7 +92,7 @@ class LoginScreen extends StatelessWidget {
                                         ? Icons.visibility
                                         : Icons.visibility_off,
                                     color: authController.passwordVisible
-                                        ? Colors.deepPurple
+                                        ? Colors.deepOrange
                                         : Colors.grey,
                                   ),
                                   onPressed:
@@ -111,7 +112,7 @@ class LoginScreen extends StatelessWidget {
                                 style: ElevatedButton.styleFrom(
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 16),
-                                  backgroundColor: Colors.deepPurple,
+                                  backgroundColor: Colors.deepOrange,
                                   disabledBackgroundColor: Colors.grey[300],
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -160,7 +161,7 @@ class LoginScreen extends StatelessWidget {
                 child: Text(
                   'Lupa password?',
                   style: TextStyle(
-                    color: Colors.deepPurple,
+                    color: Colors.deepOrange,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

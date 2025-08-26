@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:pos/controller/debt/debt_controller.dart';
-import 'package:pos/models/debt/debt_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/debt/debt_controller.dart';
+import 'package:shao_kao/models/debt/debt_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class DebtScreen extends StatelessWidget {
   final DebtController controller = Get.put(DebtController());

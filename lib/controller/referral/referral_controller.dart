@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_connect/http/src/exceptions/exceptions.dart';
-import 'package:pos/models/referral/referral_model.dart';
-import 'package:pos/services/referral/referral_service.dart';
+import 'package:shao_kao/models/referral/referral_model.dart';
+import 'package:shao_kao/services/referral/referral_service.dart';
 
 class ReferralController extends GetxController {
   final ReferralService _referralService = ReferralService.instance;

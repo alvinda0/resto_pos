@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/payroll/payroll_controller.dart';
-import 'package:pos/models/payroll/payroll_model.dart';
-import 'package:pos/widgets/pagination_widget.dart';
+import 'package:shao_kao/controller/payroll/payroll_controller.dart';
+import 'package:shao_kao/models/payroll/payroll_model.dart';
+import 'package:shao_kao/widgets/pagination_widget.dart';
 
 class PayrollScreen extends StatefulWidget {
   const PayrollScreen({Key? key}) : super(key: key);

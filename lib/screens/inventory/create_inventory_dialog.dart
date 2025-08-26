@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/inventory/inventory_controller.dart';
+import 'package:shao_kao/controller/inventory/inventory_controller.dart';
 
 class CreateInventoryDialog {
   static void show(InventoryController controller) {

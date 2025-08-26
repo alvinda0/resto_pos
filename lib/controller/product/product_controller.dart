@@ -2,8 +2,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/product/product_model.dart';
-import 'package:pos/services/product/product_service.dart';
+import 'package:shao_kao/models/product/product_model.dart';
+import 'package:shao_kao/services/product/product_service.dart';
 
 class ProductController extends GetxController {
   final ProductService _productService = ProductService.instance;

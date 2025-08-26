@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/category/category_model.dart';
-import 'package:pos/services/category/category_service.dart';
+import 'package:shao_kao/models/category/category_model.dart';
+import 'package:shao_kao/services/category/category_service.dart';
 
 class CategoryController extends GetxController {
   final CategoryService _categoryService = CategoryService();

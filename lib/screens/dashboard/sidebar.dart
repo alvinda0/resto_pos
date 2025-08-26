@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/controller/auth/auth_controller.dart';
-import 'package:pos/controller/auth/permission_controller.dart';
-import 'package:pos/services/auth_service.dart';
+import 'package:shao_kao/controller/auth/auth_controller.dart';
+import 'package:shao_kao/controller/auth/permission_controller.dart';
+import 'package:shao_kao/services/auth_service.dart';
 
 class MenuItem {
   final IconData icon;

@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos/models/tables/model_tables.dart';
-import 'package:pos/services/tables/tables_qr_code_service.dart';
+import 'package:shao_kao/models/tables/model_tables.dart';
+import 'package:shao_kao/services/tables/tables_qr_code_service.dart';
 
 class QRCodeController extends GetxController {
   final QRCodeService _qrCodeService = QRCodeService();

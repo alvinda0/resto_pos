@@ -1,7 +1,7 @@
 // services/print_service.dart - IMPROVED VERSION with chunking support
 import 'dart:convert';
-import 'package:pos/models/order/new_order_model.dart';
-import 'package:pos/screens/printer/BluetoothPrinterManager.dart';
+import 'package:shao_kao/models/order/new_order_model.dart';
+import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart';
 
 class PrintService {
   static final PrintService _instance = PrintService._internal();
