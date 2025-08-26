@@ -38,9 +38,9 @@ class QRCodeController extends GetxController {
     loadQRCodes();
 
     // Set default values
-    menuUrlController.text = 'https://www.sibayar.co.id';
-    bulkStartNumberController.text = '1';
-    bulkTableCountController.text = '5';
+    menuUrlController.text = '';
+    bulkStartNumberController.text = '';
+    bulkTableCountController.text = '';
   }
 
   @override

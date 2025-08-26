@@ -50,37 +50,10 @@ class QRCodeScreen extends StatelessWidget {
                 );
               }
 
-              if (controller.qrCodes.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.qr_code_2,
-                        size: 80,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Belum ada QR Code',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tap + untuk menambah QR Code baru',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
+              // Jika tidak ada data, tetap tampilkan grid dengan hanya button add
+              final itemCount = controller.qrCodes.isEmpty
+                  ? 1
+                  : controller.qrCodes.length + 1;
 
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
@@ -90,10 +63,11 @@ class QRCodeScreen extends StatelessWidget {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1,
                 ),
-                itemCount: controller.qrCodes.length + 1, // +1 for add button
+                itemCount: itemCount, // Gunakan itemCount yang sudah dihitung
                 itemBuilder: (context, index) {
-                  if (index == controller.qrCodes.length) {
-                    // Add button
+                  // Jika tidak ada QR codes atau index adalah posisi terakhir (add button)
+                  if (controller.qrCodes.isEmpty ||
+                      index == controller.qrCodes.length) {
                     return _buildAddButton(context, controller);
                   }
 

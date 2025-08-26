@@ -1,6 +1,8 @@
 // controllers/transaction_controller.dart
 import 'dart:io';
 
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shao_kao/models/transaction/transaction_model.dart';
@@ -9,6 +11,8 @@ import 'package:shao_kao/services/transaction/transaction_service.dart';
 import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:open_file/open_file.dart';
 
 class TransactionController extends GetxController {
   final TransactionService _transactionService = TransactionService.instance;
@@ -164,7 +168,7 @@ class TransactionController extends GetxController {
           DateTime.now().subtract(const Duration(days: 30));
       final exportEndDate = endDate ?? _endDate.value ?? DateTime.now();
 
-      showSuccess('Preparing Excel export...');
+      showSuccess('Mempersiapkan export Excel...');
 
       final result = await _transactionService.exportTaxReport(
         startDate: exportStartDate,
@@ -177,48 +181,429 @@ class TransactionController extends GetxController {
         final downloadUrl = result['download_url'] as String?;
 
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
-          showSuccess('Downloading Excel file...');
-
-          // Validate that the URL looks like an Excel download
-          if (_isValidExcelUrl(downloadUrl)) {
-            await _downloadFile(downloadUrl);
-          } else {
-            // If URL doesn't look like Excel, still try to download
-            showSuccess('Download URL received, attempting download...');
-            await _downloadFile(downloadUrl);
-          }
+          showSuccess('Mendownload file Excel...');
+          await _downloadAndOpenExcel(downloadUrl);
         } else {
-          showError('No download URL received from server');
+          showError('URL download tidak ditemukan');
         }
       } else {
-        final errorMessage =
-            result?['message'] ?? 'Failed to export tax report';
+        final errorMessage = result?['message'] ?? 'Gagal export laporan pajak';
         showError(errorMessage);
-
-        // Log detailed error for debugging
-        print('Export error details: $result');
       }
     } catch (e) {
-      showError('Error exporting tax report: $e');
+      showError('Error saat export: $e');
       print('Export exception: $e');
     } finally {
       _isExporting.value = false;
     }
   }
 
-  bool _isValidExcelUrl(String url) {
-    final lowerUrl = url.toLowerCase();
-    return lowerUrl.contains('.xlsx') ||
-        lowerUrl.contains('.xls') ||
-        lowerUrl.contains('excel') ||
-        lowerUrl.contains('spreadsheet') ||
-        lowerUrl.contains(
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  /// Request storage permission for Android
+  Future<bool> _requestStoragePermission() async {
+    if (!GetPlatform.isAndroid) return true;
+
+    // For Android 13+ (API 33+), we don't need MANAGE_EXTERNAL_STORAGE for Downloads
+    // We can write to the Downloads folder using the standard storage permission
+
+    var status = await Permission.storage.status;
+
+    if (status.isGranted) {
+      return true;
+    }
+
+    if (status.isDenied) {
+      status = await Permission.storage.request();
+    }
+
+    if (status.isPermanentlyDenied) {
+      // Show dialog to open app settings
+      Get.dialog(
+        AlertDialog(
+          title: const Text('Izin Penyimpanan Diperlukan'),
+          content: const Text(
+              'Aplikasi memerlukan izin penyimpanan untuk mendownload file Excel. '
+              'Silakan aktifkan izin di pengaturan aplikasi.'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Get.back();
+                await openAppSettings();
+              },
+              child: const Text('Buka Pengaturan'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+
+    return status.isGranted;
+  }
+
+  /// Download and open Excel file
+  Future<void> _downloadAndOpenExcel(String url) async {
+    try {
+      // For web platform, open URL directly
+      if (GetPlatform.isWeb) {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          showExcelSuccess('File Excel berhasil dibuka di browser');
+        } else {
+          throw 'Could not launch $url';
+        }
+        return;
+      }
+
+      // Request permission for Android
+      bool hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        showError('Izin penyimpanan diperlukan untuk mendownload file');
+        return;
+      }
+
+      final dio = Dio();
+
+      // Configure Dio to handle SSL certificate issues
+      (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate =
+          (HttpClient client) {
+        client.badCertificateCallback =
+            (X509Certificate cert, String host, int port) {
+          // Allow Cloudflare R2 certificates
+          if (host.contains('.r2.dev') || host.contains('cloudflare')) {
+            return true;
+          }
+          return false;
+        };
+        return client;
+      };
+
+      // Get appropriate directory - prioritize Downloads folder for Android
+      Directory? targetDirectory;
+
+      if (GetPlatform.isAndroid) {
+        // Try multiple paths for Android Downloads folder
+        final possiblePaths = [
+          '/storage/emulated/0/Download',
+          '/storage/emulated/0/Downloads',
+          '/sdcard/Download',
+          '/sdcard/Downloads',
+        ];
+
+        for (String path in possiblePaths) {
+          try {
+            final dir = Directory(path);
+            if (await dir.exists()) {
+              targetDirectory = dir;
+              break;
+            }
+          } catch (e) {
+            // Continue to next path
+            continue;
+          }
+        }
+
+        // Fallback to external storage directory if Downloads not found
+        if (targetDirectory == null) {
+          try {
+            final externalDir = await getExternalStorageDirectory();
+            if (externalDir != null) {
+              // Create Downloads subfolder in external storage
+              final downloadsDir = Directory('${externalDir.path}/Downloads');
+              await downloadsDir.create(recursive: true);
+              targetDirectory = downloadsDir;
+            }
+          } catch (e) {
+            // Final fallback to app documents directory
+            targetDirectory = await getApplicationDocumentsDirectory();
+          }
+        }
+      } else if (GetPlatform.isIOS) {
+        targetDirectory = await getApplicationDocumentsDirectory();
+      } else {
+        targetDirectory = await getDownloadsDirectory() ??
+            await getApplicationDocumentsDirectory();
+      }
+
+      if (targetDirectory == null) {
+        throw 'Could not determine download directory';
+      }
+
+      // Generate proper Excel filename
+      final fileName = _generateExcelFileName();
+      final filePath = '${targetDirectory.path}/$fileName';
+
+      // Show download progress
+      showSuccess('Mendownload file...');
+
+      // Download file with proper headers
+      await dio.download(
+        url,
+        filePath,
+        options: Options(
+          headers: {
+            'Accept':
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'User-Agent': 'Mozilla/5.0 (Android; Mobile)',
+          },
+        ),
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            double progress = (received / total * 100);
+            if (progress % 20 == 0) {
+              // Show progress every 20%
+              print('Download progress: ${progress.toStringAsFixed(0)}%');
+            }
+          }
+        },
+      );
+
+      // Verify file was downloaded successfully
+      final file = File(filePath);
+      if (await file.exists()) {
+        final fileSize = await file.length();
+        if (fileSize > 0) {
+          final downloadLocation = GetPlatform.isAndroid &&
+                  targetDirectory.path.contains('/storage/emulated/0/Download')
+              ? 'Downloads folder'
+              : 'Documents folder';
+
+          showExcelSuccess(
+              'File Excel berhasil didownload ke $downloadLocation',
+              fileName: fileName);
+
+          // Try to open the file
+          await _openExcelFile(filePath, fileName);
+        } else {
+          throw 'File yang didownload kosong';
+        }
+      } else {
+        throw 'File gagal didownload';
+      }
+    } catch (e) {
+      print('Download error: $e');
+
+      // More specific error handling
+      if (e.toString().contains('CERTIFICATE_VERIFY_FAILED') ||
+          e.toString().contains('HandshakeException') ||
+          e.toString().contains('Hostname mismatch')) {
+        showError(
+            'Gagal mendownload file: Masalah sertifikat SSL server. Coba lagi dalam beberapa saat.');
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection failed')) {
+        showError(
+            'Gagal mendownload file: Masalah koneksi internet atau server tidak dapat diakses');
+      } else if (e.toString().contains('Permission denied')) {
+        showError('Gagal mendownload file: Izin penyimpanan ditolak');
+      } else {
+        showError('Gagal mendownload file Excel: $e');
+      }
+    }
+  }
+
+  /// Open Excel file with appropriate app
+  Future<void> _openExcelFile(String filePath, String fileName) async {
+    try {
+      if (GetPlatform.isAndroid || GetPlatform.isIOS) {
+        // Use open_file package for mobile platforms
+        final result = await OpenFile.open(filePath);
+
+        if (result.type == ResultType.done) {
+          showSuccess('File Excel dibuka dengan aplikasi Excel');
+        } else if (result.type == ResultType.noAppToOpen) {
+          // Show instructions to install Excel app
+          _showInstallExcelAppDialog(filePath, fileName);
+        } else {
+          // Try alternative methods
+          await _openWithAlternativeMethod(filePath);
+        }
+      } else {
+        // Desktop platforms
+        final fileUri = Uri.file(filePath);
+        if (await canLaunchUrl(fileUri)) {
+          await launchUrl(fileUri);
+          showExcelSuccess('File Excel dibuka');
+        }
+      }
+    } catch (e) {
+      print('Could not open Excel file: $e');
+      // Show file location instead
+      _showFileLocationDialog(filePath, fileName);
+    }
+  }
+
+  /// Try alternative methods to open file
+  Future<void> _openWithAlternativeMethod(String filePath) async {
+    try {
+      // Try with file:// URI
+      final fileUri = Uri.parse('file://$filePath');
+      if (await canLaunchUrl(fileUri)) {
+        await launchUrl(fileUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+
+      // Try with content:// URI for Android
+      if (GetPlatform.isAndroid) {
+        final fileName = filePath.split('/').last;
+        final contentUri = Uri.parse(
+            'content://com.android.externalstorage.documents/document/primary:Download/$fileName');
+
+        if (await canLaunchUrl(contentUri)) {
+          await launchUrl(contentUri);
+          return;
+        }
+      }
+
+      throw 'No alternative method worked';
+    } catch (e) {
+      final fileName = filePath.split('/').last;
+      _showFileLocationDialog(filePath, fileName);
+    }
+  }
+
+  /// Show dialog to install Excel app
+  void _showInstallExcelAppDialog(String filePath, String fileName) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Install Aplikasi Excel'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Untuk membuka file Excel, Anda perlu menginstall salah satu aplikasi berikut:',
+            ),
+            const SizedBox(height: 12),
+            const Text('• Microsoft Excel'),
+            const Text('• Google Sheets'),
+            const Text('• WPS Office'),
+            const Text('• LibreOffice'),
+            const SizedBox(height: 12),
+            Text('File tersimpan di: $fileName'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Tutup'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Get.back();
+              // Open Play Store to Excel app
+              final uri = Uri.parse(
+                  'https://play.google.com/store/apps/details?id=com.microsoft.office.excel');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: const Text('Install Excel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              _showFileLocationDialog(filePath, fileName);
+            },
+            child: const Text('Lihat File'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show dialog with file location
+  void _showFileLocationDialog(String filePath, String fileName) {
+    final isInDownloads = filePath.contains('/storage/emulated/0/Download');
+    final folderName = isInDownloads ? 'Downloads' : 'Documents';
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('File Berhasil Didownload'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('File Excel telah berhasil didownload ke folder $folderName:'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                fileName,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isInDownloads
+                  ? 'Anda dapat menemukan file ini di folder Downloads perangkat Anda.'
+                  : 'Anda dapat membuka file ini dengan aplikasi Excel di perangkat Anda.',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+          if (GetPlatform.isAndroid && isInDownloads)
+            TextButton(
+              onPressed: () async {
+                Get.back();
+                // Open Downloads folder using system file manager
+                try {
+                  // Try to open Downloads folder directly
+                  final intent = AndroidIntent(
+                      action: 'android.intent.action.VIEW',
+                      data:
+                          'content://com.android.externalstorage.documents/document/primary:Download',
+                      type: 'vnd.android.document/directory');
+                  await intent.launch();
+                } catch (e) {
+                  // Fallback to generic file manager
+                  try {
+                    final intent = AndroidIntent(
+                      action: 'android.intent.action.VIEW',
+                      type: 'resource/folder',
+                    );
+                    await intent.launch();
+                  } catch (e2) {
+                    showError('Tidak dapat membuka file manager');
+                  }
+                }
+              },
+              child: const Text('Buka Downloads'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Generate Excel filename with timestamp
+  String _generateExcelFileName() {
+    final now = DateTime.now();
+    final dateStr =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+
+    return 'Laporan-Pajak-${dateStr}_$timeStr.xlsx';
   }
 
   void showExcelSuccess(String message, {String? fileName}) {
     Get.snackbar(
-      'Excel Export Success',
+      'Export Berhasil',
       fileName != null ? '$message\nFile: $fileName' : message,
       snackPosition: SnackPosition.TOP,
       backgroundColor: Colors.green.shade100,
@@ -229,159 +614,6 @@ class TransactionController extends GetxController {
         color: Colors.green,
       ),
     );
-  }
-
-  Future<void> _downloadFile(String url) async {
-    try {
-      // For web platform, open URL directly
-      if (GetPlatform.isWeb) {
-        // Add Excel MIME type headers for better browser handling
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri,
-              mode: LaunchMode.externalApplication,
-              webOnlyWindowName: '_blank');
-        } else {
-          throw 'Could not launch $url';
-        }
-        return;
-      }
-
-      // For mobile/desktop platforms, download and save
-      final dio = Dio();
-
-      // Get downloads directory
-      Directory? downloadsDirectory;
-      if (GetPlatform.isAndroid) {
-        downloadsDirectory = Directory('/storage/emulated/0/Download');
-        // Check if directory exists, create if not
-        if (!await downloadsDirectory.exists()) {
-          downloadsDirectory = await getExternalStorageDirectory();
-        }
-      } else if (GetPlatform.isIOS) {
-        downloadsDirectory = await getApplicationDocumentsDirectory();
-      } else {
-        downloadsDirectory = await getApplicationDocumentsDirectory();
-      }
-
-      // Generate proper Excel filename
-      final fileName = _generateExcelFileName(url);
-      final filePath = '${downloadsDirectory!.path}/$fileName';
-
-      // Configure Dio for Excel download
-      dio.options.headers = {
-        'Accept':
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Type':
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      };
-
-      // Download file with progress
-      await dio.download(
-        url,
-        filePath,
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            double progress = received / total;
-            // Optional: Show download progress
-            print('Download progress: ${(progress * 100).toStringAsFixed(0)}%');
-          }
-        },
-      );
-
-      // Verify file was downloaded and is Excel format
-      final file = File(filePath);
-      if (await file.exists()) {
-        final fileSize = await file.length();
-        if (fileSize > 0) {
-          showSuccess('Excel file downloaded successfully: $fileName');
-
-          // Try to open the file with appropriate Excel app
-          await _openExcelFile(filePath);
-        } else {
-          throw 'Downloaded file is empty';
-        }
-      } else {
-        throw 'File was not downloaded';
-      }
-    } catch (e) {
-      print('Download error: $e');
-
-      // Fallback: try to open URL directly in browser
-      try {
-        if (await canLaunchUrl(Uri.parse(url))) {
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-          showSuccess('Opening Excel file in browser...');
-        } else {
-          throw 'Could not open download URL';
-        }
-      } catch (fallbackError) {
-        throw 'Could not download or open Excel file: $e';
-      }
-    }
-  }
-
-  Future<void> _openExcelFile(String filePath) async {
-    try {
-      final file = File(filePath);
-
-      if (GetPlatform.isAndroid) {
-        // On Android, try to open with Excel or compatible app
-        final uri = Uri.parse(
-            'content://com.android.externalstorage.documents/document/primary:Download/${file.path.split('/').last}');
-
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri);
-        } else {
-          // Fallback to file URI
-          final fileUri = Uri.file(filePath);
-          if (await canLaunchUrl(fileUri)) {
-            await launchUrl(fileUri);
-          }
-        }
-      } else if (GetPlatform.isIOS) {
-        // On iOS, open with system share sheet
-        final fileUri = Uri.file(filePath);
-        if (await canLaunchUrl(fileUri)) {
-          await launchUrl(fileUri);
-        }
-      } else {
-        // Desktop platforms
-        final fileUri = Uri.file(filePath);
-        if (await canLaunchUrl(fileUri)) {
-          await launchUrl(fileUri);
-        }
-      }
-    } catch (e) {
-      print('Could not open Excel file: $e');
-      // Don't throw error, file is already downloaded
-    }
-  }
-
-  String _generateExcelFileName(String url) {
-    String fileName;
-
-    // Try to extract filename from URL
-    final uri = Uri.parse(url);
-    final pathSegments = uri.pathSegments;
-
-    if (pathSegments.isNotEmpty && pathSegments.last.contains('.')) {
-      fileName = pathSegments.last;
-
-      // Ensure it has .xlsx extension
-      if (!fileName.toLowerCase().endsWith('.xlsx') &&
-          !fileName.toLowerCase().endsWith('.xls')) {
-        fileName = fileName.split('.').first + '.xlsx';
-      }
-    } else {
-      // Generate filename based on current date and report type
-      final now = DateTime.now();
-      final dateStr =
-          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-      fileName = 'tax-report-$dateStr.xlsx';
-    }
-
-    return fileName;
   }
 
   /// Generate rekap data from currently loaded transactions (for initial load)
@@ -502,6 +734,7 @@ class TransactionController extends GetxController {
     _rekapData.value = rekapList;
   }
 
+  // [Rest of the methods remain the same as in your original code]
   /// Load transactions with current filters
   Future<void> loadTransactions({bool refresh = false}) async {
     try {

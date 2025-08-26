@@ -30,6 +30,8 @@ dependencies:
   flutter_blue_plus: ^1.35.5
   share_plus: ^11.1.0
   gal: ^2.3.2
+  open_file: ^3.5.10
+  android_intent_plus: ^5.3.1
 
 dev_dependencies:
   flutter_test:

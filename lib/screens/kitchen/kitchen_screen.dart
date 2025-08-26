@@ -435,11 +435,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
             )
           : const Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Daftar Pesanan Dapur',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ],
+              children: [],
             ),
     );
   }
