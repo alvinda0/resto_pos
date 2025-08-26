@@ -29,7 +29,7 @@ Future<void> initServices() async {
     Get.put(AuthService.instance);
 
     // Initialize services with lazy loading to avoid conflicts
-    Get.lazyPut(() => QrCodeService());
+    Get.lazyPut(() => QRCodeService());
 
     // Initialize auth controller
     Get.put(AuthController());

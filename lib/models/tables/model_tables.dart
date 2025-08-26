@@ -1,5 +1,5 @@
-// models/qr_code_model.dart
-class QrCodeModel {
+// lib/models/qr_code.dart
+class QRCode {
   final String id;
   final String storeId;
   final String code;
@@ -7,8 +7,9 @@ class QrCodeModel {
   final String type;
   final String menuUrl;
   final DateTime expiresAt;
+  final String? image; // Base64 encoded image
 
-  QrCodeModel({
+  QRCode({
     required this.id,
     required this.storeId,
     required this.code,
@@ -16,36 +17,20 @@ class QrCodeModel {
     required this.type,
     required this.menuUrl,
     required this.expiresAt,
+    this.image,
   });
 
-  factory QrCodeModel.fromJson(Map<String, dynamic> json) {
-    return QrCodeModel(
-      id: json['id']?.toString() ?? '',
-      storeId: json['store_id']?.toString() ?? '',
-      code: json['code']?.toString() ?? '',
-      tableNumber: json['table_number']?.toString() ?? '',
-      type: json['type']?.toString() ?? '',
-      menuUrl: json['menu_url']?.toString() ?? '',
-      expiresAt: _parseDateTime(json['expires_at']),
+  factory QRCode.fromJson(Map<String, dynamic> json) {
+    return QRCode(
+      id: json['id'] ?? '',
+      storeId: json['store_id'] ?? '',
+      code: json['code'] ?? '',
+      tableNumber: json['table_number'] ?? '',
+      type: json['type'] ?? '',
+      menuUrl: json['menu_url'] ?? '',
+      expiresAt: DateTime.parse(json['expires_at']),
+      image: json['image'],
     );
-  }
-
-  // Helper method untuk parsing DateTime yang lebih robust
-  static DateTime _parseDateTime(dynamic dateStr) {
-    if (dateStr == null) return DateTime.now();
-
-    try {
-      if (dateStr is String) {
-        return DateTime.parse(dateStr);
-      } else if (dateStr is int) {
-        // Unix timestamp
-        return DateTime.fromMillisecondsSinceEpoch(dateStr * 1000);
-      }
-    } catch (e) {
-      print('Error parsing date: $e');
-    }
-
-    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -57,82 +42,166 @@ class QrCodeModel {
       'type': type,
       'menu_url': menuUrl,
       'expires_at': expiresAt.toIso8601String(),
+      if (image != null) 'image': image,
     };
-  }
-
-  @override
-  String toString() {
-    return 'QrCodeModel(id: $id, storeId: $storeId, code: $code, tableNumber: $tableNumber, type: $type, menuUrl: $menuUrl, expiresAt: $expiresAt)';
   }
 }
 
-// Response model untuk API - dengan multiple kemungkinan struktur
-class QrCodeResponse {
+class QRCodeListResponse {
+  final bool success;
   final String message;
   final int status;
-  final List<QrCodeModel> qrCodes;
+  final DateTime timestamp;
+  final List<QRCode> qrcodes;
+  final QRCodeMetadata metadata;
 
-  QrCodeResponse({
+  QRCodeListResponse({
+    required this.success,
     required this.message,
     required this.status,
-    required this.qrCodes,
+    required this.timestamp,
+    required this.qrcodes,
+    required this.metadata,
   });
 
-  factory QrCodeResponse.fromJson(Map<String, dynamic> json) {
-    try {
-      List<QrCodeModel> qrCodeList = [];
+  factory QRCodeListResponse.fromJson(Map<String, dynamic> json) {
+    return QRCodeListResponse(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: DateTime.parse(json['timestamp']),
+      qrcodes: (json['data']['qrcodes'] as List<dynamic>?)
+              ?.map((item) => QRCode.fromJson(item))
+              .toList() ??
+          [],
+      metadata: QRCodeMetadata.fromJson(json['metadata']),
+    );
+  }
+}
 
-      // Debug: Print raw JSON
-      print('Raw JSON Response: $json');
+class QRCodeMetadata {
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
 
-      // Coba berbagai kemungkinan struktur response
-      if (json['data'] != null) {
-        var data = json['data'];
+  QRCodeMetadata({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
 
-        // Kemungkinan 1: data.qrcodes
-        if (data['qrcodes'] != null && data['qrcodes'] is List) {
-          qrCodeList = (data['qrcodes'] as List)
-              .map((qrCode) => QrCodeModel.fromJson(qrCode))
-              .toList();
-        }
-        // Kemungkinan 2: data.qr_codes
-        else if (data['qr_codes'] != null && data['qr_codes'] is List) {
-          qrCodeList = (data['qr_codes'] as List)
-              .map((qrCode) => QrCodeModel.fromJson(qrCode))
-              .toList();
-        }
-        // Kemungkinan 3: data langsung adalah array
-        else if (data is List) {
-          qrCodeList = (data as List)
-              .map((qrCode) => QrCodeModel.fromJson(qrCode))
-              .toList();
-        }
-      }
-      // Kemungkinan 4: qrcodes langsung di root
-      else if (json['qrcodes'] != null && json['qrcodes'] is List) {
-        qrCodeList = (json['qrcodes'] as List)
-            .map((qrCode) => QrCodeModel.fromJson(qrCode))
-            .toList();
-      }
-      // Kemungkinan 5: qr_codes langsung di root
-      else if (json['qr_codes'] != null && json['qr_codes'] is List) {
-        qrCodeList = (json['qr_codes'] as List)
-            .map((qrCode) => QrCodeModel.fromJson(qrCode))
-            .toList();
-      }
+  factory QRCodeMetadata.fromJson(Map<String, dynamic> json) {
+    return QRCodeMetadata(
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 100,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 1,
+    );
+  }
+}
 
-      return QrCodeResponse(
-        message: json['message']?.toString() ?? '',
-        status: json['status'] ?? json['statusCode'] ?? 200,
-        qrCodes: qrCodeList,
-      );
-    } catch (e) {
-      print('Error parsing QrCodeResponse: $e');
-      return QrCodeResponse(
-        message: 'Error parsing response',
-        status: 500,
-        qrCodes: [],
-      );
-    }
+class CreateQRCodeRequest {
+  final String tableNumber;
+  final String type;
+  final String menuUrl;
+  final DateTime expiresAt;
+
+  CreateQRCodeRequest({
+    required this.tableNumber,
+    required this.type,
+    required this.menuUrl,
+    required this.expiresAt,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'table_number': tableNumber,
+      'type': type,
+      'menu_url': menuUrl,
+      'expires_at': expiresAt.toIso8601String(),
+    };
+  }
+}
+
+class CreateQRCodeResponse {
+  final bool success;
+  final String message;
+  final int status;
+  final DateTime timestamp;
+  final QRCode data;
+
+  CreateQRCodeResponse({
+    required this.success,
+    required this.message,
+    required this.status,
+    required this.timestamp,
+    required this.data,
+  });
+
+  factory CreateQRCodeResponse.fromJson(Map<String, dynamic> json) {
+    return CreateQRCodeResponse(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: DateTime.parse(json['timestamp']),
+      data: QRCode.fromJson(json['data']),
+    );
+  }
+}
+
+class BulkCreateQRCodeRequest {
+  final int tableCount;
+  final int startNumber;
+  final String type;
+  final String menuUrl;
+  final DateTime expiresAt;
+
+  BulkCreateQRCodeRequest({
+    required this.tableCount,
+    required this.startNumber,
+    required this.type,
+    required this.menuUrl,
+    required this.expiresAt,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'table_count': tableCount,
+      'start_number': startNumber,
+      'type': type,
+      'menu_url': menuUrl,
+      'expires_at': expiresAt.toIso8601String(),
+    };
+  }
+}
+
+class BulkCreateQRCodeResponse {
+  final bool success;
+  final String message;
+  final int status;
+  final DateTime timestamp;
+  final List<QRCode> data;
+
+  BulkCreateQRCodeResponse({
+    required this.success,
+    required this.message,
+    required this.status,
+    required this.timestamp,
+    required this.data,
+  });
+
+  factory BulkCreateQRCodeResponse.fromJson(Map<String, dynamic> json) {
+    return BulkCreateQRCodeResponse(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: DateTime.parse(json['timestamp']),
+      data: (json['data'] as List<dynamic>?)
+              ?.map((item) => QRCode.fromJson(item))
+              .toList() ??
+          [],
+    );
   }
 }

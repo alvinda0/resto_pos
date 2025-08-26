@@ -102,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                       // App Name
                       Text(
-                        'SiResto',
+                        'Shao Kao',
                         style: TextStyle(
                           fontSize: 42,
                           fontWeight: FontWeight.bold,

@@ -1,281 +1,370 @@
-// controllers/qr_code_controller.dart
+// lib/controllers/qr_code_controller.dart
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos/models/tables/model_tables.dart';
 import 'package:pos/services/tables/tables_qr_code_service.dart';
 
-class QrCodeController extends GetxController {
-  static QrCodeController get instance {
-    if (!Get.isRegistered<QrCodeController>()) {
-      Get.put(QrCodeController());
-    }
-    return Get.find<QrCodeController>();
-  }
-
-  final QrCodeService _qrCodeService = QrCodeService.instance;
+class QRCodeController extends GetxController {
+  final QRCodeService _qrCodeService = QRCodeService();
 
   // Observable variables
-  final RxList<QrCodeModel> qrCodes = <QrCodeModel>[].obs;
+  final RxList<QRCode> qrCodes = <QRCode>[].obs;
   final RxBool isLoading = false.obs;
-  final RxBool isCreatingBulk = false.obs;
-  final RxString error = ''.obs;
-  final RxBool isDeleting = false.obs;
+  final RxBool isCreatingQR = false.obs;
+  final RxString searchQuery = ''.obs;
+  final RxInt currentPage = 1.obs;
+  final RxInt totalPages = 1.obs;
+  final RxInt totalItems = 0.obs;
+  final RxBool hasMoreData = true.obs;
+
+  // Form controllers for creating QR codes
+  final TextEditingController tableNumberController = TextEditingController();
+  final TextEditingController menuUrlController = TextEditingController();
+  final TextEditingController bulkTableCountController =
+      TextEditingController();
+  final TextEditingController bulkStartNumberController =
+      TextEditingController();
+
+  // Form variables
+  final RxString selectedType = 'menu'.obs;
+  final Rx<DateTime?> selectedExpiryDate = Rx<DateTime?>(null);
+  final RxBool hasExpiryDate = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    fetchQrCodes();
+    loadQRCodes();
+
+    // Set default values
+    menuUrlController.text = 'https://www.sibayar.co.id';
+    bulkStartNumberController.text = '1';
+    bulkTableCountController.text = '5';
   }
 
-  // Fetch all QR codes
-  Future<void> fetchQrCodes() async {
-    try {
-      isLoading.value = true;
-      error.value = '';
+  @override
+  void onClose() {
+    tableNumberController.dispose();
+    menuUrlController.dispose();
+    bulkTableCountController.dispose();
+    bulkStartNumberController.dispose();
+    super.onClose();
+  }
 
-      final codes = await _qrCodeService.getQrCodes();
-      qrCodes.assignAll(codes);
+  // Load QR codes with pagination
+  Future<void> loadQRCodes({bool refresh = false}) async {
+    if (refresh) {
+      currentPage.value = 1;
+      qrCodes.clear();
+    }
+
+    isLoading.value = true;
+
+    try {
+      final response = await _qrCodeService.getQRCodes(
+        page: currentPage.value,
+        limit: 100,
+        search: searchQuery.value,
+      );
+
+      if (refresh) {
+        qrCodes.assignAll(response.qrcodes);
+      } else {
+        qrCodes.addAll(response.qrcodes);
+      }
+
+      totalPages.value = response.metadata.totalPages;
+      totalItems.value = response.metadata.total;
+      hasMoreData.value = currentPage.value < totalPages.value;
+
+      if (response.qrcodes.isNotEmpty) {
+        currentPage.value++;
+      }
     } catch (e) {
-      // Extract clean error message and set to error state
-      String cleanError = _extractCleanErrorMessage(e.toString());
-      error.value = cleanError;
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Create bulk QR codes
-  Future<bool> createBulkQrCodes({
-    required int tableCount,
-    required int startNumber,
-    required String type,
-    required String menuUrl,
-    DateTime? expiresAt,
-  }) async {
+  // Search QR codes
+  Future<void> searchQRCodes(String query) async {
+    searchQuery.value = query;
+    await loadQRCodes(refresh: true);
+  }
+
+  // Create single QR code using bulk API with table_count = 1
+  Future<void> createSingleQRCode() async {
+    if (!_validateSingleQRForm()) return;
+
+    isCreatingQR.value = true;
+
     try {
-      isCreatingBulk.value = true;
-      error.value = '';
+      // Parse table number to get start_number
+      final startNumber = int.tryParse(tableNumberController.text.trim()) ?? 1;
 
-      // Validate input
-      if (tableCount <= 0) {
-        throw Exception('Jumlah meja harus lebih dari 0');
-      }
-
-      if (startNumber <= 0) {
-        throw Exception('Nomor awal meja harus lebih dari 0');
-      }
-
-      if (menuUrl.isEmpty) {
-        throw Exception('URL menu tidak boleh kosong');
-      }
-
-      // Call service to create bulk QR codes
-      final newQrCodes = await _qrCodeService.createBulkQrCodes(
-        tableCount: tableCount,
+      final request = BulkCreateQRCodeRequest(
+        tableCount: 1, // Single QR code
         startNumber: startNumber,
-        type: type,
-        menuUrl: menuUrl,
-        expiresAt: expiresAt,
+        type: selectedType.value,
+        menuUrl: menuUrlController.text.trim(),
+        expiresAt: hasExpiryDate.value
+            ? (selectedExpiryDate.value ??
+                DateTime.now().add(const Duration(days: 365)))
+            : DateTime.now().add(const Duration(days: 365)),
       );
 
-      // Add new QR codes to existing list
-      qrCodes.addAll(newQrCodes);
+      final response = await _qrCodeService.createQRCodes(request: request);
 
-      // Sort by table number for better display
-      qrCodes.sort((a, b) {
-        final aNum = int.tryParse(a.tableNumber) ?? 0;
-        final bNum = int.tryParse(b.tableNumber) ?? 0;
-        return aNum.compareTo(bNum);
-      });
+      // Add new QR code to the beginning of the list
+      qrCodes.insertAll(0, response.data);
+      totalItems.value += response.data.length;
 
-      // Use WidgetsBinding to delay snackbar until after build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSnackBar(
-          'Berhasil',
-          '$tableCount meja berhasil ditambahkan (Meja ${startNumber} - ${startNumber + tableCount - 1})',
-          isError: false,
-        );
-      });
+      // Clear form
+      _clearSingleQRForm();
 
-      return true;
+      Get.back(); // Close dialog/bottom sheet
+      Get.snackbar(
+        'Success',
+        'QR Code created successfully',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
     } catch (e) {
-      String cleanError = _extractCleanErrorMessage(e.toString());
-      error.value = cleanError;
-      // Use WidgetsBinding to delay snackbar until after build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSnackBar('Error', 'Gagal menambahkan meja: $cleanError',
-            isError: true);
-      });
-      return false;
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
-      isCreatingBulk.value = false;
+      isCreatingQR.value = false;
+    }
+  }
+
+  // Create bulk QR codes
+  Future<void> createBulkQRCodes() async {
+    if (!_validateBulkQRForm()) return;
+
+    isCreatingQR.value = true;
+
+    try {
+      final request = BulkCreateQRCodeRequest(
+        tableCount: int.parse(bulkTableCountController.text.trim()),
+        startNumber: int.parse(bulkStartNumberController.text.trim()),
+        type: selectedType.value,
+        menuUrl: menuUrlController.text.trim(),
+        expiresAt: hasExpiryDate.value
+            ? (selectedExpiryDate.value ??
+                DateTime.now().add(const Duration(days: 365)))
+            : DateTime.now().add(const Duration(days: 365)),
+      );
+
+      final response = await _qrCodeService.createQRCodes(request: request);
+
+      // Add new QR codes to the beginning of the list
+      qrCodes.insertAll(0, response.data);
+      totalItems.value += response.data.length;
+
+      // Clear form
+      _clearBulkQRForm();
+
+      Get.back(); // Close dialog/bottom sheet
+      Get.snackbar(
+        'Success',
+        '${response.data.length} QR Codes created successfully',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isCreatingQR.value = false;
     }
   }
 
   // Delete QR code
-  Future<bool> deleteQrCode(String qrCodeId, String tableNumber) async {
+  Future<void> deleteQRCode(String qrCodeId) async {
     try {
-      isDeleting.value = true;
-      error.value = '';
-
-      // Call service to delete QR code
-      final success = await _qrCodeService.deleteQrCode(qrCodeId);
+      final success = await _qrCodeService.deleteQRCode(qrCodeId: qrCodeId);
 
       if (success) {
-        // Remove from local list
         qrCodes.removeWhere((qr) => qr.id == qrCodeId);
+        totalItems.value--;
 
-        // Use WidgetsBinding to delay snackbar until after build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showSnackBar(
-            'Berhasil',
-            'Meja $tableNumber berhasil dihapus',
-            isError: false,
-          );
-        });
-
-        return true;
-      }
-
-      return false;
-    } catch (e) {
-      String cleanError = _extractCleanErrorMessage(e.toString());
-      error.value = cleanError;
-      // Use WidgetsBinding to delay snackbar until after build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSnackBar(
-          'Error',
-          'Gagal menghapus meja $tableNumber: $cleanError',
-          isError: true,
+        Get.snackbar(
+          'Success',
+          'QR Code deleted successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
         );
-      });
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // Get QR code image as Uint8List
+  Uint8List? getQRCodeImage(QRCode qrCode) {
+    if (qrCode.image != null && qrCode.image!.isNotEmpty) {
+      try {
+        return base64Decode(qrCode.image!);
+      } catch (e) {
+        print('Error decoding QR code image: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // Validate single QR form
+  bool _validateSingleQRForm() {
+    if (tableNumberController.text.trim().isEmpty) {
+      Get.snackbar('Error', 'Table number is required');
       return false;
-    } finally {
-      isDeleting.value = false;
-    }
-  }
-
-  // Show delete confirmation dialog
-  Future<bool> showDeleteConfirmation(String tableNumber) async {
-    return await Get.dialog<bool>(
-          AlertDialog(
-            title: const Text('Konfirmasi Hapus'),
-            content:
-                Text('Apakah Anda yakin ingin menghapus Meja $tableNumber?'),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: const Text('Batal'),
-              ),
-              TextButton(
-                onPressed: () => Get.back(result: true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Hapus'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-  }
-
-  // Delete QR code with confirmation
-  Future<void> deleteQrCodeWithConfirmation(
-      String qrCodeId, String tableNumber) async {
-    final confirmed = await showDeleteConfirmation(tableNumber);
-    if (confirmed) {
-      await deleteQrCode(qrCodeId, tableNumber);
-    }
-  }
-
-  // Check if table number already exists
-  bool isTableNumberExists(int tableNumber) {
-    return qrCodes.any((qr) => qr.tableNumber == tableNumber.toString());
-  }
-
-  // Check if any table in range already exists
-  bool isTableRangeExists(int startNumber, int count) {
-    for (int i = 0; i < count; i++) {
-      if (isTableNumberExists(startNumber + i)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // Get existing table numbers in range
-  List<int> getExistingTablesInRange(int startNumber, int count) {
-    List<int> existing = [];
-    for (int i = 0; i < count; i++) {
-      int tableNum = startNumber + i;
-      if (isTableNumberExists(tableNum)) {
-        existing.add(tableNum);
-      }
-    }
-    return existing;
-  }
-
-  // Extract clean error message
-  String _extractCleanErrorMessage(String errorMessage) {
-    // Remove "Exception: " prefix if present
-    if (errorMessage.startsWith('Exception: ')) {
-      errorMessage = errorMessage.substring(11);
     }
 
-    // Handle nested exception messages
-    if (errorMessage.contains('Exception: ')) {
-      final parts = errorMessage.split('Exception: ');
-      if (parts.length > 1) {
-        // Get the last (most specific) error message
-        errorMessage = parts.last.trim();
-      }
+    // Validate table number is numeric
+    if (int.tryParse(tableNumberController.text.trim()) == null) {
+      Get.snackbar('Error', 'Table number must be a valid number');
+      return false;
     }
 
-    // Remove any "Error saat" prefixes for cleaner message
-    if (errorMessage.startsWith('Error saat ')) {
-      errorMessage = errorMessage.substring(11);
+    if (menuUrlController.text.trim().isEmpty) {
+      Get.snackbar('Error', 'Menu URL is required');
+      return false;
     }
 
-    // Handle "Failed to create bulk QR codes:" prefix
-    if (errorMessage.startsWith('Failed to create bulk QR codes: ')) {
-      errorMessage = errorMessage.substring(33);
+    if (!_qrCodeService.isValidMenuUrl(menuUrlController.text.trim())) {
+      Get.snackbar('Error', 'Please enter a valid URL');
+      return false;
     }
 
-    return errorMessage;
+    return true;
   }
 
-  // Show snackbar
-  void _showSnackBar(String title, String message, {bool isError = false}) {
-    Get.snackbar(
-      title,
-      message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: isError ? Colors.red : Colors.green,
-      colorText: Colors.white,
-      duration: Duration(seconds: isError ? 4 : 3),
-      margin: const EdgeInsets.all(16),
-    );
+  // Validate bulk QR form
+  bool _validateBulkQRForm() {
+    if (bulkTableCountController.text.trim().isEmpty) {
+      Get.snackbar('Error', 'Table count is required');
+      return false;
+    }
+
+    if (bulkStartNumberController.text.trim().isEmpty) {
+      Get.snackbar('Error', 'Start number is required');
+      return false;
+    }
+
+    final tableCount = int.tryParse(bulkTableCountController.text.trim());
+    if (tableCount == null || tableCount <= 0) {
+      Get.snackbar('Error', 'Table count must be a positive number');
+      return false;
+    }
+
+    final startNumber = int.tryParse(bulkStartNumberController.text.trim());
+    if (startNumber == null || startNumber < 0) {
+      Get.snackbar('Error', 'Start number must be a valid number');
+      return false;
+    }
+
+    if (menuUrlController.text.trim().isEmpty) {
+      Get.snackbar('Error', 'Menu URL is required');
+      return false;
+    }
+
+    if (!_qrCodeService.isValidMenuUrl(menuUrlController.text.trim())) {
+      Get.snackbar('Error', 'Please enter a valid URL');
+      return false;
+    }
+
+    return true;
   }
 
-  // Refresh data
-  Future<void> refreshData() async {
-    await fetchQrCodes();
+  // Clear single QR form
+  void _clearSingleQRForm() {
+    tableNumberController.clear();
+    // Keep menu URL and other defaults
   }
 
-  // Get QR codes count
-  int get qrCodesCount => qrCodes.length;
+  // Clear bulk QR form
+  void _clearBulkQRForm() {
+    bulkTableCountController.text = '5';
+    bulkStartNumberController.text = '1';
+    // Keep menu URL and other defaults
+  }
+
+  // Set expiry date
+  void setExpiryDate(DateTime? date) {
+    selectedExpiryDate.value = date;
+    hasExpiryDate.value = date != null;
+  }
+
+  // Set QR type
+  void setQRType(String type) {
+    selectedType.value = type;
+  }
+
+  // Check if QR code is expired
+  bool isExpired(QRCode qrCode) {
+    return _qrCodeService.isQRCodeExpired(qrCode);
+  }
+
+  // Format expiry date for display
+  String formatExpiryDate(DateTime? date) {
+    if (date == null) return 'No expiry';
+    return '${date.day}/${date.month}/${date.year}';
+  }
 
   // Get next available table number
   int getNextAvailableTableNumber() {
     if (qrCodes.isEmpty) return 1;
 
-    final tableNumbers = qrCodes
+    final usedNumbers = qrCodes
         .map((qr) => int.tryParse(qr.tableNumber) ?? 0)
         .where((num) => num > 0)
         .toList();
 
-    if (tableNumbers.isEmpty) return 1;
+    if (usedNumbers.isEmpty) return 1;
 
-    tableNumbers.sort();
-    return tableNumbers.last + 1;
+    usedNumbers.sort();
+    for (int i = 1; i <= usedNumbers.last + 1; i++) {
+      if (!usedNumbers.contains(i)) {
+        return i;
+      }
+    }
+
+    return usedNumbers.last + 1;
+  }
+
+  // Auto fill next table number
+  void autoFillNextTableNumber() {
+    final nextNumber = getNextAvailableTableNumber();
+    tableNumberController.text = nextNumber.toString();
+  }
+
+  // Toggle expiry date
+  void toggleExpiryDate(bool value) {
+    hasExpiryDate.value = value;
+    if (!value) {
+      selectedExpiryDate.value = null;
+    } else {
+      selectedExpiryDate.value = DateTime.now().add(const Duration(days: 365));
+    }
   }
 }

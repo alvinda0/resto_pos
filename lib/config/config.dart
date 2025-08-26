@@ -1,5 +1,5 @@
 class Config {
-  static const String publicBackEndUrl = 'http://192.168.1.11:3000';
+  static const String publicBackEndUrl = 'http://192.168.1.43:3000';
   static const String apiVersion = '/api/v1';
 }
 

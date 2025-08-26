@@ -137,7 +137,7 @@ class AppRoutes {
           page: () => _wrapWithMainLayout(const DashboardScreen(), dashboard)),
       GetPage(
           name: tables,
-          page: () => _wrapWithMainLayout(const TableScreen(), tables)),
+          page: () => _wrapWithMainLayout(const QRCodeScreen(), tables)),
 
       // Product and Material Routes (Produk dan Bahan)
       GetPage(

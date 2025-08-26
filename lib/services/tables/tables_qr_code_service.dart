@@ -1,213 +1,175 @@
-// services/qr_code_service.dart
+// lib/services/qr_code_service.dart
 import 'dart:convert';
-import 'package:get/get.dart';
+
 import 'package:pos/http_client.dart';
 import 'package:pos/models/tables/model_tables.dart';
-import 'package:pos/storage_service.dart';
 
-class QrCodeService extends GetxService {
-  static QrCodeService get instance => Get.find<QrCodeService>();
-
+class QRCodeService {
   final HttpClient _httpClient = HttpClient.instance;
-  final StorageService _storage = StorageService.instance;
 
-  // Get store ID from storage or token
-  String? get _storeId {
-    String? storeId = _storage.getString('store_id');
-    if (storeId?.isNotEmpty == true) return storeId;
-
-    final token = _storage.getToken();
-    if (token != null) {
-      storeId = _extractStoreIdFromToken(token);
-      if (storeId != null) _storage.setString('store_id', storeId);
-    }
-    return storeId;
-  }
-
-  // Extract store ID from JWT token
-  String? _extractStoreIdFromToken(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
-
-      String payload = parts[1];
-      // Add base64 padding
-      payload += '=' * (4 - payload.length % 4);
-
-      final decoded = jsonDecode(utf8.decode(base64Url.decode(payload)));
-      return decoded['store_id']?.toString() ??
-          decoded['storeId']?.toString() ??
-          decoded['store']?.toString();
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Get all QR codes
-  Future<List<QrCodeModel>> getQrCodes() async {
-    try {
-      final response = await _httpClient.get('/qr-codes', storeId: _storeId);
-
-      if (response.statusCode != 200) {
-        throw Exception(_extractErrorMessage(response));
-      }
-
-      final data = jsonDecode(response.body);
-      final qrCodes = _extractQrCodesFromResponse(data);
-
-      return qrCodes.map((item) => QrCodeModel.fromJson(item)).toList();
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Network error: $e');
-    }
-  }
-
-  // Bulk create QR codes for tables
-  Future<List<QrCodeModel>> createBulkQrCodes({
-    required int tableCount,
-    required int startNumber,
-    required String type,
-    required String menuUrl,
-    DateTime? expiresAt,
+  // Get QR codes with pagination and search
+  Future<QRCodeListResponse> getQRCodes({
+    int page = 1,
+    int limit = 100,
+    String search = '',
+    String? storeId,
   }) async {
     try {
-      // Prepare request data
-      final Map<String, dynamic> requestData = {
-        'table_count': tableCount,
-        'start_number': startNumber,
-        'type': type,
-        'menu_url': menuUrl,
+      final queryParameters = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'search': search,
       };
 
-      // Add expiry date if provided
-      if (expiresAt != null) {
-        requestData['expires_at'] = expiresAt.toIso8601String();
-      }
+      final response = await _httpClient.get(
+        '/qr-codes',
+        requireAuth: true,
+        storeId: storeId,
+        queryParameters: queryParameters,
+      );
 
-      // Make POST request to bulk endpoint
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return QRCodeListResponse.fromJson(jsonData);
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to fetch QR codes');
+      }
+    } catch (e) {
+      throw Exception('Error fetching QR codes: $e');
+    }
+  }
+
+  // Create QR codes using bulk API (supports both single and multiple)
+  Future<BulkCreateQRCodeResponse> createQRCodes({
+    required BulkCreateQRCodeRequest request,
+    String? storeId,
+  }) async {
+    try {
+      // Use the exact format that matches your API expectation
+      final requestData = {
+        'table_count': request.tableCount,
+        'start_number': request.startNumber,
+        'type': request.type,
+        'menu_url': request.menuUrl,
+        'expires_at': request.expiresAt.toUtc().toIso8601String(),
+      };
+
+      print('=== QR Code Creation ===');
+      print('Request data: $requestData');
+      print('JSON string: ${jsonEncode(requestData)}');
+      print('Store ID: $storeId');
+      print('========================');
+
       final response = await _httpClient.post(
         '/qr-codes/bulk',
         requestData,
-        storeId: _storeId,
+        requireAuth: true,
+        storeId: storeId,
       );
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception(_extractErrorMessage(response));
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = jsonDecode(response.body);
+        return BulkCreateQRCodeResponse.fromJson(jsonData);
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to create QR codes');
       }
-
-      final data = jsonDecode(response.body);
-
-      // Extract QR codes from response
-      final qrCodesData = _extractQrCodesFromBulkResponse(data);
-
-      // Convert to QrCodeModel objects
-      final qrCodes =
-          qrCodesData.map((item) => QrCodeModel.fromJson(item)).toList();
-
-      return qrCodes;
     } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Failed to create bulk QR codes: $e');
+      print('Exception caught: $e');
+      throw Exception('Error creating QR codes: $e');
     }
-  }
-
-  // Extract QR codes from bulk creation response
-  List<dynamic> _extractQrCodesFromBulkResponse(dynamic data) {
-    if (data is Map<String, dynamic>) {
-      // Check for data field first (as shown in your API response)
-      if (data.containsKey('data') && data['data'] is List) {
-        return data['data'] as List<dynamic>;
-      }
-
-      // Fallback to other possible structures
-      if (data.containsKey('qrcodes') && data['qrcodes'] is List) {
-        return data['qrcodes'] as List<dynamic>;
-      }
-
-      if (data.containsKey('qr_codes') && data['qr_codes'] is List) {
-        return data['qr_codes'] as List<dynamic>;
-      }
-    }
-
-    // If data itself is a list
-    if (data is List) {
-      return data;
-    }
-
-    return [];
   }
 
   // Delete QR code by ID
-  Future<bool> deleteQrCode(String qrCodeId) async {
+  Future<bool> deleteQRCode({
+    required String qrCodeId,
+    String? storeId,
+  }) async {
     try {
       final response = await _httpClient.delete(
         '/qr-codes/$qrCodeId',
-        storeId: _storeId,
+        requireAuth: true,
+        storeId: storeId,
       );
 
-      if (response.statusCode != 200) {
-        throw Exception(_extractErrorMessage(response));
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData['success'] ?? false;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to delete QR code');
       }
-
-      final data = jsonDecode(response.body);
-
-      // Check if the response indicates success
-      final success = data['success'] ?? false;
-      if (!success) {
-        final message = data['message'] ?? 'Failed to delete QR code';
-        throw Exception(message);
-      }
-
-      return true;
     } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Failed to delete QR code: $e');
+      throw Exception('Error deleting QR code: $e');
     }
   }
 
-  // Extract QR codes list from various response structures
-  List<dynamic> _extractQrCodesFromResponse(dynamic data) {
-    if (data is List) return data;
-
-    if (data is Map<String, dynamic>) {
-      // Try different possible structures
-      final possiblePaths = [
-        ['data', 'qrcodes'],
-        ['data', 'qr_codes'],
-        ['qrcodes'],
-        ['qr_codes'],
-        ['data']
-      ];
-
-      for (final path in possiblePaths) {
-        dynamic current = data;
-        for (final key in path) {
-          if (current is Map<String, dynamic> && current.containsKey(key)) {
-            current = current[key];
-          } else {
-            current = null;
-            break;
-          }
-        }
-        if (current is List) return current;
-      }
-    }
-
-    return [];
-  }
-
-  // Extract error message from response
-  String _extractErrorMessage(dynamic response) {
+  // Get QR code image as base64 (if needed separately)
+  Future<String?> getQRCodeImage({
+    required String qrCodeId,
+    String? storeId,
+  }) async {
     try {
-      if (response.body?.isNotEmpty == true) {
-        final error = jsonDecode(response.body);
-        if (error is Map<String, dynamic>) {
-          return error['message'] ?? error['error'] ?? 'Request failed';
-        }
+      final response = await _httpClient.get(
+        '/qr-codes/$qrCodeId/image',
+        requireAuth: true,
+        storeId: storeId,
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData['data']['image'];
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to get QR code image');
       }
     } catch (e) {
-      // If JSON parsing fails, continue with fallback
+      throw Exception('Error getting QR code image: $e');
     }
-    return 'Request failed with status ${response.statusCode}';
+  }
+
+  // Helper method to validate table number
+  bool isValidTableNumber(String tableNumber) {
+    return tableNumber.isNotEmpty && tableNumber.trim().isNotEmpty;
+  }
+
+  // Helper method to validate menu URL
+  bool isValidMenuUrl(String menuUrl) {
+    try {
+      final uri = Uri.parse(menuUrl);
+      return uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Helper method to check if QR code is expired
+  bool isQRCodeExpired(QRCode qrCode) {
+    return DateTime.now().isAfter(qrCode.expiresAt);
+  }
+
+  // Validate request before sending
+  bool validateCreateRequest(BulkCreateQRCodeRequest request) {
+    print('=== Request Validation ===');
+    print(
+        'Table Count: ${request.tableCount} (valid: ${request.tableCount > 0})');
+    print(
+        'Start Number: ${request.startNumber} (valid: ${request.startNumber >= 0})');
+    print('Type: "${request.type}" (valid: ${request.type.isNotEmpty})');
+    print(
+        'Menu URL: "${request.menuUrl}" (valid: ${isValidMenuUrl(request.menuUrl)})');
+    print(
+        'Expires At: ${request.expiresAt} (valid: ${request.expiresAt.isAfter(DateTime.now())})');
+    print('========================');
+
+    return request.tableCount > 0 &&
+        request.startNumber >= 0 &&
+        request.type.isNotEmpty &&
+        isValidMenuUrl(request.menuUrl) &&
+        request.expiresAt.isAfter(DateTime.now());
   }
 }
