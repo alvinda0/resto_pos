@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shao_kao/controller/order/order_controller.dart';
 import 'package:shao_kao/controller/product/product_controller.dart';
+import 'package:shao_kao/controller/tax/tax_controller.dart';
 import 'package:shao_kao/models/order/order_model.dart';
 import 'package:shao_kao/models/product/product_model.dart';
 import 'package:shao_kao/controller/payment/payment_controller.dart';
@@ -46,6 +47,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   final TextEditingController cashAmountController = TextEditingController();
   final TextEditingController changeController = TextEditingController();
   final TextEditingController productSearchController = TextEditingController();
+  final TaxController taxController = Get.put(TaxController());
 
   String selectedPaymentMethod = 'Tunai';
   List<String> paymentMethods = ['Tunai', 'QRIS', 'Debit'];
@@ -59,6 +61,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     tableController.text = widget.order.tableNumber.toString();
     cashAmountController.addListener(_calculateChange);
     currentOrderItems = List.from(widget.order.items);
+    taxController.loadActiveTaxes();
 
     // Setup product search listener
     productSearchController.addListener(() {
@@ -132,9 +135,21 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
   }
 
-  double _calculateOrderTotal() {
+  double _calculateSubtotal() {
     return currentOrderItems.fold(
         0.0, (sum, item) => sum + _getItemTotalPriceDouble(item));
+  }
+
+  // Method baru untuk menghitung total pajak
+  double _calculateTotalTax() {
+    double subtotal = _calculateSubtotal();
+    double totalTaxPercentage = taxController.getTotalTaxPercentage();
+    return subtotal * (totalTaxPercentage / 100);
+  }
+
+  // Update method untuk menghitung total (subtotal + pajak)
+  double _calculateOrderTotal() {
+    return _calculateSubtotal() + _calculateTotalTax();
   }
 
   @override
@@ -1142,7 +1157,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
           const SizedBox(height: 16),
 
-          // Payment method buttons in row - FIXED SECTION
+          // Payment method buttons - tetap sama
           Row(
             children: paymentMethods.map((method) {
               final isSelected = selectedPaymentMethod == method;
@@ -1196,43 +1211,15 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               );
             }).toList(),
           ),
-          // END FIXED SECTION
 
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.green.shade50, Colors.green.shade100],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.shade200),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Pembayaran',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                  ),
-                ),
-                Text(
-                  'Rp${_formatPrice(_calculateOrderTotal().round())}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
-                  ),
-                ),
-              ],
-            ),
-          ),
+
+          // BAGIAN BARU: Tampilan breakdown harga dengan pajak
+          _buildPriceBreakdown(),
+
           const SizedBox(height: 12),
+
+          // Cash amount field jika tunai
           if (selectedPaymentMethod == 'Tunai') ...[
             _buildResponsiveTextField(
               'Jumlah Pembayaran',
@@ -1280,6 +1267,108 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ],
       ),
     );
+  }
+
+  Widget _buildPriceBreakdown() {
+    return Obx(() {
+      double subtotal = _calculateSubtotal();
+      double totalTax = _calculateTotalTax();
+      double total = subtotal + totalTax;
+
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blue.shade50, Colors.blue.shade100],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue.shade200),
+        ),
+        child: Column(
+          children: [
+            // Subtotal
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Subtotal',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+                Text(
+                  'Rp${_formatPrice(subtotal.round())}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ],
+            ),
+
+            // Tampilkan pajak jika ada
+            if (taxController.activeTaxes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ...taxController.activeTaxes.map((tax) {
+                double taxAmount = subtotal * (tax.percentage / 100);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${tax.name} (${tax.percentage}%)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade600,
+                        ),
+                      ),
+                      Text(
+                        'Rp${_formatPrice(taxAmount.round())}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+
+            const SizedBox(height: 8),
+            Container(height: 1, color: Colors.blue.shade300),
+            const SizedBox(height: 8),
+
+            // Total akhir
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Pembayaran',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+                Text(
+                  'Rp${_formatPrice(total.round())}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade900,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildPaymentButton() {
