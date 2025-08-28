@@ -1,4 +1,4 @@
-// controller/order/new_order_controller.dart - FIXED VERSION
+// controller/order/new_order_controller.dart - FIXED VERSION untuk QR Code flickering
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -10,10 +10,9 @@ import 'package:shao_kao/services/order/new_order_service.dart';
 
 class NewOrderController extends GetxController {
   final OrderService _orderService = OrderService.instance;
-
-  // Observable variables - pastikan semua menggunakan .obs
   final PrintService _printService = PrintService();
 
+  // Observable variables
   final RxBool isLoading = false.obs;
   final RxBool isProcessingPayment = false.obs;
   final RxString error = ''.obs;
@@ -21,14 +20,17 @@ class NewOrderController extends GetxController {
   final Rx<QrisPaymentResponse?> qrisPayment = Rx<QrisPaymentResponse?>(null);
   final RxBool isQrisPaymentActive = false.obs;
 
-  // NEW: Add print status tracking
+  // FIXED: Separate observable for QRIS status to prevent QR code flickering
+  final RxString qrisPaymentStatus = 'PENDING'.obs;
+  final Rx<DateTime> qrisLastUpdated = DateTime.now().obs;
+
   final RxBool isPrinting = false.obs;
   final RxString printStatus = ''.obs;
 
   // Timer for QRIS status checking
   Timer? _qrisStatusTimer;
 
-  // Order form data - semua observable
+  // Order form data
   final RxList<Map<String, dynamic>> orderItems = <Map<String, dynamic>>[].obs;
   final RxString customerName = ''.obs;
   final RxString customerPhone = ''.obs;
@@ -52,7 +54,6 @@ class NewOrderController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Delay initialization to avoid controller conflicts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeListeners();
     });
@@ -66,23 +67,18 @@ class NewOrderController extends GetxController {
   }
 
   void resetControllerState() {
-    // Cancel any ongoing operations
     _qrisStatusTimer?.cancel();
-
-    // Reset loading states
     isLoading.value = false;
     isProcessingPayment.value = false;
     isQrisPaymentActive.value = false;
-    isPrinting.value = false; // NEW
-
-    // Clear error
+    isPrinting.value = false;
     error.value = '';
-    printStatus.value = ''; // NEW
+    printStatus.value = '';
+    qrisPaymentStatus.value = 'PENDING';
   }
 
   void _initializeListeners() {
     try {
-      // Listen to text controller changes
       customerNameController.addListener(() {
         customerName.value = customerNameController.text;
       });
@@ -142,7 +138,6 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // Tambahkan di NewOrderController setelah getter orderTotal
   double get orderTotalWithTax {
     try {
       double subtotal = orderItems.fold(
@@ -154,36 +149,32 @@ class NewOrderController extends GetxController {
         totalTaxAmount = taxController.activeTaxes
             .fold(0.0, (sum, tax) => sum + (subtotal * (tax.percentage / 100)));
       } catch (e) {
-        // TaxController not found, use 0
         totalTaxAmount = 0.0;
       }
 
       return subtotal + totalTaxAmount;
     } catch (e) {
       print('Error calculating order total with tax: $e');
-      return orderTotal; // Fallback to original total
+      return orderTotal;
     }
   }
 
-  // Calculate change
   void calculateChange() {
     try {
       if (selectedPaymentMethod.value == 'Tunai' && cashAmount.value > 0) {
-        double change =
-            cashAmount.value - orderTotalWithTax; // Gunakan orderTotalWithTax
+        double change = cashAmount.value - orderTotalWithTax;
         changeAmount.value = change >= 0 ? change : 0.0;
         changeController.text = 'Rp${formatPrice(changeAmount.value.round())}';
       } else {
         changeAmount.value = 0.0;
         changeController.text = 'Rp0';
       }
-      update(); // Trigger UI update
+      update();
     } catch (e) {
       print('Error calculating change: $e');
     }
   }
 
-  // Format price helper
   String formatPrice(int price) {
     try {
       return price.toString().replaceAllMapped(
@@ -194,7 +185,6 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // Add product to order
   void addProductToOrder(Product product) {
     try {
       int existingIndex =
@@ -220,14 +210,13 @@ class NewOrderController extends GetxController {
 
       orderItems.refresh();
       calculateChange();
-      update(); // Trigger UI update
+      update();
     } catch (e) {
       error.value = 'Failed to add product: $e';
       _showErrorSnackbar(error.value);
     }
   }
 
-  // Increase quantity
   void increaseQuantity(int index) {
     try {
       if (index >= 0 && index < orderItems.length) {
@@ -237,14 +226,13 @@ class NewOrderController extends GetxController {
             orderItems[index]['quantity'] * unitPrice;
         orderItems.refresh();
         calculateChange();
-        update(); // Trigger UI update
+        update();
       }
     } catch (e) {
       print('Error increasing quantity: $e');
     }
   }
 
-  // Decrease quantity
   void decreaseQuantity(int index) {
     try {
       if (index >= 0 && index < orderItems.length) {
@@ -258,39 +246,36 @@ class NewOrderController extends GetxController {
         }
         orderItems.refresh();
         calculateChange();
-        update(); // Trigger UI update
+        update();
       }
     } catch (e) {
       print('Error decreasing quantity: $e');
     }
   }
 
-  // Remove item
   void removeItem(int index) {
     try {
       if (index >= 0 && index < orderItems.length) {
         orderItems.removeAt(index);
         orderItems.refresh();
         calculateChange();
-        update(); // Trigger UI update
+        update();
       }
     } catch (e) {
       print('Error removing item: $e');
     }
   }
 
-  // Update payment method
   void updatePaymentMethod(String method) {
     try {
       selectedPaymentMethod.value = method;
       calculateChange();
-      update(); // Trigger UI update
+      update();
     } catch (e) {
       print('Error updating payment method: $e');
     }
   }
 
-  // Validate order data
   bool validateOrder() {
     try {
       error.value = '';
@@ -307,7 +292,6 @@ class NewOrderController extends GetxController {
 
       if (selectedPaymentMethod.value == 'Tunai' &&
           cashAmount.value < orderTotalWithTax) {
-        // Gunakan orderTotalWithTax
         error.value = 'Jumlah pembayaran kurang dari total pesanan';
         return false;
       }
@@ -319,7 +303,6 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // Create order and process payment
   Future<void> processOrder() async {
     if (!validateOrder()) {
       _showErrorSnackbar(error.value);
@@ -329,9 +312,8 @@ class NewOrderController extends GetxController {
     try {
       isLoading.value = true;
       error.value = '';
-      update(); // Trigger UI update
+      update();
 
-      // Prepare order request
       final orderRequest = CreateOrderRequest(
         order: OrderDetails(
           customerName: customerName.value.trim(),
@@ -353,32 +335,27 @@ class NewOrderController extends GetxController {
         ],
       );
 
-      // Create order
       final order = await _orderService.createOrder(orderRequest);
       currentOrder.value = order;
 
-      // Process payment based on method
       await _processPayment(order.id);
     } catch (e) {
       error.value = e.toString();
       _showErrorSnackbar('Gagal membuat pesanan: ${error.value}');
     } finally {
       isLoading.value = false;
-      update(); // Trigger UI update
+      update();
     }
   }
 
-  // Process payment - IMPROVED VERSION
   Future<void> _processPayment(String orderId) async {
     try {
       isProcessingPayment.value = true;
-      update(); // Trigger UI update
+      update();
 
       if (selectedPaymentMethod.value == 'QRIS') {
-        // Handle QRIS payment
         await _initiateQrisPayment(orderId);
       } else {
-        // Handle Cash/Debit payment
         final paymentResponse = await _orderService.processPayment(
           orderId: orderId,
           method: selectedPaymentMethod.value,
@@ -386,10 +363,7 @@ class NewOrderController extends GetxController {
 
         if (paymentResponse.status == 'SUCCESS') {
           _showSuccessMessage('Pembayaran berhasil!');
-
-          // IMPROVED: Wait a moment and check printer status before auto print
           await _attemptAutoPrint();
-
           resetForm();
         } else {
           throw Exception(
@@ -401,11 +375,10 @@ class NewOrderController extends GetxController {
       _showErrorSnackbar('Pembayaran gagal: ${error.value}');
     } finally {
       isProcessingPayment.value = false;
-      update(); // Trigger UI update
+      update();
     }
   }
 
-  // NEW: Improved auto print method with better error handling
   Future<void> _attemptAutoPrint() async {
     if (currentOrder.value == null) {
       print('NewOrderController: No order available for printing');
@@ -417,10 +390,8 @@ class NewOrderController extends GetxController {
       printStatus.value = 'Memeriksa koneksi printer...';
       update();
 
-      // Wait a moment to ensure payment processing is complete
       await Future.delayed(Duration(milliseconds: 500));
 
-      // Check printer connection status
       if (!_printService.isConnected) {
         printStatus.value = 'Printer tidak terhubung';
         _showWarningSnackbar(
@@ -432,7 +403,6 @@ class NewOrderController extends GetxController {
       printStatus.value = 'Mencetak struk...';
       update();
 
-      // Attempt to print with retry mechanism
       bool printed = false;
       int retryCount = 0;
       const maxRetries = 3;
@@ -476,7 +446,6 @@ class NewOrderController extends GetxController {
           'Pembayaran berhasil tetapi terjadi error saat print: $e');
     } finally {
       isPrinting.value = false;
-      // Clear print status after delay
       Future.delayed(Duration(seconds: 3), () {
         printStatus.value = '';
         update();
@@ -485,67 +454,66 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // NEW: Manual print method for retry
   Future<void> manualPrint() async {
     if (currentOrder.value == null) {
       _showErrorSnackbar('Tidak ada order untuk dicetak');
       return;
     }
-
     await _attemptAutoPrint();
   }
 
-  // Check QRIS payment status - IMPROVED VERSION
+  // FIXED: Improved QRIS status checking without causing UI flicker
   Future<void> checkQrisPaymentStatus(String orderId) async {
     try {
       final statusResponse =
           await _orderService.checkQrisPaymentStatus(orderId);
 
+      // Update status tanpa memanggil update() global
+      qrisPaymentStatus.value = statusResponse.status;
+      qrisLastUpdated.value = DateTime.now();
+
       if (statusResponse.status == 'SUCCESS') {
-        // Payment successful
         _qrisStatusTimer?.cancel();
         isQrisPaymentActive.value = false;
         _showSuccessMessage('Pembayaran QRIS berhasil!');
 
-        // Auto print for QRIS payment
         await _attemptAutoPrint();
-
         resetForm();
       } else if (statusResponse.status == 'FAILED' ||
           statusResponse.status == 'EXPIRED') {
-        // Payment failed
         _qrisStatusTimer?.cancel();
         isQrisPaymentActive.value = false;
         error.value = 'Pembayaran QRIS gagal atau expired';
         _showErrorSnackbar(error.value);
-      } else {
-        // Still pending, show current status
-        print('QRIS Payment Status: ${statusResponse.status}');
       }
 
-      update(); // Trigger UI update
+      // Hanya update UI jika ada perubahan status penting
+      if (statusResponse.status == 'SUCCESS' ||
+          statusResponse.status == 'FAILED' ||
+          statusResponse.status == 'EXPIRED') {
+        update();
+      }
     } catch (e) {
       print('Error checking QRIS status: $e');
       error.value = 'Error checking QRIS status: $e';
     }
   }
 
-  // Initiate QRIS payment
   Future<void> _initiateQrisPayment(String orderId) async {
     try {
       final qrisResponse = await _orderService.initiateQrisPayment(orderId);
       qrisPayment.value = qrisResponse;
       isQrisPaymentActive.value = true;
-      update(); // Trigger UI update
+      qrisPaymentStatus.value = 'PENDING';
+      update(); // Update UI setelah QR code dimuat
 
-      // Start checking payment status
       _startQrisStatusCheck(orderId);
     } catch (e) {
       throw Exception('Failed to initiate QRIS payment: $e');
     }
   }
 
-  // Start QRIS status checking
+  // FIXED: Improved status checking to prevent UI flickering
   void _startQrisStatusCheck(String orderId) {
     _qrisStatusTimer?.cancel();
 
@@ -558,26 +526,25 @@ class NewOrderController extends GetxController {
         final statusResponse =
             await _orderService.checkQrisPaymentStatus(orderId);
 
+        // Update status observable tanpa global update
+        qrisPaymentStatus.value = statusResponse.status;
+        qrisLastUpdated.value = DateTime.now();
+
         if (statusResponse.status == 'SUCCESS') {
-          // Payment successful
           timer.cancel();
           isQrisPaymentActive.value = false;
           _showSuccessMessage('Pembayaran QRIS berhasil!');
-
-          // Auto print for QRIS payment
           await _attemptAutoPrint();
-
           resetForm();
         } else if (statusResponse.status == 'FAILED' ||
             statusResponse.status == 'EXPIRED') {
-          // Payment failed
           timer.cancel();
           isQrisPaymentActive.value = false;
           error.value = 'Pembayaran QRIS gagal atau expired';
           _showErrorSnackbar(error.value);
         }
-        // If still pending, continue checking
-        update(); // Trigger UI update
+
+        // PENTING: Jangan panggil update() di sini untuk mencegah flickering QR code
       } catch (e) {
         print('Error checking QRIS status: $e');
       }
@@ -595,25 +562,24 @@ class NewOrderController extends GetxController {
           isQrisPaymentActive.value = false;
           error.value = 'QRIS payment expired';
           _showErrorSnackbar('QRIS payment expired');
-          update(); // Trigger UI update
+          update();
         }
       });
     }
   }
 
-  // Cancel QRIS payment
   void cancelQrisPayment() {
     try {
       _qrisStatusTimer?.cancel();
       isQrisPaymentActive.value = false;
       qrisPayment.value = null;
-      update(); // Trigger UI update
+      qrisPaymentStatus.value = 'PENDING';
+      update();
     } catch (e) {
       print('Error canceling QRIS payment: $e');
     }
   }
 
-  // Reset form
   void resetForm() {
     try {
       orderItems.clear();
@@ -629,11 +595,11 @@ class NewOrderController extends GetxController {
       currentOrder.value = null;
       qrisPayment.value = null;
       isQrisPaymentActive.value = false;
+      qrisPaymentStatus.value = 'PENDING';
       error.value = '';
-      isPrinting.value = false; // NEW
-      printStatus.value = ''; // NEW
+      isPrinting.value = false;
+      printStatus.value = '';
 
-      // Clear controllers
       customerNameController.clear();
       phoneController.clear();
       tableController.clear();
@@ -643,13 +609,12 @@ class NewOrderController extends GetxController {
       changeController.clear();
 
       _qrisStatusTimer?.cancel();
-      update(); // Trigger UI update
+      update();
     } catch (e) {
       print('Error resetting form: $e');
     }
   }
 
-  // Show success message
   void _showSuccessMessage(String message) {
     try {
       Get.snackbar(
@@ -665,7 +630,6 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // Show error message
   void _showErrorSnackbar(String message) {
     try {
       Get.snackbar(
@@ -681,7 +645,6 @@ class NewOrderController extends GetxController {
     }
   }
 
-  // NEW: Show warning message
   void _showWarningSnackbar(String message) {
     try {
       Get.snackbar(
