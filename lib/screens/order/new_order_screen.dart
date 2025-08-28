@@ -1553,13 +1553,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                         orderController.customerNameController),
                     const SizedBox(height: 12),
                     _buildResponsiveTextField(
-                        'Nomor WA', orderController.phoneController),
+                        'Nomor WA', orderController.phoneController,
+                        isNumberInput: true),
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                             child: _buildResponsiveTextField(
-                                'Nomor Meja', orderController.tableController)),
+                                'Nomor Meja', orderController.tableController,
+                                isNumberInput: true)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildResponsiveTextField(
@@ -1589,7 +1591,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                             child: _buildResponsiveTextField(
-                                'Nomor WA', orderController.phoneController)),
+                                'Nomor WA', orderController.phoneController,
+                                isNumberInput: true)),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -1597,7 +1600,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       children: [
                         Expanded(
                             child: _buildResponsiveTextField(
-                                'Nomor Meja', orderController.tableController)),
+                                'Nomor Meja', orderController.tableController,
+                                isNumberInput: true)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildResponsiveTextField(
@@ -1618,7 +1622,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 );
               }
             },
-          ),
+          )
         ],
       ),
     );
@@ -1627,7 +1631,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   // Enhanced responsive text field
   Widget _buildResponsiveTextField(
       String label, TextEditingController controller,
-      {String? hintText}) {
+      {String? hintText, bool isNumberInput = false}) {
     return LayoutBuilder(
       builder: (context, constraints) {
         bool isCompact = constraints.maxWidth < 200;
@@ -1646,6 +1650,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             SizedBox(height: isCompact ? 4 : 6),
             TextField(
               controller: controller,
+              keyboardType:
+                  isNumberInput ? TextInputType.number : TextInputType.text,
               decoration: InputDecoration(
                 hintText: hintText,
                 hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -1805,6 +1811,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                           'Jumlah Pembayaran',
                           controller.cashAmountController,
                           hintText: 'Masukkan jumlah uang cash',
+                          isNumberInput: true,
                         ),
                         const SizedBox(height: 12),
                         Column(
