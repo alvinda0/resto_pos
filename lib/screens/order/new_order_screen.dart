@@ -1797,149 +1797,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
           const SizedBox(height: 16),
 
-          // Tax Display Section - Add this before Total Payment
-          GetBuilder<TaxController>(
-            init: Get.put(TaxController()),
-            builder: (taxController) {
-              if (taxController.activeTaxes.isNotEmpty) {
-                return Column(
-                  children: [
-                    // Subtotal
-                    GetBuilder<NewOrderController>(
-                      init: orderController,
-                      builder: (controller) {
-                        double subtotal = controller.orderItems.fold(
-                            0.0,
-                            (sum, item) =>
-                                sum + (item['totalPrice']?.toDouble() ?? 0.0));
-
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Subtotal',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            Text(
-                              'Rp${controller.formatPrice(subtotal.round())}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Tax breakdown
-                    ...taxController.activeTaxes.map((tax) {
-                      return GetBuilder<NewOrderController>(
-                        init: orderController,
-                        builder: (controller) {
-                          double subtotal = controller.orderItems.fold(
-                              0.0,
-                              (sum, item) =>
-                                  sum +
-                                  (item['totalPrice']?.toDouble() ?? 0.0));
-                          double taxAmount = subtotal * (tax.percentage / 100);
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${tax.name} (${tax.percentage.toStringAsFixed(0)}%)',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                Text(
-                                  'Rp${controller.formatPrice(taxAmount.round())}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    }).toList(),
-
-                    Divider(color: Colors.grey.shade300, thickness: 1),
-                    const SizedBox(height: 8),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
-          // Total Payment Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.green.shade50, Colors.green.shade100],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.shade200),
-            ),
-            child: GetBuilder<NewOrderController>(
-              init: orderController,
-              builder: (controller) {
-                // Calculate total with taxes
-                double subtotal = controller.orderItems.fold(
-                    0.0,
-                    (sum, item) =>
-                        sum + (item['totalPrice']?.toDouble() ?? 0.0));
-
-                double totalTaxAmount = 0.0;
-                try {
-                  final taxController = Get.find<TaxController>();
-                  totalTaxAmount = taxController.activeTaxes.fold(0.0,
-                      (sum, tax) => sum + (subtotal * (tax.percentage / 100)));
-                } catch (e) {
-                  // TaxController not found, use 0
-                  totalTaxAmount = 0.0;
-                }
-
-                double finalTotal = subtotal + totalTaxAmount;
-
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Pembayaran',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green.shade700,
-                      ),
-                    ),
-                    Text(
-                      'Rp${controller.formatPrice(finalTotal.round())}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green.shade800,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
+          // Price Breakdown Section - ENHANCED VERSION
+          _buildPriceBreakdown(),
 
           const SizedBox(height: 12),
 
@@ -1997,53 +1856,196 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             },
           ),
 
-          // Process Payment Button
-          GetBuilder<NewOrderController>(
-            init: orderController,
-            builder: (controller) {
-              return SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: controller.orderItems.isEmpty ||
-                          controller.isLoading.value ||
-                          controller.isProcessingPayment.value
-                      ? null
-                      : controller.processOrder,
-                  icon: controller.isLoading.value ||
-                          controller.isProcessingPayment.value
-                      ? const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.check_circle, size: 20),
-                  label: Text(
-                    controller.isLoading.value ||
-                            controller.isProcessingPayment.value
-                        ? 'Memproses...'
-                        : 'Proses Pembayaran',
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 2,
-                  ),
-                ),
-              );
-            },
-          ),
+          // Enhanced Process Payment Button
+          _buildEnhancedPaymentButton(),
         ],
       ),
+    );
+  }
+
+  Widget _buildPriceBreakdown() {
+    return GetBuilder<NewOrderController>(
+      init: orderController,
+      builder: (controller) {
+        // Calculate subtotal
+        double subtotal = controller.orderItems.fold(
+            0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+        // Calculate total tax
+        double totalTaxAmount = 0.0;
+        try {
+          final taxController = Get.find<TaxController>();
+          totalTaxAmount = taxController.activeTaxes.fold(
+              0.0, (sum, tax) => sum + (subtotal * (tax.percentage / 100)));
+        } catch (e) {
+          totalTaxAmount = 0.0;
+        }
+
+        double finalTotal = subtotal + totalTaxAmount;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue.shade50, Colors.blue.shade100],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue.shade200),
+          ),
+          child: Column(
+            children: [
+              // Subtotal
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Subtotal',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                  Text(
+                    'Rp${controller.formatPrice(subtotal.round())}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Show taxes if any
+              if (totalTaxAmount > 0) ...[
+                const SizedBox(height: 8),
+                GetBuilder<TaxController>(
+                  init: Get.put(TaxController()),
+                  builder: (taxController) {
+                    return Column(
+                      children: taxController.activeTaxes.map((tax) {
+                        double taxAmount = subtotal * (tax.percentage / 100);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${tax.name} (${tax.percentage}%)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue.shade600,
+                                ),
+                              ),
+                              Text(
+                                'Rp${controller.formatPrice(taxAmount.round())}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 8),
+              Container(height: 1, color: Colors.blue.shade300),
+              const SizedBox(height: 8),
+
+              // Final total
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Pembayaran',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade800,
+                    ),
+                  ),
+                  Text(
+                    'Rp${controller.formatPrice(finalTotal.round())}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade900,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+// NEW METHOD: Enhanced payment button matching OrderDetailDialog
+  Widget _buildEnhancedPaymentButton() {
+    return GetBuilder<NewOrderController>(
+      init: orderController,
+      builder: (controller) {
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: controller.orderItems.isEmpty ||
+                    controller.isLoading.value ||
+                    controller.isProcessingPayment.value
+                ? null
+                : controller.processOrder,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _getPaymentButtonColor(),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 2,
+            ),
+            child: controller.isLoading.value ||
+                    controller.isProcessingPayment.value
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Memproses...',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(_getPaymentButtonIcon(), size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        _getPaymentButtonText(),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+          ),
+        );
+      },
     );
   }
 
@@ -2053,50 +2055,92 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.blue.shade300 : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.2),
-                    spreadRadius: 0,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isSelected ? Colors.white : Colors.grey.shade600,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isCompact = constraints.maxWidth < 100;
+
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(
+              right: method != 'Debit' ? 8 : 0, // No margin on last item
             ),
-            const SizedBox(height: 4),
-            Text(
-              method,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : Colors.grey.shade700,
+            child: ElevatedButton(
+              onPressed: onTap,
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    isSelected ? Colors.blue : Colors.grey.shade200,
+                foregroundColor: isSelected ? Colors.white : Colors.black,
+                padding: EdgeInsets.symmetric(
+                  vertical: isCompact ? 8 : 12,
+                  horizontal: isCompact ? 4 : 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: isSelected ? 2 : 0,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: isCompact ? 16 : 20,
+                    color: isSelected ? Colors.white : Colors.black54,
+                  ),
+                  SizedBox(height: isCompact ? 2 : 4),
+                  Text(
+                    method,
+                    style: TextStyle(
+                      fontSize: isCompact ? 10 : 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
+  }
+
+  Color _getPaymentButtonColor() {
+    switch (orderController.selectedPaymentMethod.value) {
+      case 'QRIS':
+        return Colors.blue.shade600;
+      case 'Tunai':
+        return Colors.green.shade600;
+      case 'Debit':
+        return Colors.purple.shade600;
+      default:
+        return Colors.green;
+    }
+  }
+
+  IconData _getPaymentButtonIcon() {
+    switch (orderController.selectedPaymentMethod.value) {
+      case 'QRIS':
+        return Icons.qr_code;
+      case 'Tunai':
+        return Icons.payments;
+      case 'Debit':
+        return Icons.credit_card;
+      default:
+        return Icons.payment;
+    }
+  }
+
+  String _getPaymentButtonText() {
+    switch (orderController.selectedPaymentMethod.value) {
+      case 'QRIS':
+        return 'Bayar dengan QRIS';
+      case 'Tunai':
+        return 'Proses Pembayaran Tunai';
+      case 'Debit':
+        return 'Proses Pembayaran Debit';
+      default:
+        return 'Proses Pembayaran';
+    }
   }
 }
