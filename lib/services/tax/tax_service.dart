@@ -63,6 +63,38 @@ class TaxService {
     }
   }
 
+  // Get active taxes only
+  Future<List<TaxModel>> getActiveTaxes() async {
+    try {
+      print('Making request to /taxes/active');
+
+      final response = await _httpClient.get('/taxes/active');
+
+      print('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+
+        // Extract data array from response
+        final List<dynamic> dataList = jsonResponse['data'] ?? [];
+
+        // Convert to List<TaxModel>
+        return dataList.map((json) => TaxModel.fromJson(json)).toList();
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        throw Exception(
+            errorResponse['message'] ?? 'Failed to get active taxes');
+      }
+    } catch (e) {
+      print('TaxService.getActiveTaxes error: $e');
+      if (e is Exception) {
+        rethrow;
+      } else {
+        throw Exception('Network error: $e');
+      }
+    }
+  }
+
   // Get tax by ID
   Future<TaxResponse> getTaxById(String id) async {
     try {

@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shao_kao/controller/tax/tax_controller.dart';
 import 'package:shao_kao/models/order/new_order_model.dart';
 import 'package:shao_kao/models/product/product_model.dart';
 import 'package:shao_kao/services/order/PrintServiceOrder.dart';
@@ -141,11 +142,35 @@ class NewOrderController extends GetxController {
     }
   }
 
+  // Tambahkan di NewOrderController setelah getter orderTotal
+  double get orderTotalWithTax {
+    try {
+      double subtotal = orderItems.fold(
+          0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+      double totalTaxAmount = 0.0;
+      try {
+        final taxController = Get.find<TaxController>();
+        totalTaxAmount = taxController.activeTaxes
+            .fold(0.0, (sum, tax) => sum + (subtotal * (tax.percentage / 100)));
+      } catch (e) {
+        // TaxController not found, use 0
+        totalTaxAmount = 0.0;
+      }
+
+      return subtotal + totalTaxAmount;
+    } catch (e) {
+      print('Error calculating order total with tax: $e');
+      return orderTotal; // Fallback to original total
+    }
+  }
+
   // Calculate change
   void calculateChange() {
     try {
       if (selectedPaymentMethod.value == 'Tunai' && cashAmount.value > 0) {
-        double change = cashAmount.value - orderTotal;
+        double change =
+            cashAmount.value - orderTotalWithTax; // Gunakan orderTotalWithTax
         changeAmount.value = change >= 0 ? change : 0.0;
         changeController.text = 'Rp${formatPrice(changeAmount.value.round())}';
       } else {
@@ -281,7 +306,8 @@ class NewOrderController extends GetxController {
       }
 
       if (selectedPaymentMethod.value == 'Tunai' &&
-          cashAmount.value < orderTotal) {
+          cashAmount.value < orderTotalWithTax) {
+        // Gunakan orderTotalWithTax
         error.value = 'Jumlah pembayaran kurang dari total pesanan';
         return false;
       }

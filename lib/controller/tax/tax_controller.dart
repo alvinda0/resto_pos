@@ -10,7 +10,11 @@ class TaxController extends GetxController {
 
   // Observable variables
   final RxList<TaxModel> taxes = <TaxModel>[].obs;
+  final RxList<TaxModel> activeTaxes =
+      <TaxModel>[].obs; // New: Active taxes only
   final RxBool isLoading = false.obs;
+  final RxBool isLoadingActiveTaxes =
+      false.obs; // New: Loading state for active taxes
   final RxString error = ''.obs;
 
   // Pagination variables
@@ -67,6 +71,7 @@ class TaxController extends GetxController {
     // Load data setelah widget selesai dibuild
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadTaxes();
+      loadActiveTaxes(); // New: Load active taxes on init
     });
   }
 
@@ -130,6 +135,29 @@ class TaxController extends GetxController {
     }
   }
 
+  // New: Load active taxes only
+  Future<void> loadActiveTaxes({bool showLoading = true}) async {
+    try {
+      // Prevent multiple simultaneous requests
+      if (isLoadingActiveTaxes.value && showLoading) return;
+
+      if (showLoading) isLoadingActiveTaxes.value = true;
+
+      final activeTaxList = await _taxService.getActiveTaxes();
+
+      // Update data dengan memastikan reactive update
+      activeTaxes.assignAll(activeTaxList);
+
+      print('Loaded ${activeTaxList.length} active taxes');
+    } catch (e) {
+      print('Error loading active taxes: $e');
+      // Don't show error for active taxes as it might be used in background
+      activeTaxes.clear();
+    } finally {
+      if (showLoading) isLoadingActiveTaxes.value = false;
+    }
+  }
+
   String _getErrorMessage(dynamic error) {
     String errorStr = error.toString();
     if (errorStr.contains('timeout')) {
@@ -147,6 +175,12 @@ class TaxController extends GetxController {
     currentPage.value = 1;
     selectedIds.clear(); // Clear selections saat refresh
     await loadTaxes();
+    await loadActiveTaxes(); // New: Also refresh active taxes
+  }
+
+  // New: Refresh only active taxes (useful for other parts of the app)
+  Future<void> refreshActiveTaxes() async {
+    await loadActiveTaxes();
   }
 
   // Search dengan debounce otomatis
@@ -237,6 +271,7 @@ class TaxController extends GetxController {
 
       // Gunakan loadTaxes untuk mempertahankan halaman saat ini
       await loadTaxes(showLoading: false);
+      await loadActiveTaxes(showLoading: false); // New: Update active taxes too
     } catch (e) {
       _showErrorSnackbar(_getErrorMessage(e));
     } finally {
@@ -262,6 +297,8 @@ class TaxController extends GetxController {
 
           // Refresh data
           await loadTaxes(showLoading: false);
+          await loadActiveTaxes(
+              showLoading: false); // New: Update active taxes too
         }
       } catch (e) {
         _showErrorSnackbar(_getErrorMessage(e));
@@ -330,11 +367,29 @@ class TaxController extends GetxController {
       selectedIds.clear();
       toggleSelectMode();
       await loadTaxes();
+      await loadActiveTaxes(); // New: Update active taxes after bulk operation
     } catch (e) {
       _showErrorSnackbar(_getErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // New: Helper methods for getting specific active taxes
+  TaxModel? getActiveTaxByType(TaxType type) {
+    try {
+      return activeTaxes.firstWhere((tax) => tax.type == type);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<TaxModel> getActiveTaxesByType(TaxType type) {
+    return activeTaxes.where((tax) => tax.type == type).toList();
+  }
+
+  double getTotalTaxPercentage() {
+    return activeTaxes.fold(0.0, (sum, tax) => sum + tax.percentage);
   }
 
   // Helper methods untuk snackbar

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:shao_kao/controller/product/product_controller.dart';
 import 'package:shao_kao/controller/order/new_order_controller.dart';
+import 'package:shao_kao/controller/tax/tax_controller.dart';
 import 'package:shao_kao/models/product/product_model.dart';
 
 class NewOrderScreen extends StatefulWidget {
@@ -167,6 +168,25 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 return GetBuilder<NewOrderController>(
                   init: orderController,
                   builder: (controller) {
+                    // Calculate total with taxes for header
+                    double subtotal = controller.orderItems.fold(
+                        0.0,
+                        (sum, item) =>
+                            sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+                    double totalTaxAmount = 0.0;
+                    try {
+                      final taxController = Get.find<TaxController>();
+                      totalTaxAmount = taxController.activeTaxes.fold(
+                          0.0,
+                          (sum, tax) =>
+                              sum + (subtotal * (tax.percentage / 100)));
+                    } catch (e) {
+                      totalTaxAmount = 0.0;
+                    }
+
+                    double finalTotal = subtotal + totalTaxAmount;
+
                     return Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
@@ -191,7 +211,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Rp${controller.formatPrice(controller.orderTotal.round())}',
+                            'Rp${controller.formatPrice(finalTotal.round())}',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -458,11 +478,11 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                     ),
                   ),
                   Text(
-                    'Rp${controller.formatPrice(controller.orderTotal.round())}',
-                    style: TextStyle(
+                    'Rp${controller.formatPrice(controller.orderTotalWithTax.round())}',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade800,
+                      color: Color(0xFFFF8C00),
                     ),
                   ),
                 ],
@@ -1233,8 +1253,27 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                     GetBuilder<NewOrderController>(
                       init: orderController,
                       builder: (controller) {
+                        // Calculate total with taxes for QRIS
+                        double subtotal = controller.orderItems.fold(
+                            0.0,
+                            (sum, item) =>
+                                sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+                        double totalTaxAmount = 0.0;
+                        try {
+                          final taxController = Get.find<TaxController>();
+                          totalTaxAmount = taxController.activeTaxes.fold(
+                              0.0,
+                              (sum, tax) =>
+                                  sum + (subtotal * (tax.percentage / 100)));
+                        } catch (e) {
+                          totalTaxAmount = 0.0;
+                        }
+
+                        double finalTotal = subtotal + totalTaxAmount;
+
                         return Text(
-                          'Total: Rp${controller.formatPrice(controller.orderTotal.round())}',
+                          'Total: Rp${controller.formatPrice(finalTotal.round())}',
                           style: TextStyle(
                             fontSize: isMobile ? 16 : 18,
                             fontWeight: FontWeight.bold,
@@ -1758,6 +1797,92 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
           const SizedBox(height: 16),
 
+          // Tax Display Section - Add this before Total Payment
+          GetBuilder<TaxController>(
+            init: Get.put(TaxController()),
+            builder: (taxController) {
+              if (taxController.activeTaxes.isNotEmpty) {
+                return Column(
+                  children: [
+                    // Subtotal
+                    GetBuilder<NewOrderController>(
+                      init: orderController,
+                      builder: (controller) {
+                        double subtotal = controller.orderItems.fold(
+                            0.0,
+                            (sum, item) =>
+                                sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Subtotal',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            Text(
+                              'Rp${controller.formatPrice(subtotal.round())}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Tax breakdown
+                    ...taxController.activeTaxes.map((tax) {
+                      return GetBuilder<NewOrderController>(
+                        init: orderController,
+                        builder: (controller) {
+                          double subtotal = controller.orderItems.fold(
+                              0.0,
+                              (sum, item) =>
+                                  sum +
+                                  (item['totalPrice']?.toDouble() ?? 0.0));
+                          double taxAmount = subtotal * (tax.percentage / 100);
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${tax.name} (${tax.percentage.toStringAsFixed(0)}%)',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                Text(
+                                  'Rp${controller.formatPrice(taxAmount.round())}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    }).toList(),
+
+                    Divider(color: Colors.grey.shade300, thickness: 1),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+
           // Total Payment Section
           Container(
             padding: const EdgeInsets.all(16),
@@ -1773,6 +1898,24 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             child: GetBuilder<NewOrderController>(
               init: orderController,
               builder: (controller) {
+                // Calculate total with taxes
+                double subtotal = controller.orderItems.fold(
+                    0.0,
+                    (sum, item) =>
+                        sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+                double totalTaxAmount = 0.0;
+                try {
+                  final taxController = Get.find<TaxController>();
+                  totalTaxAmount = taxController.activeTaxes.fold(0.0,
+                      (sum, tax) => sum + (subtotal * (tax.percentage / 100)));
+                } catch (e) {
+                  // TaxController not found, use 0
+                  totalTaxAmount = 0.0;
+                }
+
+                double finalTotal = subtotal + totalTaxAmount;
+
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1785,7 +1928,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       ),
                     ),
                     Text(
-                      'Rp${controller.formatPrice(controller.orderTotal.round())}',
+                      'Rp${controller.formatPrice(finalTotal.round())}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
