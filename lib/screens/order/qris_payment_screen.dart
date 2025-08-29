@@ -378,11 +378,6 @@ class _QRISPaymentScreenState extends State<QRISPaymentScreen> {
 
           SizedBox(height: isMobile ? 16 : 20),
 
-          // Instructions
-          _buildInstructions(),
-
-          SizedBox(height: isMobile ? 16 : 20),
-
           // Manual Check Button
           _buildManualCheckButton(),
         ],
@@ -537,95 +532,6 @@ class _QRISPaymentScreenState extends State<QRISPaymentScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildInstructions() {
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 12 : 16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                color: Colors.blue.shade600,
-                size: isMobile ? 16 : 20,
-              ),
-              SizedBox(width: isMobile ? 6 : 8),
-              Text(
-                'Cara Pembayaran',
-                style: TextStyle(
-                  fontSize: isMobile ? 14 : 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue.shade800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isMobile ? 8 : 12),
-          ..._buildInstructionSteps(),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildInstructionSteps() {
-    final steps = [
-      'Buka aplikasi e-wallet (OVO, GoPay, DANA, dll)',
-      'Pilih menu "Scan QR" atau "QRIS"',
-      'Arahkan kamera ke QR code di atas',
-      'Konfirmasi pembayaran di aplikasi',
-      'Tunggu konfirmasi pembayaran berhasil',
-    ];
-
-    return steps.asMap().entries.map((entry) {
-      final index = entry.key;
-      final step = entry.value;
-
-      return Padding(
-        padding: EdgeInsets.only(bottom: isMobile ? 4 : 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: isMobile ? 16 : 20,
-              height: isMobile ? 16 : 20,
-              margin: EdgeInsets.only(right: isMobile ? 6 : 8, top: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade600,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isMobile ? 8 : 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                step,
-                style: TextStyle(
-                  fontSize: isMobile ? 11 : 13,
-                  color: Colors.blue.shade700,
-                  height: 1.3,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
   }
 
   Widget _buildManualCheckButton() {

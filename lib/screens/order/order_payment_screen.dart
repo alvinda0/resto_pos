@@ -1029,7 +1029,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     ),
                     const SizedBox(height: 12),
                     _buildResponsiveTextField('Kode Promo', promoController,
-                        hintText: 'Masukkan kode promo (optional)'),
+                        hintText: 'Masukkan kode promo (optional)',
+                        isPromoField: true), // Add this line
                   ],
                 );
               } else {
@@ -1063,7 +1064,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     ),
                     const SizedBox(height: 12),
                     _buildResponsiveTextField('Kode Promo', promoController,
-                        hintText: 'Masukkan kode promo (optional)'),
+                        hintText: 'Masukkan kode promo (optional)',
+                        isPromoField: true), // Add this line
                   ],
                 );
               }
@@ -1077,7 +1079,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 // 9. Enhanced responsive text field with proper keyboard types
   Widget _buildResponsiveTextField(
       String label, TextEditingController controller,
-      {String? hintText, TextInputType? keyboardType}) {
+      {String? hintText,
+      TextInputType? keyboardType,
+      bool isPromoField = false}) {
     return LayoutBuilder(
       builder: (context, constraints) {
         bool isCompact = constraints.maxWidth < 200;
@@ -1094,37 +1098,137 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               ),
             ),
             SizedBox(height: isCompact ? 4 : 6),
-            TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              decoration: InputDecoration(
-                hintText: hintText,
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: keyboardType,
+                    decoration: InputDecoration(
+                      hintText: hintText,
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide:
+                            const BorderSide(color: Colors.blue, width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: isCompact ? 8 : 12,
+                        vertical: isCompact ? 8 : 10,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                    style: TextStyle(fontSize: isCompact ? 11 : 13),
+                  ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.blue, width: 2),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: isCompact ? 8 : 12,
-                  vertical: isCompact ? 8 : 10,
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-              ),
-              style: TextStyle(fontSize: isCompact ? 11 : 13),
+                if (isPromoField) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () =>
+                        _checkPromoCodeDialog(controller.text.trim()),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade600,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCompact ? 12 : 16,
+                        vertical: isCompact ? 8 : 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'Cek',
+                      style: TextStyle(
+                        fontSize: isCompact ? 10 : 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         );
       },
     );
+  }
+
+  void _checkPromoCodeDialog(String promoCode) {
+    if (promoCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Masukkan kode promo terlebih dahulu'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
+
+    // Implement your promo code validation logic here
+    _validatePromoCodeDialog(promoCode);
+  }
+
+  void _validatePromoCodeDialog(String promoCode) {
+    // Example validation - replace with actual implementation
+    const validPromoCodes = ['DISKON10', 'PROMO20', 'HEMAT15'];
+
+    if (validPromoCodes.contains(promoCode.toUpperCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child:
+                    Text('Kode promo "$promoCode" valid dan telah diterapkan'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // Apply discount logic here
+      // Apply discount to currentOrderItems or update total calculation
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                    'Kode promo "$promoCode" tidak ditemukan atau sudah kadaluarsa'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
 // 10. Enhanced payment card
