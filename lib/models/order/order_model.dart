@@ -12,6 +12,8 @@ class OrderModel {
   final double taxAmount;
   final double totalAmount;
   final String? notes;
+  final String? promoCode; // TAMBAHKAN INI
+  final String? referralCode; // TAMBAHKAN INI
   final DateTime createdAt;
   final List<PaymentMethod> paymentMethods;
   final List<OrderItem> items;
@@ -29,6 +31,8 @@ class OrderModel {
     required this.taxAmount,
     required this.totalAmount,
     this.notes,
+    this.promoCode, // TAMBAHKAN INI
+    this.referralCode, // TAMBAHKAN INI
     required this.createdAt,
     required this.paymentMethods,
     required this.items,
@@ -48,6 +52,8 @@ class OrderModel {
       taxAmount: (json['tax_amount'] as num).toDouble(),
       totalAmount: (json['total_amount'] as num).toDouble(),
       notes: json['notes'],
+      promoCode: json['promo_code'], // TAMBAHKAN INI
+      referralCode: json['referral_code'], // TAMBAHKAN INI
       createdAt: DateTime.parse(json['created_at']),
       paymentMethods: (json['payment_methods'] as List)
           .map((e) => PaymentMethod.fromJson(e))
@@ -70,6 +76,8 @@ class OrderModel {
       'tax_amount': taxAmount,
       'total_amount': totalAmount,
       'notes': notes,
+      'promo_code': promoCode, // TAMBAHKAN INI
+      'referral_code': referralCode, // TAMBAHKAN INI
       'created_at': createdAt.toIso8601String(),
       'payment_methods': paymentMethods.map((e) => e.toJson()).toList(),
       'items': items.map((e) => e.toJson()).toList(),

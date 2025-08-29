@@ -62,6 +62,7 @@ class PaymentController extends GetxController {
     String? promoCode,
     bool printReceipt = true,
     bool showSuccessDialog = true,
+    String? referralCode,
   }) async {
     PaymentProcessResult? result;
 

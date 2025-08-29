@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shao_kao/controller/order/order_controller.dart';
 import 'package:shao_kao/controller/product/product_controller.dart';
+import 'package:shao_kao/controller/promotion/promotion_controller.dart';
 import 'package:shao_kao/controller/tax/tax_controller.dart';
 import 'package:shao_kao/models/order/order_model.dart';
 import 'package:shao_kao/models/product/product_model.dart';
 import 'package:shao_kao/controller/payment/payment_controller.dart';
+import 'package:shao_kao/models/promotion/promotion_model.dart';
 import 'package:shao_kao/screens/order/qris_payment_screen.dart';
 
 class OrderDetailDialog extends StatefulWidget {
@@ -38,6 +40,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   final OrderController orderController = Get.find<OrderController>();
   final ProductController productController = Get.put(ProductController());
   final PaymentController paymentController = Get.put(PaymentController());
+  final TextEditingController referralCodeController = TextEditingController();
+  final PromotionController promotionController =
+      Get.put(PromotionController());
 
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
@@ -52,13 +57,23 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   String selectedPaymentMethod = 'Tunai';
   List<String> paymentMethods = ['Tunai', 'QRIS', 'Debit'];
   List<dynamic> currentOrderItems = [];
+  Promotion? appliedPromotion;
+  double discountAmount = 0.0;
 
   @override
   void initState() {
     super.initState();
+
+    // Populate data customer yang sudah ada
     customerNameController.text = widget.order.customerName;
     phoneController.text = widget.order.customerPhone ?? '';
     tableController.text = widget.order.tableNumber.toString();
+    notesController.text = widget.order.notes ?? '';
+
+    // PERBAIKAN: Populate promo code dan referral code jika ada
+    promoController.text = widget.order.promoCode ?? '';
+    referralCodeController.text = widget.order.referralCode ?? '';
+
     cashAmountController.addListener(_calculateChange);
     currentOrderItems = List.from(widget.order.items);
     taxController.loadActiveTaxes();
@@ -67,6 +82,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     productSearchController.addListener(() {
       productController.searchProducts(productSearchController.text);
     });
+    if (widget.order.promoCode != null && widget.order.promoCode!.isNotEmpty) {
+      promoController.text = widget.order.promoCode!;
+      _autoCheckPromoCode(widget.order.promoCode!);
+    }
   }
 
   @override
@@ -77,10 +96,62 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     tableController.dispose();
     notesController.dispose();
     promoController.dispose();
+    referralCodeController.dispose(); // Tambah ini
     cashAmountController.dispose();
     changeController.dispose();
     productSearchController.dispose();
     super.dispose();
+  }
+
+  void _autoCheckPromoCode(String promoCode) async {
+    try {
+      final promotion = await promotionController.getPromotionByCode(promoCode);
+      if (promotion != null && promotion.isCurrentlyActive) {
+        setState(() {
+          appliedPromotion = promotion;
+          _calculateDiscountAmount();
+        });
+      } else {
+        setState(() {
+          appliedPromotion = null;
+          discountAmount = 0.0;
+        });
+      }
+    } catch (e) {
+      // Jika error atau promo tidak valid, set null
+      setState(() {
+        appliedPromotion = null;
+        discountAmount = 0.0;
+      });
+    }
+    _calculateChange();
+  }
+
+  void _calculateDiscountAmount() {
+    if (appliedPromotion == null) {
+      discountAmount = 0.0;
+      return;
+    }
+
+    double baseAmount = _calculateSubtotal();
+
+    if (appliedPromotion!.discountType == 'percent') {
+      discountAmount = baseAmount * (appliedPromotion!.discountValue / 100);
+
+      // Apply max discount limit jika ada
+      if (appliedPromotion!.maxDiscount > 0 &&
+          discountAmount > appliedPromotion!.maxDiscount) {
+        discountAmount = appliedPromotion!.maxDiscount;
+      }
+    } else {
+      // Fixed discount
+      discountAmount = appliedPromotion!.discountValue;
+
+      // Discount tidak boleh lebih besar dari base amount
+      if (discountAmount > baseAmount) {
+        discountAmount = baseAmount;
+      }
+    }
   }
 
   // Helper method to determine device type and breakpoints
@@ -142,14 +213,28 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   // Method baru untuk menghitung total pajak
   double _calculateTotalTax() {
-    double subtotal = _calculateSubtotal();
-    double totalTaxPercentage = taxController.getTotalTaxPercentage();
-    return subtotal * (totalTaxPercentage / 100);
+    double baseAmount = _calculateSubtotal();
+    _calculateDiscountAmount();
+    double subtotalAfterDiscount = baseAmount - discountAmount;
+    return subtotalAfterDiscount *
+        (taxController.getTotalTaxPercentage() / 100);
   }
 
   // Update method untuk menghitung total (subtotal + pajak)
   double _calculateOrderTotal() {
-    return _calculateSubtotal() + _calculateTotalTax();
+    double baseAmount = _calculateSubtotal();
+
+    // Hitung discount jika ada promo
+    _calculateDiscountAmount();
+
+    // subtotal = base_amount - discount_amount
+    double subtotal = baseAmount - discountAmount;
+
+    // tax_amount = subtotal * tax_rate
+    double taxAmount = subtotal * (taxController.getTotalTaxPercentage() / 100);
+
+    // total_amount = subtotal + tax_amount
+    return subtotal + taxAmount;
   }
 
   @override
@@ -1028,9 +1113,14 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    _buildResponsiveTextField(
+                        'Kode Referral', referralCodeController,
+                        hintText: 'Masukkan kode referral (optional)',
+                        isReferralField: true),
+                    const SizedBox(height: 12),
                     _buildResponsiveTextField('Kode Promo', promoController,
                         hintText: 'Masukkan kode promo (optional)',
-                        isPromoField: true), // Add this line
+                        isPromoField: true),
                   ],
                 );
               } else {
@@ -1063,9 +1153,14 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    _buildResponsiveTextField(
+                        'Kode Referral', referralCodeController,
+                        hintText: 'Masukkan kode referral (optional)',
+                        isReferralField: true),
+                    const SizedBox(height: 12),
                     _buildResponsiveTextField('Kode Promo', promoController,
                         hintText: 'Masukkan kode promo (optional)',
-                        isPromoField: true), // Add this line
+                        isPromoField: true),
                   ],
                 );
               }
@@ -1081,7 +1176,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       String label, TextEditingController controller,
       {String? hintText,
       TextInputType? keyboardType,
-      bool isPromoField = false}) {
+      bool isPromoField = false,
+      bool isReferralField = false}) {
     return LayoutBuilder(
       builder: (context, constraints) {
         bool isCompact = constraints.maxWidth < 200;
@@ -1181,34 +1277,75 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     _validatePromoCodeDialog(promoCode);
   }
 
-  void _validatePromoCodeDialog(String promoCode) {
-    // Example validation - replace with actual implementation
-    const validPromoCodes = ['DISKON10', 'PROMO20', 'HEMAT15'];
+  void _validatePromoCodeDialog(String promoCode) async {
+    try {
+      final promotion = await promotionController.getPromotionByCode(promoCode);
 
-    if (validPromoCodes.contains(promoCode.toUpperCase())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(
-                child:
-                    Text('Kode promo "$promoCode" valid dan telah diterapkan'),
-              ),
-            ],
+      if (promotion != null && promotion.isCurrentlyActive) {
+        setState(() {
+          appliedPromotion = promotion;
+          _calculateDiscountAmount();
+        });
+
+        _calculateChange();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                      'Kode promo "$promoCode" valid! Diskon ${promotion.formattedDiscount} diterapkan'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
           ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+        );
+      } else {
+        setState(() {
+          appliedPromotion = null;
+          discountAmount = 0.0;
+        });
 
-      // Apply discount logic here
-      // Apply discount to currentOrderItems or update total calculation
-    } else {
+        _calculateChange();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                      'Kode promo "$promoCode" tidak valid atau sudah tidak aktif'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        appliedPromotion = null;
+        discountAmount = 0.0;
+      });
+
+      _calculateChange();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -1216,8 +1353,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               const Icon(Icons.error, color: Colors.white),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                    'Kode promo "$promoCode" tidak ditemukan atau sudah kadaluarsa'),
+                child: Text('Terjadi kesalahan saat memvalidasi kode promo'),
               ),
             ],
           ),
@@ -1375,9 +1511,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   Widget _buildPriceBreakdown() {
     return Obx(() {
-      double subtotal = _calculateSubtotal();
+      double baseAmount = _calculateSubtotal();
+      double subtotalAfterDiscount = baseAmount - discountAmount;
       double totalTax = _calculateTotalTax();
-      double total = subtotal + totalTax;
+      double total = subtotalAfterDiscount + totalTax;
 
       return Container(
         padding: const EdgeInsets.all(16),
@@ -1392,7 +1529,54 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ),
         child: Column(
           children: [
-            // Subtotal
+            // Base amount
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Jumlah Awal',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+                Text(
+                  'Rp${_formatPrice(baseAmount.round())}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ],
+            ),
+
+            // Discount (jika ada)
+            if (appliedPromotion != null && discountAmount > 0) ...[
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(
+                  'Diskon (${appliedPromotion!.promoCode})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green.shade600,
+                  ),
+                ),
+                Text(
+                  '- Rp${_formatPrice(discountAmount.round())}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ]),
+            ],
+
+            const SizedBox(height: 8),
+            Container(height: 1, color: Colors.blue.shade300),
+            const SizedBox(height: 8),
+
+            // Subtotal after discount
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1401,13 +1585,15 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.blue.shade700,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
-                  'Rp${_formatPrice(subtotal.round())}',
+                  'Rp${_formatPrice(subtotalAfterDiscount.round())}',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.blue.shade700,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -1417,7 +1603,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             if (taxController.activeTaxes.isNotEmpty) ...[
               const SizedBox(height: 8),
               ...taxController.activeTaxes.map((tax) {
-                double taxAmount = subtotal * (tax.percentage / 100);
+                double taxAmount =
+                    subtotalAfterDiscount * (tax.percentage / 100);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(
@@ -1602,31 +1789,31 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   double _getItemTotalPriceDouble(dynamic item) {
     try {
       if (item is Map) {
+        // Untuk item Map (baru atau yang sudah dikonversi)
         if (item['totalPrice'] != null) {
           return item['totalPrice'] is double
               ? item['totalPrice']
               : double.parse(item['totalPrice'].toString());
         }
+
         double unitPrice = item['price'] is double
             ? item['price']
-            : double.parse(item['price'].toString());
+            : double.parse((item['price'] ?? 0).toString());
         int quantity = item['quantity'] ?? 1;
         return unitPrice * quantity;
       } else {
-        if (item.totalPrice != null) {
-          return item.totalPrice is double
-              ? item.totalPrice
-              : double.parse(item.totalPrice.toString());
+        // Untuk item dari OrderModel
+        if (item.totalPrice != null && item.totalPrice > 0) {
+          return item.totalPrice.toDouble();
         }
 
         double unitPrice = 0.0;
-        try {
-          unitPrice = item.price?.toDouble() ??
-              item.unitPrice?.toDouble() ??
-              item.product?.basePrice?.toDouble() ??
-              0.0;
-        } catch (e) {
-          unitPrice = 0.0;
+        if (item.unitPrice != null && item.unitPrice > 0) {
+          unitPrice = item.unitPrice.toDouble();
+        } else if (item.price != null && item.price > 0) {
+          unitPrice = item.price.toDouble();
+        } else if (item.product?.basePrice != null) {
+          unitPrice = item.product.basePrice.toDouble();
         }
 
         return unitPrice * _getItemQuantity(item);
@@ -1637,25 +1824,49 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
   }
 
-  String _getItemUnitPrice(dynamic item) {
+  double _getItemUnitPriceDouble(dynamic item) {
     try {
       if (item is Map) {
-        double price = item['price'] is double
+        return item['price'] is double
             ? item['price']
             : double.parse((item['price'] ?? 0).toString());
-        return 'Rp${_formatPrice(price.round())}';
       } else {
-        double price = 0.0;
-        try {
-          price = item.price?.toDouble() ??
-              item.unitPrice?.toDouble() ??
-              item.product?.basePrice?.toDouble() ??
-              0.0;
-        } catch (e) {
-          price = 0.0;
+        if (item.unitPrice != null && item.unitPrice > 0) {
+          return item.unitPrice.toDouble();
+        } else if (item.price != null && item.price > 0) {
+          return item.price.toDouble();
+        } else if (item.product?.basePrice != null) {
+          return item.product.basePrice.toDouble();
         }
-        return 'Rp${_formatPrice(price.round())}';
+        return 0.0;
       }
+    } catch (e) {
+      print('Error getting unit price double: $e');
+      return 0.0;
+    }
+  }
+
+  String _getItemUnitPrice(dynamic item) {
+    try {
+      double price = 0.0;
+
+      if (item is Map) {
+        // Untuk item baru yang ditambahkan di dialog
+        price = item['price'] is double
+            ? item['price']
+            : double.parse((item['price'] ?? 0).toString());
+      } else {
+        // Untuk item dari OrderModel yang sudah ada
+        if (item.unitPrice != null && item.unitPrice > 0) {
+          price = item.unitPrice.toDouble();
+        } else if (item.price != null && item.price > 0) {
+          price = item.price.toDouble();
+        } else if (item.product?.basePrice != null) {
+          price = item.product.basePrice.toDouble();
+        }
+      }
+
+      return 'Rp${_formatPrice(price.round())}';
     } catch (e) {
       print('Error getting unit price: $e');
       return 'Rp0';
@@ -1674,37 +1885,20 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     setState(() {
       var item = currentOrderItems[index];
       int newQuantity = _getItemQuantity(item) + 1;
-      double unitPrice = 0.0;
+      double unitPrice = _getItemUnitPriceDouble(item);
 
-      if (item is Map) {
-        unitPrice = item['price'] is double
-            ? item['price']
-            : double.parse(item['price'].toString());
-        currentOrderItems[index] = {
-          ...item,
-          'quantity': newQuantity,
-          'totalPrice': unitPrice * newQuantity,
-        };
-      } else {
-        try {
-          unitPrice = item.price?.toDouble() ??
-              item.unitPrice?.toDouble() ??
-              item.product?.basePrice?.toDouble() ??
-              0.0;
-        } catch (e) {
-          unitPrice = 0.0;
-        }
-
-        currentOrderItems[index] = {
-          'id': item.id,
-          'productId': item.productId ?? item.id,
-          'name': _getItemName(item),
-          'productName': _getItemName(item),
-          'quantity': newQuantity,
-          'price': unitPrice,
-          'totalPrice': unitPrice * newQuantity,
-        };
-      }
+      // Konversi semua item ke Map untuk konsistensi
+      currentOrderItems[index] = {
+        'id': item is Map ? item['id'] : (item.id ?? item.productId),
+        'productId': item is Map
+            ? (item['productId'] ?? item['id'])
+            : (item.productId ?? item.id),
+        'name': _getItemName(item),
+        'productName': _getItemName(item),
+        'quantity': newQuantity,
+        'price': unitPrice,
+        'totalPrice': unitPrice * newQuantity,
+      };
     });
     _calculateChange();
   }
@@ -1716,37 +1910,20 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
       if (currentQuantity > 1) {
         int newQuantity = currentQuantity - 1;
-        double unitPrice = 0.0;
+        double unitPrice = _getItemUnitPriceDouble(item);
 
-        if (item is Map) {
-          unitPrice = item['price'] is double
-              ? item['price']
-              : double.parse(item['price'].toString());
-          currentOrderItems[index] = {
-            ...item,
-            'quantity': newQuantity,
-            'totalPrice': unitPrice * newQuantity,
-          };
-        } else {
-          try {
-            unitPrice = item.price?.toDouble() ??
-                item.unitPrice?.toDouble() ??
-                item.product?.basePrice?.toDouble() ??
-                0.0;
-          } catch (e) {
-            unitPrice = 0.0;
-          }
-
-          currentOrderItems[index] = {
-            'id': item.id,
-            'productId': item.productId ?? item.id,
-            'name': _getItemName(item),
-            'productName': _getItemName(item),
-            'quantity': newQuantity,
-            'price': unitPrice,
-            'totalPrice': unitPrice * newQuantity,
-          };
-        }
+        // Konversi semua item ke Map untuk konsistensi
+        currentOrderItems[index] = {
+          'id': item is Map ? item['id'] : (item.id ?? item.productId),
+          'productId': item is Map
+              ? (item['productId'] ?? item['id'])
+              : (item.productId ?? item.id),
+          'name': _getItemName(item),
+          'productName': _getItemName(item),
+          'quantity': newQuantity,
+          'price': unitPrice,
+          'totalPrice': unitPrice * newQuantity,
+        };
       } else {
         currentOrderItems.removeAt(index);
       }
@@ -1857,8 +2034,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       tableNumber: tableNumber,
       notes: notesController.text.isEmpty ? null : notesController.text.trim(),
       orderItems: List.from(currentOrderItems),
-      promoCode:
-          promoController.text.isEmpty ? null : promoController.text.trim(),
+      promoCode: appliedPromotion?.promoCode, // Gunakan promo yang sudah valid
     );
   }
 
@@ -1897,6 +2073,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         notes: notesController.text.isEmpty ? null : notesController.text,
         orderItems: currentOrderItems,
         paymentMethod: selectedPaymentMethod,
+        promoCode: appliedPromotion?.promoCode, // Kirim promo code yang valid
+        referralCode: referralCodeController.text.isEmpty
+            ? null
+            : referralCodeController.text.trim(),
       );
 
       print('Payment process completed, success: $success');
