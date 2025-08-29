@@ -37,6 +37,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   final TextEditingController productSearchController = TextEditingController();
   Timer? _debounceTimer;
+  final TextEditingController referralCodeController =
+      TextEditingController(); // TAMBAH INI
 
   @override
   void initState() {
@@ -118,6 +120,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     _debounceTimer?.cancel();
     productSearchController.removeListener(_onSearchChanged);
     productSearchController.dispose();
+    referralCodeController.dispose(); // TAMBAH INI
     super.dispose();
   }
 
@@ -1721,6 +1724,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    // TAMBAH INI: Referral Code Field
+                    _buildResponsiveTextField(
+                      'Kode Referral',
+                      referralCodeController,
+                      hintText: 'Masukkan kode referral (optional)',
                     ),
                     const SizedBox(height: 12),
                     _buildResponsiveTextField(
