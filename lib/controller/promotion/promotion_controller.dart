@@ -126,6 +126,31 @@ class PromotionController extends GetxController {
     }
   }
 
+  // Get promotion by promo code
+  Future<Promotion?> getPromotionByCode(String promoCode) async {
+    try {
+      final storeId = _storageService.getStoreIdWithFallback();
+      return await _promotionService.getPromotionByCode(promoCode,
+          storeId: storeId);
+    } catch (e) {
+      _showErrorSnackbar('Gagal memuat promosi', e.toString());
+      return null;
+    }
+  }
+
+  // Validate promo code (useful for checkout/order process)
+  Future<bool> validatePromoCode(String promoCode) async {
+    try {
+      final promotion = await getPromotionByCode(promoCode);
+      if (promotion == null) return false;
+
+      // Check if promotion is currently active and valid
+      return promotion.isCurrentlyActive;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Load more promotions (pagination)
   Future<void> loadMorePromotions() async {
     if (!hasMoreData.value || isLoadingMore.value) return;

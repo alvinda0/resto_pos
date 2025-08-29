@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:shao_kao/controller/product/product_controller.dart';
 import 'package:shao_kao/controller/order/new_order_controller.dart';
+import 'package:shao_kao/controller/promotion/promotion_controller.dart';
 import 'package:shao_kao/controller/tax/tax_controller.dart';
 import 'package:shao_kao/models/product/product_model.dart';
 
@@ -53,12 +54,17 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   void _initializeControllers() {
     try {
-      // Pastikan controller sudah ada atau buat baru
+      // Existing controller initializations
       if (!Get.isRegistered<ProductController>()) {
         Get.put(ProductController(), permanent: true);
       }
       if (!Get.isRegistered<NewOrderController>()) {
         Get.put(NewOrderController(), permanent: true);
+      }
+
+      // Add PromotionController initialization
+      if (!Get.isRegistered<PromotionController>()) {
+        Get.put(PromotionController(), permanent: true);
       }
     } catch (e) {
       print('Error initializing controllers: $e');
@@ -78,6 +84,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       // Load products hanya jika belum ada
       if (productController.products.isEmpty) {
         productController.loadProducts();
+      }
+
+      // TAMBAHKAN INI: Load active taxes saat aplikasi dimulai
+      final taxController = Get.find<TaxController>();
+      if (taxController.activeTaxes.isEmpty) {
+        taxController.loadActiveTaxes().then((_) {
+          // Refresh order calculation setelah tax dimuat
+          orderController.update();
+        });
       }
 
       // Reset order controller state
@@ -168,11 +183,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 return GetBuilder<NewOrderController>(
                   init: orderController,
                   builder: (controller) {
-                    // Calculate total with taxes for header
-                    double subtotal = controller.orderItems.fold(
+                    // Calculate dengan formula yang benar
+                    double baseAmount = controller.orderItems.fold(
                         0.0,
                         (sum, item) =>
                             sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+                    double subtotal =
+                        baseAmount - controller.promoDiscount.value;
+                    if (subtotal < 0) subtotal = 0.0;
 
                     double totalTaxAmount = 0.0;
                     try {
@@ -188,28 +207,11 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                     double finalTotal = subtotal + totalTaxAmount;
 
                     return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
+                      // ... styling tetap sama
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.shopping_cart,
-                              size: 16, color: Colors.blue.shade600),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${controller.orderItems.length} items',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.blue.shade600,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
+                          // ... icon dan items count tetap sama
                           Text(
                             'Rp${controller.formatPrice(finalTotal.round())}',
                             style: TextStyle(
@@ -1836,30 +1838,119 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 ),
                 if (isPromoField) ...[
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => _checkPromoCode(controller.text.trim()),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade600,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isCompact ? 12 : 16,
-                        vertical: isCompact ? 8 : 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: Text(
-                      'Cek',
-                      style: TextStyle(
-                        fontSize: isCompact ? 10 : 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  GetBuilder<NewOrderController>(
+                    init: orderController,
+                    builder: (controller) {
+                      return ElevatedButton(
+                        onPressed: controller.isCheckingPromo.value
+                            ? null
+                            : () => _checkPromoCode(
+                                controller.promoController.text.trim()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade600,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isCompact ? 12 : 16,
+                            vertical: isCompact ? 8 : 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: controller.isCheckingPromo.value
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : Text(
+                                'Cek',
+                                style: TextStyle(
+                                  fontSize: isCompact ? 10 : 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      );
+                    },
                   ),
                 ],
               ],
             ),
+            // Show applied promo info
+            if (isPromoField) ...[
+              const SizedBox(height: 8),
+              GetBuilder<NewOrderController>(
+                init: orderController,
+                builder: (controller) {
+                  final appliedPromo = controller.appliedPromo.value;
+                  if (appliedPromo != null) {
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  appliedPromo.name,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                                Text(
+                                  'Diskon: ${appliedPromo.formattedDiscount}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.green.shade600,
+                                  ),
+                                ),
+                                Text(
+                                  'Hemat: Rp${controller.formatPrice(controller.promoDiscount.value.round())}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => controller.removeAppliedPromo(),
+                            icon: Icon(
+                              Icons.close,
+                              color: Colors.grey.shade500,
+                              size: 16,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
           ],
         );
       },
@@ -1881,43 +1972,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       return;
     }
 
-    // Implement your promo code validation logic here
-    // This is a placeholder - replace with actual API call or validation
-    _validatePromoCode(promoCode);
+    orderController.checkAndApplyPromo(promoCode);
   }
 
   void _validatePromoCode(String promoCode) {
-    // Example validation - replace with actual implementation
-    const validPromoCodes = ['DISKON10', 'PROMO20', 'HEMAT15'];
-
-    if (validPromoCodes.contains(promoCode.toUpperCase())) {
-      Get.snackbar(
-        'Berhasil!',
-        'Kode promo "$promoCode" valid dan telah diterapkan',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 8,
-        icon: const Icon(Icons.check_circle, color: Colors.white),
-      );
-
-      // Apply discount logic here
-      // orderController.applyPromoDiscount(promoCode);
-    } else {
-      Get.snackbar(
-        'Kode Tidak Valid',
-        'Kode promo "$promoCode" tidak ditemukan atau sudah kadaluarsa',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 8,
-        icon: const Icon(Icons.error, color: Colors.white),
-      );
-    }
+    // This method is no longer needed as validation is handled by checkAndApplyPromo
+    orderController.checkAndApplyPromo(promoCode);
   }
 
   Widget _buildPaymentCard() {
@@ -2066,11 +2126,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     return GetBuilder<NewOrderController>(
       init: orderController,
       builder: (controller) {
-        // Calculate subtotal
-        double subtotal = controller.orderItems.fold(
+        // 1. Hitung base amount (total item sebelum discount dan tax)
+        double baseAmount = controller.orderItems.fold(
             0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
 
-        // Calculate total tax
+        // 2. Hitung subtotal setelah discount
+        double subtotal = baseAmount - controller.promoDiscount.value;
+        if (subtotal < 0) subtotal = 0.0;
+
+        // 3. Hitung total tax berdasarkan subtotal
         double totalTaxAmount = 0.0;
         try {
           final taxController = Get.find<TaxController>();
@@ -2080,6 +2144,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           totalTaxAmount = 0.0;
         }
 
+        // 4. Total akhir
         double finalTotal = subtotal + totalTaxAmount;
 
         return Container(
@@ -2095,19 +2160,19 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           ),
           child: Column(
             children: [
-              // Subtotal
+              // Base Amount
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Subtotal',
+                    'Base Amount',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.blue.shade700,
                     ),
                   ),
                   Text(
-                    'Rp${controller.formatPrice(subtotal.round())}',
+                    'Rp${controller.formatPrice(baseAmount.round())}',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.blue.shade700,
@@ -2116,7 +2181,58 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 ],
               ),
 
-              // Show taxes if any
+              // Show promo discount if applied
+              if (controller.promoDiscount.value > 0) ...[
+                const SizedBox(height: 8),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Diskon Promo (${controller.appliedPromo.value?.promoCode ?? ''})',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        '-Rp${controller.formatPrice(controller.promoDiscount.value.round())}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ]),
+              ],
+
+              // Subtotal setelah discount
+              if (controller.promoDiscount.value > 0) ...[
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Subtotal',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      'Rp${controller.formatPrice(subtotal.round())}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // Show taxes if any (berdasarkan subtotal)
               if (totalTaxAmount > 0) ...[
                 const SizedBox(height: 8),
                 GetBuilder<TaxController>(

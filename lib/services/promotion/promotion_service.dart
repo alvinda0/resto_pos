@@ -235,6 +235,36 @@ class PromotionService {
     }
   }
 
+  // Get promotion by promo code
+  Future<Promotion> getPromotionByCode(String promoCode,
+      {String? storeId}) async {
+    try {
+      final encodedCode = Uri.encodeComponent(promoCode);
+      final response = await _httpClient.get(
+        '/promotions/code/$encodedCode',
+        requireAuth: true,
+        storeId: storeId,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final promotionResponse =
+            SinglePromotionResponse.fromJson(jsonResponse);
+
+        return promotionResponse.promotion;
+      } else {
+        final errorBody = jsonDecode(response.body);
+        throw Exception(errorBody['message'] ??
+            'Failed to load promotion: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e.toString().contains('Exception:')) {
+        rethrow;
+      }
+      throw Exception('Error fetching promotion by code: $e');
+    }
+  }
+
   // Get promotions by status filter
   Future<List<Promotion>> getPromotionsByStatus(String status,
       {String? storeId, int page = 1, int limit = 10}) async {

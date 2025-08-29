@@ -2,15 +2,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shao_kao/controller/promotion/promotion_controller.dart';
 import 'package:shao_kao/controller/tax/tax_controller.dart';
 import 'package:shao_kao/models/order/new_order_model.dart';
 import 'package:shao_kao/models/product/product_model.dart';
+import 'package:shao_kao/models/promotion/promotion_model.dart';
 import 'package:shao_kao/services/order/PrintServiceOrder.dart';
 import 'package:shao_kao/services/order/new_order_service.dart';
 
 class NewOrderController extends GetxController {
   final OrderService _orderService = OrderService.instance;
   final PrintService _printService = PrintService();
+
+  // Add new observables for promo
+  final Rx<Promotion?> appliedPromo = Rx<Promotion?>(null);
+  final RxDouble promoDiscount = 0.0.obs;
+  final RxBool isCheckingPromo = false.obs;
 
   // Observable variables
   final RxBool isLoading = false.obs;
@@ -140,23 +147,156 @@ class NewOrderController extends GetxController {
 
   double get orderTotalWithTax {
     try {
-      double subtotal = orderItems.fold(
+      // 1. Hitung base amount (subtotal dari semua item)
+      double baseAmount = orderItems.fold(
           0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
 
+      // 2. Kurangi discount dari base amount untuk mendapatkan subtotal
+      double subtotal = baseAmount - promoDiscount.value;
+
+      // Pastikan subtotal tidak negatif
+      if (subtotal < 0) subtotal = 0.0;
+
+      // 3. Hitung tax berdasarkan subtotal (setelah discount)
       double totalTaxAmount = 0.0;
       try {
-        final taxController = Get.find<TaxController>();
-        totalTaxAmount = taxController.activeTaxes
-            .fold(0.0, (sum, tax) => sum + (subtotal * (tax.percentage / 100)));
+        TaxController? taxController;
+        try {
+          taxController = Get.find<TaxController>();
+        } catch (e) {
+          taxController = Get.put(TaxController(), permanent: true);
+          Future.delayed(Duration(milliseconds: 100), () {
+            taxController!.loadActiveTaxes();
+          });
+        }
+
+        if (taxController != null && taxController.activeTaxes.isNotEmpty) {
+          totalTaxAmount = taxController.activeTaxes.fold(
+              0.0, (sum, tax) => sum + (subtotal * (tax.percentage / 100)));
+          print(
+              'Base: $baseAmount, Discount: ${promoDiscount.value}, Subtotal: $subtotal, Tax: $totalTaxAmount');
+        }
       } catch (e) {
+        print('Error getting tax controller: $e');
         totalTaxAmount = 0.0;
       }
 
-      return subtotal + totalTaxAmount;
+      // 4. Total akhir = subtotal + tax
+      double finalTotal = subtotal + totalTaxAmount;
+      return finalTotal >= 0 ? finalTotal : 0.0;
     } catch (e) {
       print('Error calculating order total with tax: $e');
       return orderTotal;
     }
+  }
+
+  void refreshTaxCalculation() {
+    try {
+      final taxController = Get.find<TaxController>();
+      taxController.loadActiveTaxes().then((_) {
+        calculateChange();
+        update();
+      });
+    } catch (e) {
+      print('Error refreshing tax calculation: $e');
+    }
+  }
+
+  Future<void> checkAndApplyPromo(String promoCode) async {
+    if (promoCode.trim().isEmpty) {
+      _showErrorSnackbar('Masukkan kode promo terlebih dahulu');
+      return;
+    }
+
+    if (orderItems.isEmpty) {
+      _showErrorSnackbar(
+          'Tambahkan produk terlebih dahulu sebelum menggunakan promo');
+      return;
+    }
+
+    try {
+      isCheckingPromo.value = true;
+
+      // Get promotion controller
+      final promotionController = Get.find<PromotionController>();
+      final promotion = await promotionController
+          .getPromotionByCode(promoCode.trim().toUpperCase());
+
+      if (promotion == null) {
+        _showErrorSnackbar(
+            'Kode promo "$promoCode" tidak ditemukan atau sudah kadaluarsa');
+        return;
+      }
+
+      // Validate if promotion is currently active
+      if (!promotion.isCurrentlyActive) {
+        String reason = '';
+        if (promotion.status.toLowerCase() != 'active') {
+          reason = 'promo tidak aktif';
+        } else {
+          reason = 'promo tidak berlaku pada waktu ini';
+        }
+        _showErrorSnackbar('Kode promo "$promoCode" $reason');
+        return;
+      }
+
+      // Apply the promotion
+      appliedPromo.value = promotion;
+      calculatePromoDiscount();
+
+      _showSuccessMessage(
+          'Kode promo "${promotion.promoCode}" berhasil diterapkan! Diskon ${promotion.formattedDiscount}');
+    } catch (e) {
+      print('Error checking promo: $e');
+      _showErrorSnackbar('Gagal memvalidasi kode promo: ${e.toString()}');
+    } finally {
+      isCheckingPromo.value = false;
+    }
+  }
+
+  void calculatePromoDiscount() {
+    if (appliedPromo.value == null) {
+      promoDiscount.value = 0.0;
+      return;
+    }
+
+    final promotion = appliedPromo.value!;
+    // Hitung discount berdasarkan base amount (sebelum tax)
+    double baseAmount = orderItems.fold(
+        0.0, (sum, item) => sum + (item['totalPrice']?.toDouble() ?? 0.0));
+
+    double discount = 0.0;
+
+    if (promotion.discountType == 'percent') {
+      // Percentage discount berdasarkan base amount
+      discount = baseAmount * (promotion.discountValue / 100);
+
+      // Apply max discount limit if specified
+      if (promotion.maxDiscount > 0 && discount > promotion.maxDiscount) {
+        discount = promotion.maxDiscount;
+      }
+    } else if (promotion.discountType == 'fixed') {
+      // Fixed amount discount
+      discount = promotion.discountValue;
+
+      // Ensure discount doesn't exceed base amount
+      if (discount > baseAmount) {
+        discount = baseAmount;
+      }
+    }
+
+    promoDiscount.value = discount;
+    calculateChange(); // Recalculate change if cash payment
+    update();
+  }
+
+  void removeAppliedPromo() {
+    appliedPromo.value = null;
+    promoDiscount.value = 0.0;
+    promoController.clear();
+    calculateChange();
+    _showSuccessMessage('Promo telah dihapus');
+    update();
   }
 
   void calculateChange() {
@@ -599,6 +739,11 @@ class NewOrderController extends GetxController {
       error.value = '';
       isPrinting.value = false;
       printStatus.value = '';
+
+      // Reset promo
+      appliedPromo.value = null;
+      promoDiscount.value = 0.0;
+      isCheckingPromo.value = false;
 
       customerNameController.clear();
       phoneController.clear();
