@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shao_kao/controller/payment/QRISController.dart';
+import 'package:shao_kao/controller/promotion/promotion_controller.dart';
+import 'package:shao_kao/controller/tax/tax_controller.dart';
 import 'package:shao_kao/models/order/order_model.dart';
+import 'package:shao_kao/models/promotion/promotion_model.dart';
 
 class QRISPaymentScreen extends StatefulWidget {
   final OrderModel order;
@@ -13,6 +16,7 @@ class QRISPaymentScreen extends StatefulWidget {
   final String? notes;
   final List<dynamic> orderItems;
   final String? promoCode;
+  final double totalAmount;
 
   const QRISPaymentScreen({
     super.key,
@@ -23,6 +27,7 @@ class QRISPaymentScreen extends StatefulWidget {
     this.notes,
     required this.orderItems,
     this.promoCode,
+    required this.totalAmount,
   });
 
   static Future<void> show(
@@ -34,6 +39,7 @@ class QRISPaymentScreen extends StatefulWidget {
     String? notes,
     required List<dynamic> orderItems,
     String? promoCode,
+    required double totalAmount,
   }) {
     return showDialog(
       context: context,
@@ -46,6 +52,7 @@ class QRISPaymentScreen extends StatefulWidget {
         notes: notes,
         orderItems: orderItems,
         promoCode: promoCode,
+        totalAmount: totalAmount,
       ),
     );
   }
@@ -56,6 +63,12 @@ class QRISPaymentScreen extends StatefulWidget {
 
 class _QRISPaymentScreenState extends State<QRISPaymentScreen> {
   final QRISController qrisController = Get.put(QRISController());
+  final PromotionController promotionController =
+      Get.put(PromotionController());
+  final TaxController taxController = Get.put(TaxController());
+
+  Promotion? appliedPromotion;
+  double discountAmount = 0.0;
 
   // Helper method to determine device type
   bool get isMobile => MediaQuery.of(context).size.width < 600;
@@ -67,9 +80,89 @@ class _QRISPaymentScreenState extends State<QRISPaymentScreen> {
   @override
   void initState() {
     super.initState();
+    // Load tax data
+    taxController.loadActiveTaxes();
+
+    // Check and apply promo code if exists
+    if (widget.promoCode != null && widget.promoCode!.isNotEmpty) {
+      _autoCheckPromoCode(widget.promoCode!);
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startQRISPayment();
     });
+  }
+
+  void _autoCheckPromoCode(String promoCode) async {
+    try {
+      final promotion = await promotionController.getPromotionByCode(promoCode);
+      if (promotion != null && promotion.isCurrentlyActive) {
+        setState(() {
+          appliedPromotion = promotion;
+          _calculateDiscountAmount();
+        });
+      }
+    } catch (e) {
+      // Jika error, tidak ada promo yang diterapkan
+      setState(() {
+        appliedPromotion = null;
+        discountAmount = 0.0;
+      });
+    }
+  }
+
+  void _calculateDiscountAmount() {
+    if (appliedPromotion == null) {
+      discountAmount = 0.0;
+      return;
+    }
+
+    double baseAmount = _calculateSubtotal();
+
+    if (appliedPromotion!.discountType == 'percent') {
+      discountAmount = baseAmount * (appliedPromotion!.discountValue / 100);
+
+      // Apply max discount limit jika ada
+      if (appliedPromotion!.maxDiscount > 0 &&
+          discountAmount > appliedPromotion!.maxDiscount) {
+        discountAmount = appliedPromotion!.maxDiscount;
+      }
+    } else {
+      // Fixed discount
+      discountAmount = appliedPromotion!.discountValue;
+
+      // Discount tidak boleh lebih besar dari base amount
+      if (discountAmount > baseAmount) {
+        discountAmount = baseAmount;
+      }
+    }
+  }
+
+  double _calculateSubtotal() {
+    return widget.orderItems.fold(0.0, (sum, item) {
+      try {
+        if (item is Map) {
+          double totalPrice = item['totalPrice'] is double
+              ? item['totalPrice']
+              : double.parse(item['totalPrice'].toString());
+          return sum + totalPrice;
+        } else {
+          double totalPrice = item.totalPrice?.toDouble() ?? 0.0;
+          return sum + totalPrice;
+        }
+      } catch (e) {
+        return sum;
+      }
+    });
+  }
+
+  // Method baru untuk menghitung total pajak
+  double _calculateTotalTax() {
+    double baseAmount = _calculateSubtotal();
+    _calculateDiscountAmount();
+    double subtotalAfterDiscount = baseAmount - discountAmount;
+    return subtotalAfterDiscount *
+        (taxController.getTotalTaxPercentage() / 100);
   }
 
   @override
@@ -99,21 +192,7 @@ class _QRISPaymentScreenState extends State<QRISPaymentScreen> {
   }
 
   double _calculateOrderTotal() {
-    return widget.orderItems.fold(0.0, (sum, item) {
-      try {
-        if (item is Map) {
-          double totalPrice = item['totalPrice'] is double
-              ? item['totalPrice']
-              : double.parse(item['totalPrice'].toString());
-          return sum + totalPrice;
-        } else {
-          double totalPrice = item.totalPrice?.toDouble() ?? 0.0;
-          return sum + totalPrice;
-        }
-      } catch (e) {
-        return sum;
-      }
-    });
+    return widget.totalAmount; // Langsung return total yang dikirim
   }
 
   String _formatCurrency(double amount) {

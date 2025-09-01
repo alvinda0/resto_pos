@@ -2034,7 +2034,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       tableNumber: tableNumber,
       notes: notesController.text.isEmpty ? null : notesController.text.trim(),
       orderItems: List.from(currentOrderItems),
-      promoCode: appliedPromotion?.promoCode, // Gunakan promo yang sudah valid
+      promoCode: appliedPromotion?.promoCode,
+      totalAmount: _calculateOrderTotal(), // Kirim total yang sudah dihitung
     );
   }
 

@@ -68,6 +68,11 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       if (!Get.isRegistered<PromotionController>()) {
         Get.put(PromotionController(), permanent: true);
       }
+
+      // TAMBAH INI: TaxController initialization
+      if (!Get.isRegistered<TaxController>()) {
+        Get.put(TaxController(), permanent: true);
+      }
     } catch (e) {
       print('Error initializing controllers: $e');
     }
@@ -88,13 +93,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         productController.loadProducts();
       }
 
-      // TAMBAHKAN INI: Load active taxes saat aplikasi dimulai
-      final taxController = Get.find<TaxController>();
-      if (taxController.activeTaxes.isEmpty) {
-        taxController.loadActiveTaxes().then((_) {
-          // Refresh order calculation setelah tax dimuat
-          orderController.update();
-        });
+      // UBAH INI: Load active taxes saat aplikasi dimulai dengan error handling
+      try {
+        final taxController = Get.find<TaxController>();
+        if (taxController.activeTaxes.isEmpty) {
+          taxController.loadActiveTaxes().then((_) {
+            // Refresh order calculation setelah tax dimuat
+            orderController.update();
+          });
+        }
+      } catch (e) {
+        print('Warning: TaxController not available: $e');
+        // Continue without tax functionality
       }
 
       // Reset order controller state
@@ -1179,12 +1189,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (BuildContext context) {
         return Dialog(
+          insetPadding:
+              const EdgeInsets.all(8.0), // Minimal padding from screen edges
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.9,
-            constraints: const BoxConstraints(maxWidth: 400),
+            width: double.infinity, // Take full available width
+            height:
+                MediaQuery.of(context).size.height * 0.95, // Almost full height
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.95,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1258,7 +1274,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // Total Payment Amount
+                      // Total Payment Amount - UPDATED CALCULATION
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
@@ -1281,14 +1297,21 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                             GetBuilder<NewOrderController>(
                               init: orderController,
                               builder: (controller) {
-                                // Calculate total with taxes for QRIS
-                                double subtotal = controller.orderItems.fold(
+                                // SAME CALCULATION AS _buildPriceBreakdown()
+                                // 1. Hitung base amount (total item sebelum discount dan tax)
+                                double baseAmount = controller.orderItems.fold(
                                     0.0,
                                     (sum, item) =>
                                         sum +
                                         (item['totalPrice']?.toDouble() ??
                                             0.0));
 
+                                // 2. Hitung subtotal setelah discount
+                                double subtotal =
+                                    baseAmount - controller.promoDiscount.value;
+                                if (subtotal < 0) subtotal = 0.0;
+
+                                // 3. Hitung total tax berdasarkan subtotal
                                 double totalTaxAmount = 0.0;
                                 try {
                                   final taxController =
@@ -1304,6 +1327,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                                   totalTaxAmount = 0.0;
                                 }
 
+                                // 4. Total akhir (sama seperti _buildPriceBreakdown)
                                 double finalTotal = subtotal + totalTaxAmount;
 
                                 return Text(
