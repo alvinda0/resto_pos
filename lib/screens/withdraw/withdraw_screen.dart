@@ -42,6 +42,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        automaticallyImplyLeading: false, // Tambahkan ini
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
@@ -86,15 +87,24 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             color: Colors.white,
-            child: Obx(() => SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: List.generate(
-                      controller.statusOptions.length,
-                      (index) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
+            child: Obx(() => Row(
+                  children: List.generate(
+                    controller.statusOptions.length,
+                    (index) => Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: index < controller.statusOptions.length - 1
+                              ? 8
+                              : 0,
+                        ),
                         child: FilterChip(
-                          label: Text(controller.statusLabels[index]),
+                          label: SizedBox(
+                            width: double.infinity,
+                            child: Text(
+                              controller.statusLabels[index],
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                           selected: controller.selectedStatus.value ==
                               controller.statusOptions[index],
                           onSelected: (selected) {
@@ -151,7 +161,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                     children: [
                       // Table Header
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
                         decoration: BoxDecoration(
                           color: Colors.grey[50],
                           borderRadius: const BorderRadius.only(
@@ -159,7 +170,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                             topRight: Radius.circular(8),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             SizedBox(
                                 width: 40,
@@ -281,7 +292,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
   Widget _buildTableRow(WithdrawalModel withdrawal, int index) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Colors.grey[200]!),
@@ -301,6 +312,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             child: Text(
               withdrawal.referralName,
               style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
@@ -308,6 +320,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             child: Text(
               _formatDate(withdrawal.createdAt),
               style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
@@ -315,6 +328,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             child: Text(
               withdrawal.formattedAmount,
               style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
@@ -322,6 +336,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             child: Text(
               withdrawal.bankName,
               style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
@@ -329,6 +344,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             child: Text(
               withdrawal.bankAccountNumber,
               style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
@@ -336,6 +352,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             child: Text(
               withdrawal.formattedAmount,
               style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(

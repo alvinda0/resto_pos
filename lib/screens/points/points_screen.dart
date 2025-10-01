@@ -169,46 +169,58 @@ class PointConfigScreen extends StatelessWidget {
           if (constraints.maxWidth < 600) {
             return _buildMobileTable();
           }
-          return _buildDesktopTable();
+          return _buildDesktopTable(constraints.maxWidth);
         },
       ),
     );
   }
 
-  Widget _buildDesktopTable() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+  Widget _buildDesktopTable(double maxWidth) {
+    return SizedBox(
+      width: maxWidth,
       child: DataTable(
         headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
+        columnSpacing: 24,
+        horizontalMargin: 16,
         columns: const [
           DataColumn(
-            label: Text(
-              'Amount (IDR)',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            label: Expanded(
+              child: Text(
+                'Amount (IDR)',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           DataColumn(
-            label: Text(
-              'Points',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            label: Expanded(
+              child: Text(
+                'Points',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           DataColumn(
-            label: Text(
-              'Status',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            label: Expanded(
+              child: Text(
+                'Status',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           DataColumn(
-            label: Text(
-              'Created At',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            label: Expanded(
+              child: Text(
+                'Created At',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
           DataColumn(
-            label: Text(
-              'Actions',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            label: Expanded(
+              child: Text(
+                'Actions',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],

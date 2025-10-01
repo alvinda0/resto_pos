@@ -22,14 +22,16 @@ class QRCode {
 
   factory QRCode.fromJson(Map<String, dynamic> json) {
     return QRCode(
-      id: json['id'] ?? '',
-      storeId: json['store_id'] ?? '',
-      code: json['code'] ?? '',
-      tableNumber: json['table_number'] ?? '',
-      type: json['type'] ?? '',
-      menuUrl: json['menu_url'] ?? '',
-      expiresAt: DateTime.parse(json['expires_at']),
-      image: json['image'],
+      id: json['id']?.toString() ?? '',
+      storeId: json['store_id']?.toString() ?? '',
+      code: json['code']?.toString() ?? '',
+      tableNumber: json['table_number']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      menuUrl: json['menu_url']?.toString() ?? '',
+      expiresAt: json['expires_at'] != null
+          ? DateTime.parse(json['expires_at'].toString())
+          : DateTime.now().add(const Duration(days: 365)),
+      image: json['image']?.toString(),
     );
   }
 
@@ -67,14 +69,17 @@ class QRCodeListResponse {
   factory QRCodeListResponse.fromJson(Map<String, dynamic> json) {
     return QRCodeListResponse(
       success: json['success'] ?? false,
-      message: json['message'] ?? '',
+      message: json['message']?.toString() ?? '',
       status: json['status'] ?? 0,
-      timestamp: DateTime.parse(json['timestamp']),
-      qrcodes: (json['data']['qrcodes'] as List<dynamic>?)
-              ?.map((item) => QRCode.fromJson(item))
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'].toString())
+          : DateTime.now(),
+      qrcodes: (json['data']?['qrcodes'] as List<dynamic>?)
+              ?.map((item) => QRCode.fromJson(item as Map<String, dynamic>))
               .toList() ??
           [],
-      metadata: QRCodeMetadata.fromJson(json['metadata']),
+      metadata: QRCodeMetadata.fromJson(
+          (json['metadata'] as Map<String, dynamic>?) ?? {}),
     );
   }
 }
@@ -94,10 +99,10 @@ class QRCodeMetadata {
 
   factory QRCodeMetadata.fromJson(Map<String, dynamic> json) {
     return QRCodeMetadata(
-      page: json['page'] ?? 1,
-      limit: json['limit'] ?? 100,
-      total: json['total'] ?? 0,
-      totalPages: json['total_pages'] ?? 1,
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      limit: (json['limit'] as num?)?.toInt() ?? 100,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      totalPages: (json['total_pages'] as num?)?.toInt() ?? 1,
     );
   }
 }
