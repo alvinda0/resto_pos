@@ -160,7 +160,7 @@ class AppRoutes {
       ),
       GetPage(
         name: returnScreen,
-        page: () => _wrapWithMainLayout(const ReturnScreen(), returnScreen),
+        page: () => _wrapWithMainLayout(const WasteScreen(), returnScreen),
       ),
 
       // Other Main Routes
