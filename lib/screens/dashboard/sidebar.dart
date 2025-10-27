@@ -65,52 +65,53 @@ class _MainLayoutState extends State<MainLayout> {
       MenuItem(Icons.category, 'Kategori', permissionKey: 'categories'),
       MenuItem(Icons.kitchen, 'Bahan', permissionKey: 'materials'),
       MenuItem(Icons.restaurant_menu, 'Resep', permissionKey: 'recipes'),
+      MenuItem(Icons.assignment_return, 'Return', permissionKey: 'return'),
       MenuItem(Icons.inventory, 'Aset', permissionKey: 'assets'),
     ]),
 
     // KEUANGAN
-    MenuItem(Icons.account_balance_wallet, 'Keuangan', subItems: [
-      // MenuItem(Icons.trending_up, 'Pendapatan', permissionKey: 'income'),
-      MenuItem(Icons.receipt_long, 'Laporan Transaksi',
-          permissionKey: 'reports'),
-      MenuItem(Icons.account_balance_wallet, 'Dompet', permissionKey: 'wallet'),
-      MenuItem(Icons.receipt_long, 'Tagihan', permissionKey: 'bills'),
-      MenuItem(Icons.analytics, 'Keuntungan', permissionKey: 'profit'),
-      // MenuItem(Icons.account_balance_wallet, 'Pencairan',
-      //     permissionKey: 'disbursement'),
-    ]),
+    // MenuItem(Icons.account_balance_wallet, 'Keuangan', subItems: [
+    //   // MenuItem(Icons.trending_up, 'Pendapatan', permissionKey: 'income'),
+    //   MenuItem(Icons.receipt_long, 'Laporan Transaksi',
+    //       permissionKey: 'reports'),
+    //   MenuItem(Icons.account_balance_wallet, 'Dompet', permissionKey: 'wallet'),
+    //   MenuItem(Icons.receipt_long, 'Tagihan', permissionKey: 'bills'),
+    //   MenuItem(Icons.analytics, 'Keuntungan', permissionKey: 'profit'),
+    //   // MenuItem(Icons.account_balance_wallet, 'Pencairan',
+    //   //     permissionKey: 'disbursement'),
+    // ]),
 
     // MANAJEMEN SDM
-    MenuItem(Icons.people, 'Manajemen SDM', subItems: [
-      MenuItem(Icons.person, 'Data Karyawan', permissionKey: 'employees'),
-      MenuItem(Icons.payment, 'Pembayaran Karyawan',
-          permissionKey: 'employee_payments'),
-      MenuItem(Icons.person_add, 'Role', permissionKey: 'roles'),
-      MenuItem(Icons.account_circle, 'Akun', permissionKey: 'accounts'),
-    ]),
+    // MenuItem(Icons.people, 'Manajemen SDM', subItems: [
+    //   MenuItem(Icons.person, 'Data Karyawan', permissionKey: 'employees'),
+    //   MenuItem(Icons.payment, 'Pembayaran Karyawan',
+    //       permissionKey: 'employee_payments'),
+    //   MenuItem(Icons.person_add, 'Role', permissionKey: 'roles'),
+    //   MenuItem(Icons.account_circle, 'Akun', permissionKey: 'accounts'),
+    // ]),
 
     // PELANGGAN & LOYALTY
-    MenuItem(Icons.people_alt, 'Pelanggan & Loyalty', subItems: [
-      MenuItem(Icons.people, 'Data Pelanggan', permissionKey: 'customers'),
-      MenuItem(Icons.card_giftcard, 'Hadiah Poin',
-          permissionKey: 'point_rewards'),
-      MenuItem(Icons.history, 'Riwayat Penukaran',
-          permissionKey: 'redemption_history'),
-      MenuItem(Icons.tune, 'Konfigurasi Poin', permissionKey: 'point_config'),
-    ]),
+    // MenuItem(Icons.people_alt, 'Pelanggan & Loyalty', subItems: [
+    //   MenuItem(Icons.people, 'Data Pelanggan', permissionKey: 'customers'),
+    //   MenuItem(Icons.card_giftcard, 'Hadiah Poin',
+    //       permissionKey: 'point_rewards'),
+    //   MenuItem(Icons.history, 'Riwayat Penukaran',
+    //       permissionKey: 'redemption_history'),
+    //   MenuItem(Icons.tune, 'Konfigurasi Poin', permissionKey: 'point_config'),
+    // ]),
 
     // REFERRAL & PARTNERSHIP
-    MenuItem(Icons.share, 'Referral', subItems: [
-      MenuItem(Icons.person_add, 'Kelola Referral', permissionKey: 'referrals'),
-      MenuItem(Icons.attach_money, 'Pencairan Referral',
-          permissionKey: 'referral_withdraw'),
-    ]),
+    // MenuItem(Icons.share, 'Referral', subItems: [
+    //   MenuItem(Icons.person_add, 'Kelola Referral', permissionKey: 'referrals'),
+    //   MenuItem(Icons.attach_money, 'Pencairan Referral',
+    //       permissionKey: 'referral_withdraw'),
+    // ]),
 
     // PENGATURAN SISTEM
     MenuItem(Icons.settings, 'Pengaturan', subItems: [
       MenuItem(Icons.palette, 'Tema', permissionKey: 'themes'),
-      MenuItem(Icons.account_balance, 'Konfigurasi Pajak',
-          permissionKey: 'tax_config'),
+      // MenuItem(Icons.account_balance, 'Konfigurasi Pajak',
+      //     permissionKey: 'tax_config'),
       MenuItem(Icons.qr_code, 'Konfigurasi QRIS', permissionKey: 'qris_config'),
       // MenuItem(Icons.key, 'Ganti Password', permissionKey: 'change_password'),
       MenuItem(Icons.description, 'Printer', permissionKey: 'printer'),
@@ -247,6 +248,8 @@ class _MainLayoutState extends State<MainLayout> {
         return '/material';
       case 'recipes':
         return '/recipe';
+      case 'return':
+        return '/return';
       case 'assets':
         return '/assets';
       case 'income':

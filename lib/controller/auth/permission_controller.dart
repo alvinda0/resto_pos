@@ -145,6 +145,12 @@ class PermissionController extends GetxService {
           "update:recipe",
           "delete:recipe"
         ],
+        'return': [
+          "view:order",
+          "create:order",
+          "update:order",
+          "delete:order"
+        ],
         'assets': [
           // "view:asset",
           // "create:asset",

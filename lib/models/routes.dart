@@ -14,6 +14,7 @@ import 'package:shao_kao/screens/printer/printer_screen.dart';
 import 'package:shao_kao/screens/profit/profit_screen.dart';
 import 'package:shao_kao/screens/redemption/redemption_screen.dart';
 import 'package:shao_kao/screens/referral/referral_screen.dart';
+import 'package:shao_kao/screens/return/return_screen.dart';
 import 'package:shao_kao/screens/rewards/rewards_screen.dart';
 import 'package:shao_kao/screens/role/role_form_screen.dart';
 import 'package:shao_kao/screens/role/role_screen.dart';
@@ -50,6 +51,7 @@ class AppRoutes {
   // Dashboard Routes
   static const String dashboard = '/dashboard';
   static const String tables = '/tables';
+  static const String returnScreen = '/return';
 
   // Product and Material Routes (Produk dan Bahan)
   static const String product = '/product';
@@ -155,6 +157,10 @@ class AppRoutes {
       GetPage(
         name: recipe,
         page: () => _wrapWithMainLayout(const RecipeManagementScreen(), recipe),
+      ),
+      GetPage(
+        name: returnScreen,
+        page: () => _wrapWithMainLayout(const ReturnScreen(), returnScreen),
       ),
 
       // Other Main Routes
@@ -326,6 +332,7 @@ class AppRoutes {
   static void toCategories() => Get.toNamed(categories);
   static void toMaterial() => Get.toNamed(material);
   static void toRecipe() => Get.toNamed(recipe);
+  static void toReturn() => Get.toNamed(returnScreen);
 
   // Other main navigation helpers
   static void toPromos() => Get.toNamed(promos);
