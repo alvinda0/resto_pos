@@ -842,11 +842,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
   void _printOrderDetails(KitchenModel kitchen) async {
     try {
-      // Import BluetoothPrinterManager di atas file
       final BluetoothPrinterManager printerManager = BluetoothPrinterManager();
 
-      // Check if printer is connected
-      if (!printerManager.isConnected) {
+      // Check if ANY printer is connected
+      if (printerManager.connectedCount == 0) {
         _showPrinterNotConnectedDialog();
         return;
       }
@@ -870,16 +869,20 @@ class _KitchenScreenState extends State<KitchenScreen> {
       // Generate print data
       List<int> printData = _generateOrderPrintData(kitchen);
 
-      // Send to printer
-      bool success = await printerManager.printData(printData);
+      // Send to ALL connected printers
+      Map<String, bool> results = await printerManager.printToAll(printData);
 
       // Close loading dialog
       Navigator.of(context).pop();
 
-      if (success) {
+      // Count success
+      int successCount = results.values.where((v) => v).length;
+      int totalPrinters = results.length;
+
+      if (successCount > 0) {
         Get.snackbar(
           'Print Berhasil',
-          'Pesanan ${kitchen.displayId} berhasil dicetak',
+          'Pesanan ${kitchen.displayId} berhasil dicetak ke $successCount dari $totalPrinters printer',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.green,
           colorText: Colors.white,
@@ -887,7 +890,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
       } else {
         Get.snackbar(
           'Print Gagal',
-          'Gagal mencetak pesanan ${kitchen.displayId}',
+          'Gagal mencetak pesanan ${kitchen.displayId} ke semua printer',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red,
           colorText: Colors.white,

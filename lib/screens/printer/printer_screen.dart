@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart';
+import 'dart:convert';
 
 class BluetoothPrinterPage extends StatefulWidget {
   @override
@@ -14,8 +14,14 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
   bool _isScanning = false;
   bool _bluetoothEnabled = false;
 
-  // Instance dari singleton manager
   final BluetoothPrinterManager _printerManager = BluetoothPrinterManager();
+
+  // Available printer roles
+  final List<Map<String, String>> _availableRoles = [
+    {'role': 'admin', 'name': 'Printer Admin'},
+    {'role': 'dapur1', 'name': 'Printer Dapur 1'},
+    {'role': 'dapur2', 'name': 'Printer Dapur 2'},
+  ];
 
   @override
   void initState() {
@@ -23,23 +29,15 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
     _initBluetooth();
   }
 
-  @override
-  void dispose() {
-    // TIDAK memanggil disconnect() di sini agar koneksi tetap aktif
-    super.dispose();
-  }
-
   Future<void> _initBluetooth() async {
     await _requestPermissions();
     await _checkBluetoothState();
-
-    // Initialize printer manager untuk auto reconnect
     await _printerManager.initialize();
 
-    // Show saved printer info if available
-    if (_printerManager.hasSavedPrinter()) {
-      Map<String, String?> savedInfo = _printerManager.getSavedPrinterInfo();
-      _showSnackBar('Printer tersimpan: ${savedInfo['name']}');
+    if (_printerManager.hasSavedPrinters()) {
+      List<Map<String, String>> savedInfo =
+          _printerManager.getSavedPrintersInfo();
+      _showSnackBar('Tersimpan ${savedInfo.length} printer');
     }
   }
 
@@ -62,12 +60,6 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
       setState(() {
         _bluetoothEnabled = state == BluetoothAdapterState.on;
       });
-
-      if (!_bluetoothEnabled) {
-        _showSnackBar('Bluetooth tidak aktif');
-      } else {
-        _showSnackBar('Bluetooth aktif');
-      }
     });
 
     BluetoothAdapterState state = await FlutterBluePlus.adapterState.first;
@@ -78,8 +70,7 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
 
   Future<void> _scanForDevices() async {
     if (!_bluetoothEnabled) {
-      _showSnackBar(
-          'Bluetooth tidak aktif. Silakan aktifkan Bluetooth terlebih dahulu.');
+      _showSnackBar('Bluetooth tidak aktif');
       return;
     }
 
@@ -90,39 +81,23 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
 
     try {
       await FlutterBluePlus.stopScan();
-
       List<BluetoothDevice> allDevices = [];
 
       try {
         List<BluetoothDevice> systemDevices =
             await FlutterBluePlus.systemDevices([]);
-        print('System devices found: ${systemDevices.length}');
-
-        for (var device in systemDevices) {
-          print('System device: ${device.platformName} - ${device.remoteId}');
-          if (!allDevices.any((d) => d.remoteId == device.remoteId)) {
-            allDevices.add(device);
-          }
-        }
+        allDevices.addAll(systemDevices);
       } catch (e) {
         print('Error getting system devices: $e');
       }
 
-      print('Starting BLE scan...');
       await FlutterBluePlus.startScan(
         timeout: Duration(seconds: 15),
         androidUsesFineLocation: true,
       );
 
       var scanSubscription = FlutterBluePlus.scanResults.listen((results) {
-        print('Scan results received: ${results.length} devices');
-
         for (ScanResult result in results) {
-          String deviceName = result.device.platformName;
-          String deviceId = result.device.remoteId.toString();
-
-          print('Found device: $deviceName ($deviceId) - RSSI: ${result.rssi}');
-
           if (!allDevices
               .any((device) => device.remoteId == result.device.remoteId)) {
             allDevices.add(result.device);
@@ -139,13 +114,7 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
               name.contains('canon') ||
               name.contains('hp') ||
               name.contains('star') ||
-              name.contains('citizen') ||
               name.contains('xprinter') ||
-              name.contains('bluetooth') ||
-              name.contains('bt-') ||
-              name.contains('rpp') ||
-              name.contains('mtp') ||
-              name.contains('esc') ||
               name.isNotEmpty;
         }).toList();
 
@@ -158,20 +127,12 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
       await scanSubscription.cancel();
       await FlutterBluePlus.stopScan();
 
-      print('Scan completed. Total devices found: ${allDevices.length}');
-      print('Printer devices found: ${_devicesList.length}');
-
       setState(() {
         _isScanning = false;
       });
 
       if (_devicesList.isEmpty) {
-        _showSnackBar('Tidak ada printer ditemukan.\n'
-            'Tips:\n'
-            '1. Pastikan printer dalam mode pairing\n'
-            '2. Printer sudah dipair di pengaturan Bluetooth\n'
-            '3. Printer dekat dengan perangkat\n'
-            '4. Coba restart printer dan scan ulang');
+        _showSnackBar('Tidak ada printer ditemukan');
       } else {
         _showSnackBar('Ditemukan ${_devicesList.length} perangkat');
       }
@@ -180,19 +141,89 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
         _isScanning = false;
       });
       _showSnackBar('Error scanning: $e');
-      print('Scan error: $e');
     }
   }
 
-  Future<void> _connectToDevice(BluetoothDevice device) async {
+  Future<void> _showRoleSelectionDialog(BluetoothDevice device) async {
+    Map<String, PrinterInfo>? currentPrinters = _printerManager.printers;
+
+    // Filter available roles (belum terpakai)
+    List<Map<String, String>> availableRoles =
+        _availableRoles.where((roleData) {
+      return !currentPrinters.containsKey(roleData['role']);
+    }).toList();
+
+    if (availableRoles.isEmpty) {
+      _showSnackBar(
+          'Semua slot printer sudah terpakai.\nHapus printer yang tidak digunakan terlebih dahulu.');
+      return;
+    }
+
+    String? selectedRole = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Pilih Role Printer'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hubungkan "${device.platformName}" sebagai:',
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+              SizedBox(height: 16),
+              ...availableRoles.map((roleData) {
+                return Card(
+                  margin: EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: Icon(
+                      _getRoleIcon(roleData['role']!),
+                      color: _getRoleColor(roleData['role']!),
+                    ),
+                    title: Text(
+                      roleData['name']!,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('Role: ${roleData['role']}'),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.of(context).pop(roleData['role']);
+                    },
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Batal'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (selectedRole != null) {
+      await _connectToDevice(device, selectedRole);
+    }
+  }
+
+  Future<void> _connectToDevice(BluetoothDevice device, String role) async {
     try {
       _showSnackBar('Menghubungkan ke ${device.platformName}...');
 
-      bool connected = await _printerManager.connectToDevice(device);
+      String name = _availableRoles.firstWhere(
+        (r) => r['role'] == role,
+        orElse: () => {'name': device.platformName},
+      )['name']!;
+
+      bool connected =
+          await _printerManager.connectToDevice(device, role, name);
 
       if (connected) {
-        _showSnackBar(
-            'Berhasil terhubung ke ${device.platformName}\nPrinter akan otomatis terhubung saat buka aplikasi');
+        _showSnackBar('Berhasil terhubung ke $name');
       } else {
         _showSnackBar('Gagal terhubung ke ${device.platformName}');
       }
@@ -201,34 +232,77 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
     }
   }
 
-  Future<void> _testPrint() async {
-    bool success = await _printerManager.testPrint();
+  Future<void> _testPrintRole(String role) async {
+    bool success = await _printerManager.testPrint(role);
+    String name = _printerManager.getPrinterByRole(role)?.name ?? role;
+
     if (success) {
-      _showSnackBar('Test print berhasil dikirim');
+      _showSnackBar('Test print ke $name berhasil');
     } else {
-      _showSnackBar('Gagal print: Tidak ada printer yang terhubung');
+      _showSnackBar('Gagal print ke $name');
     }
   }
 
-  Future<void> _disconnect() async {
-    await _printerManager.disconnect();
-    _showSnackBar('Printer telah diputuskan dan dihapus dari memori');
+  Future<void> _testPrintAll() async {
+    Map<String, bool> results =
+        await _printerManager.printToAll(_getTestPrintData());
+
+    int success = results.values.where((v) => v).length;
+    int total = results.length;
+
+    _showSnackBar('Print ke $success dari $total printer berhasil');
   }
 
-  Future<void> _reconnect() async {
-    if (_printerManager.isReconnecting) {
-      _showSnackBar('Sedang mencoba menghubungkan...');
-      return;
+  List<int> _getTestPrintData() {
+    List<int> commands = [];
+    commands.addAll([0x1B, 0x40]);
+    commands.addAll([0x1B, 0x61, 0x01]);
+    commands.addAll([0x1D, 0x21, 0x11]);
+    commands.addAll(utf8.encode("=== TEST PRINT ===\n\n"));
+    commands.addAll([0x1D, 0x21, 0x00]);
+    commands.addAll([0x1B, 0x61, 0x00]);
+    commands.addAll(utf8.encode("Multi Printer System\n"));
+    commands.addAll(
+        utf8.encode("Waktu: ${DateTime.now().toString().split('.')[0]}\n\n"));
+    commands.addAll([0x0A, 0x0A, 0x0A]);
+    commands.addAll([0x1D, 0x56, 0x00]);
+    return commands;
+  }
+
+  Future<void> _disconnectPrinter(String role) async {
+    await _printerManager.disconnectPrinter(role);
+    String name = _availableRoles.firstWhere((r) => r['role'] == role)['name']!;
+    _showSnackBar('$name telah diputuskan');
+  }
+
+  Future<void> _disconnectAll() async {
+    await _printerManager.disconnectAll();
+    _showSnackBar('Semua printer telah diputuskan');
+  }
+
+  IconData _getRoleIcon(String role) {
+    switch (role) {
+      case 'admin':
+        return Icons.admin_panel_settings;
+      case 'dapur1':
+        return Icons.restaurant;
+      case 'dapur2':
+        return Icons.restaurant_menu;
+      default:
+        return Icons.print;
     }
+  }
 
-    _showSnackBar('Mencoba menghubungkan ulang...');
-    bool success = await _printerManager.reconnect();
-
-    if (success) {
-      _showSnackBar('Berhasil terhubung ulang');
-    } else {
-      _showSnackBar(
-          'Gagal menghubungkan ulang. Coba scan dan hubungkan manual.');
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'admin':
+        return Colors.blue;
+      case 'dapur1':
+        return Colors.orange;
+      case 'dapur2':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -243,41 +317,37 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
     );
   }
 
-  void _showDebugInfo() {
-    _printerManager.debugInfo();
-
-    Map<String, String?> savedInfo = _printerManager.getSavedPrinterInfo();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Debug Info'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-                'Status: ${_printerManager.isConnected ? "Terhubung" : "Terputus"}'),
-            Text(
-                'Reconnecting: ${_printerManager.isReconnecting ? "Ya" : "Tidak"}'),
-            Text('Saved Printer: ${savedInfo["name"] ?? "Tidak ada"}'),
-            Text('Saved ID: ${savedInfo["id"] ?? "Tidak ada"}'),
-            Text(
-                'Current Device: ${_printerManager.selectedDevice?.platformName ?? "Tidak ada"}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Multi Printer Manager'),
+        backgroundColor: Colors.blue[700],
+        foregroundColor: Colors.white,
+        actions: [
+          ValueListenableBuilder<int>(
+            valueListenable: _printerManager.connectedCountNotifier,
+            builder: (context, count, child) {
+              return Container(
+                margin: EdgeInsets.only(right: 16),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: count > 0 ? Colors.green : Colors.red,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.print, size: 16),
+                    SizedBox(width: 4),
+                    Text('$count/3',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -288,10 +358,10 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
         ),
         child: Column(
           children: [
-            // Status Card - menggunakan ValueListenableBuilder untuk realtime update
+            // Connected Printers Status
             Container(
               margin: EdgeInsets.all(16),
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
@@ -303,114 +373,129 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
                   ),
                 ],
               ),
-              child: ValueListenableBuilder<bool>(
-                valueListenable: _printerManager.connectionStatus,
-                builder: (context, isConnected, child) {
-                  return ValueListenableBuilder<BluetoothDevice?>(
-                    valueListenable: _printerManager.selectedDeviceNotifier,
-                    builder: (context, selectedDevice, child) {
-                      Map<String, String?> savedInfo =
-                          _printerManager.getSavedPrinterInfo();
-                      bool hasReconnecting = _printerManager.isReconnecting;
-
-                      return Column(
+              child: ValueListenableBuilder<Map<String, PrinterInfo>>(
+                valueListenable: _printerManager.printersNotifier,
+                builder: (context, printers, child) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Status Koneksi',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          Text(
+                            'Printer Terhubung',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          if (printers.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: _testPrintAll,
+                              icon: Icon(Icons.print, size: 16),
+                              label: Text('Test All'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.blue[700],
                               ),
-                              Row(
-                                children: [
-                                  if (hasReconnecting)
-                                    Padding(
-                                      padding: EdgeInsets.only(right: 8),
-                                      child: SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  Colors.orange),
+                            ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      if (printers.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text(
+                              'Belum ada printer terhubung',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._availableRoles.map((roleData) {
+                          String role = roleData['role']!;
+                          PrinterInfo? printer = printers[role];
+
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 8),
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: printer?.isConnected == true
+                                  ? Colors.green[50]
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: printer?.isConnected == true
+                                    ? Colors.green[300]!
+                                    : Colors.grey[300]!,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: _getRoleColor(role),
+                                  child: Icon(
+                                    _getRoleIcon(role),
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        roleData['name']!,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
                                         ),
                                       ),
-                                    ),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: hasReconnecting
-                                          ? Colors.orange
-                                          : (isConnected
-                                              ? Colors.green
-                                              : Colors.red),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      hasReconnecting
-                                          ? 'Menghubungkan...'
-                                          : (isConnected
-                                              ? 'Terhubung'
-                                              : 'Terputus'),
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
+                                      if (printer != null) ...[
+                                        Text(
+                                          printer.device?.platformName ??
+                                              'Unknown',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ] else
+                                        Text(
+                                          'Tidak terhubung',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                if (printer?.isConnected == true) ...[
+                                  IconButton(
+                                    icon: Icon(Icons.print, size: 20),
+                                    color: Colors.blue[700],
+                                    onPressed: () => _testPrintRole(role),
+                                    tooltip: 'Test Print',
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.close, size: 20),
+                                    color: Colors.red,
+                                    onPressed: () => _disconnectPrinter(role),
+                                    tooltip: 'Putuskan',
                                   ),
                                 ],
-                              ),
-                            ],
-                          ),
-                          if (selectedDevice != null) ...[
-                            SizedBox(height: 10),
-                            Text(
-                              'Printer: ${selectedDevice.platformName}',
-                              style: TextStyle(fontSize: 16),
+                              ],
                             ),
-                            Text(
-                              'ID: ${selectedDevice.remoteId}',
-                              style: TextStyle(
-                                  fontSize: 14, color: Colors.grey[600]),
-                            ),
-                          ] else if (savedInfo['name'] != null) ...[
-                            SizedBox(height: 10),
-                            Text(
-                              'Printer tersimpan: ${savedInfo['name']}',
-                              style: TextStyle(
-                                  fontSize: 16, color: Colors.grey[700]),
-                            ),
-                            Text(
-                              'ID: ${savedInfo['id']}',
-                              style: TextStyle(
-                                  fontSize: 14, color: Colors.grey[600]),
-                            ),
-                          ],
-                          if (!isConnected && savedInfo['name'] != null) ...[
-                            SizedBox(height: 10),
-                            Text(
-                              'Printer akan otomatis terhubung jika tersedia',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.blue[700]),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ],
-                      );
-                    },
+                          );
+                        }).toList(),
+                    ],
                   );
                 },
               ),
             ),
 
-            // Control Buttons Row
+            // Control Buttons
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -429,7 +514,7 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
                               ),
                             )
                           : Icon(Icons.search),
-                      label: Text(_isScanning ? 'Scan...' : 'Scan'),
+                      label: Text(_isScanning ? 'Scanning...' : 'Scan Printer'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[600],
                         foregroundColor: Colors.white,
@@ -441,24 +526,20 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
                     ),
                   ),
                   SizedBox(width: 10),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _printerManager.connectionStatus,
-                    builder: (context, isConnected, child) {
-                      return Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: (!isConnected &&
-                                  _printerManager.hasSavedPrinter())
-                              ? _reconnect
-                              : null,
-                          icon: Icon(Icons.refresh),
-                          label: Text('Reconnect'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange[600],
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                  ValueListenableBuilder<Map<String, PrinterInfo>>(
+                    valueListenable: _printerManager.printersNotifier,
+                    builder: (context, printers, child) {
+                      return ElevatedButton.icon(
+                        onPressed: printers.isNotEmpty ? _disconnectAll : null,
+                        icon: Icon(Icons.delete_sweep),
+                        label: Text('Clear'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600],
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       );
@@ -468,9 +549,9 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
               ),
             ),
 
-            SizedBox(height: 10),
+            SizedBox(height: 16),
 
-            // Printer List
+            // Device List
             Expanded(
               child: Container(
                 margin: EdgeInsets.all(16),
@@ -488,17 +569,15 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
                 child: Column(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(20),
+                      padding: EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          Icon(Icons.print, color: Colors.blue[600]),
+                          Icon(Icons.devices, color: Colors.blue[600]),
                           SizedBox(width: 10),
                           Text(
-                            'Daftar Printer',
+                            'Daftar Perangkat',
                             style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -509,224 +588,65 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.print_disabled,
-                                    size: 80,
-                                    color: Colors.grey[400],
-                                  ),
+                                  Icon(Icons.bluetooth_searching,
+                                      size: 80, color: Colors.grey[400]),
                                   SizedBox(height: 20),
                                   Text(
-                                    'Tidak ada printer ditemukan',
+                                    'Tidak ada perangkat ditemukan',
                                     style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                    ),
+                                        fontSize: 16, color: Colors.grey[600]),
                                   ),
                                   SizedBox(height: 10),
                                   Text(
-                                    'Pastikan printer sudah dipair\ndan tekan tombol scan',
-                                    textAlign: TextAlign.center,
+                                    'Tekan tombol scan untuk mencari',
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[500],
-                                    ),
+                                        fontSize: 14, color: Colors.grey[500]),
                                   ),
                                 ],
                               ),
                             )
-                          : ValueListenableBuilder<BluetoothDevice?>(
-                              valueListenable:
-                                  _printerManager.selectedDeviceNotifier,
-                              builder: (context, selectedDevice, child) {
-                                return ValueListenableBuilder<bool>(
-                                  valueListenable:
-                                      _printerManager.connectionStatus,
-                                  builder: (context, isConnected, child) {
-                                    return ListView.builder(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 20),
-                                      itemCount: _devicesList.length,
-                                      itemBuilder: (context, index) {
-                                        BluetoothDevice device =
-                                            _devicesList[index];
-                                        bool isSelected =
-                                            selectedDevice?.remoteId ==
-                                                device.remoteId;
+                          : ListView.builder(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _devicesList.length,
+                              itemBuilder: (context, index) {
+                                BluetoothDevice device = _devicesList[index];
 
-                                        // Check if this is the saved printer
-                                        Map<String, String?> savedInfo =
-                                            _printerManager
-                                                .getSavedPrinterInfo();
-                                        bool isSaved = savedInfo['id'] ==
-                                            device.remoteId.toString();
-
-                                        return Container(
-                                          margin: EdgeInsets.only(bottom: 10),
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? Colors.blue[50]
-                                                : (isSaved
-                                                    ? Colors.green[50]
-                                                    : Colors.grey[50]),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                            border: Border.all(
-                                              color: isSelected
-                                                  ? Colors.blue[300]!
-                                                  : (isSaved
-                                                      ? Colors.green[300]!
-                                                      : Colors.grey[300]!),
-                                            ),
-                                          ),
-                                          child: ListTile(
-                                            leading: Stack(
-                                              children: [
-                                                CircleAvatar(
-                                                  backgroundColor: isSelected
-                                                      ? Colors.blue[600]
-                                                      : (isSaved
-                                                          ? Colors.green[600]
-                                                          : Colors.grey[600]),
-                                                  child: Icon(
-                                                    Icons.print,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                if (isSaved)
-                                                  Positioned(
-                                                    right: 0,
-                                                    top: 0,
-                                                    child: Container(
-                                                      width: 16,
-                                                      height: 16,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                      child: Icon(
-                                                        Icons.star,
-                                                        color: Colors.white,
-                                                        size: 12,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                            title: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    device.platformName
-                                                            .isNotEmpty
-                                                        ? device.platformName
-                                                        : 'Unknown Device',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold),
-                                                  ),
-                                                ),
-                                                if (isSaved)
-                                                  Container(
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.green,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              10),
-                                                    ),
-                                                    child: Text(
-                                                      'Tersimpan',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                            subtitle: Text(
-                                                device.remoteId.toString()),
-                                            trailing: ElevatedButton(
-                                              onPressed: () =>
-                                                  _connectToDevice(device),
-                                              child: Text(
-                                                isSelected && isConnected
-                                                    ? 'Terhubung'
-                                                    : 'Hubungkan',
-                                              ),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    isSelected && isConnected
-                                                        ? Colors.green
-                                                        : Colors.blue[600],
-                                                foregroundColor: Colors.white,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
+                                return Card(
+                                  margin: EdgeInsets.only(bottom: 10),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: Colors.blue[600],
+                                      child: Icon(Icons.print,
+                                          color: Colors.white),
+                                    ),
+                                    title: Text(
+                                      device.platformName.isNotEmpty
+                                          ? device.platformName
+                                          : 'Unknown Device',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    subtitle: Text(device.remoteId.toString()),
+                                    trailing: ElevatedButton(
+                                      onPressed: () =>
+                                          _showRoleSelectionDialog(device),
+                                      child: Text('Hubungkan'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue[600],
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 );
                               },
                             ),
                     ),
                   ],
                 ),
-              ),
-            ),
-
-            // Action Buttons
-            Container(
-              padding: EdgeInsets.all(16),
-              child: ValueListenableBuilder<bool>(
-                valueListenable: _printerManager.connectionStatus,
-                builder: (context, isConnected, child) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: isConnected ? _testPrint : null,
-                          icon: Icon(Icons.print),
-                          label: Text('Test Print'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green[600],
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: isConnected ? _disconnect : null,
-                          icon: Icon(Icons.bluetooth_disabled),
-                          label: Text('Putuskan'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red[600],
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
               ),
             ),
           ],

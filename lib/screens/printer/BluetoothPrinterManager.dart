@@ -5,220 +5,234 @@ import 'dart:typed_data';
 import 'dart:convert';
 import 'package:shao_kao/storage_service.dart';
 
-// Import bluetooth package only on supported platforms
 import 'package:flutter_blue_plus/flutter_blue_plus.dart'
     if (dart.library.html) 'package:pos/bluetooth_stub.dart'
     if (dart.library.io) 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-// Singleton class untuk manage koneksi printer dengan persistent connection
+// Model untuk menyimpan info printer
+class PrinterInfo {
+  final String id;
+  final String name;
+  final String role; // 'admin', 'dapur1', 'dapur2'
+  BluetoothDevice? device;
+  BluetoothCharacteristic? writeCharacteristic;
+  bool isConnected;
+  int mtu;
+  int maxChunkSize;
+
+  PrinterInfo({
+    required this.id,
+    required this.name,
+    required this.role,
+    this.device,
+    this.writeCharacteristic,
+    this.isConnected = false,
+    this.mtu = 23,
+    this.maxChunkSize = 50,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'role': role,
+      };
+
+  factory PrinterInfo.fromJson(Map<String, dynamic> json) => PrinterInfo(
+        id: json['id'],
+        name: json['name'],
+        role: json['role'],
+      );
+}
+
+// Singleton class untuk manage multiple printers
 class BluetoothPrinterManager {
   static final BluetoothPrinterManager _instance =
       BluetoothPrinterManager._internal();
   factory BluetoothPrinterManager() => _instance;
   BluetoothPrinterManager._internal();
 
-  BluetoothDevice? _selectedDevice;
-  BluetoothCharacteristic? _writeCharacteristic;
-  bool _isConnected = false;
+  // Map untuk menyimpan semua printer berdasarkan role
+  final Map<String, PrinterInfo> _printers = {};
   bool _isReconnecting = false;
   bool _isBluetoothSupported = false;
 
-  // NEW: MTU and chunk size management
-  int _mtu = 23; // Default BLE MTU
-  int _maxChunkSize = 200; // Conservative default, will be updated based on MTU
   static const int _defaultMaxChunkSize = 200;
   static const int _minChunkSize = 50;
 
-  // Stream controllers untuk notify perubahan state
-  final ValueNotifier<bool> connectionStatus = ValueNotifier<bool>(false);
-  final ValueNotifier<BluetoothDevice?> selectedDeviceNotifier =
-      ValueNotifier<BluetoothDevice?>(null);
+  // Notifiers untuk UI updates
+  final ValueNotifier<Map<String, PrinterInfo>> printersNotifier =
+      ValueNotifier<Map<String, PrinterInfo>>({});
+  final ValueNotifier<int> connectedCountNotifier = ValueNotifier<int>(0);
 
-  // Storage service untuk menyimpan data printer
   final StorageService _storage = StorageService.instance;
-
-  // Keys untuk storage
-  static const String _printerIdKey = 'saved_printer_id';
-  static const String _printerNameKey = 'saved_printer_name';
+  static const String _printersKey = 'saved_printers_list';
 
   // Getters
-  BluetoothDevice? get selectedDevice => _selectedDevice;
-  BluetoothCharacteristic? get writeCharacteristic => _writeCharacteristic;
-  bool get isConnected => _isConnected;
-  bool get isReconnecting => _isReconnecting;
   bool get isBluetoothSupported => _isBluetoothSupported;
-  int get maxChunkSize => _maxChunkSize;
+  bool get isReconnecting => _isReconnecting;
+  Map<String, PrinterInfo> get printers => Map.from(_printers);
+  int get connectedCount => _printers.values.where((p) => p.isConnected).length;
 
-  // Check if current platform supports Bluetooth
+  // Get printer by role
+  PrinterInfo? getPrinterByRole(String role) => _printers[role];
+
+  // Check if specific role is connected
+  bool isRoleConnected(String role) => _printers[role]?.isConnected ?? false;
+
   bool _checkBluetoothSupport() {
-    if (kIsWeb) {
-      print('BluetoothPrinterManager: Web platform - Bluetooth not supported');
-      return false;
-    }
-
+    if (kIsWeb) return false;
     try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        print(
-            'BluetoothPrinterManager: Mobile platform detected - Bluetooth supported');
-        return true;
-      } else {
-        print(
-            'BluetoothPrinterManager: Desktop platform - Bluetooth not supported');
-        return false;
-      }
+      return Platform.isAndroid || Platform.isIOS;
     } catch (e) {
-      print('BluetoothPrinterManager: Platform check error: $e');
       return false;
     }
   }
 
-  // NEW: Calculate optimal chunk size based on MTU
-  void _calculateChunkSize() {
+  void _calculateChunkSize(PrinterInfo printer) {
     try {
-      if (_mtu <= 23) {
-        // Default BLE MTU
-        _maxChunkSize = _minChunkSize;
+      if (printer.mtu <= 23) {
+        printer.maxChunkSize = _minChunkSize;
       } else {
-        // Conservative approach: use 70% of available space
-        // MTU - 3 (ATT header) - 20 (safety margin) = usable space
-        int usableSpace = ((_mtu - 23) * 0.7).round();
-        _maxChunkSize = (usableSpace + _minChunkSize)
+        int usableSpace = ((printer.mtu - 23) * 0.7).round();
+        printer.maxChunkSize = (usableSpace + _minChunkSize)
             .clamp(_minChunkSize, _defaultMaxChunkSize);
       }
-
-      print('BluetoothPrinterManager: MTU: $_mtu, Chunk size: $_maxChunkSize');
+      print(
+          'Printer ${printer.role}: MTU ${printer.mtu}, Chunk ${printer.maxChunkSize}');
     } catch (e) {
-      print('BluetoothPrinterManager: Error calculating chunk size: $e');
-      _maxChunkSize = _minChunkSize;
+      printer.maxChunkSize = _minChunkSize;
     }
   }
 
-  // Initialize - dipanggil saat app start
   Future<void> initialize() async {
-    print('BluetoothPrinterManager: Initializing...');
-
+    print('MultiPrinterManager: Initializing...');
     _isBluetoothSupported = _checkBluetoothSupport();
 
     if (!_isBluetoothSupported) {
-      print(
-          'BluetoothPrinterManager: Bluetooth not supported on this platform');
+      print('MultiPrinterManager: Bluetooth not supported');
       return;
     }
 
-    // Check if there's a saved printer to reconnect
+    // Load saved printers
+    await _loadSavedPrinters();
+
+    // Attempt auto reconnect
     await _attemptAutoReconnect();
 
-    // Listen to Bluetooth state changes
+    // Listen to Bluetooth state
     try {
       FlutterBluePlus.adapterState.listen((BluetoothAdapterState state) {
-        if (state == BluetoothAdapterState.on && !_isConnected) {
+        if (state == BluetoothAdapterState.on) {
           _attemptAutoReconnect();
-        } else if (state != BluetoothAdapterState.on && _isConnected) {
-          _updateConnectionStatus(false);
+        } else {
+          _disconnectAll();
         }
       });
     } catch (e) {
-      print('BluetoothPrinterManager: Failed to listen to adapter state: $e');
+      print('MultiPrinterManager: Failed to listen adapter state: $e');
     }
   }
 
-  // Attempt to reconnect to saved printer
+  Future<void> _loadSavedPrinters() async {
+    try {
+      String? savedData = _storage.getString(_printersKey);
+      if (savedData != null) {
+        List<dynamic> jsonList = jsonDecode(savedData);
+        for (var json in jsonList) {
+          PrinterInfo printer = PrinterInfo.fromJson(json);
+          _printers[printer.role] = printer;
+        }
+        print('MultiPrinterManager: Loaded ${_printers.length} saved printers');
+        _updateNotifiers();
+      }
+    } catch (e) {
+      print('MultiPrinterManager: Error loading saved printers: $e');
+    }
+  }
+
+  Future<void> _savePrinters() async {
+    try {
+      List<Map<String, dynamic>> jsonList =
+          _printers.values.map((p) => p.toJson()).toList();
+      _storage.setString(_printersKey, jsonEncode(jsonList));
+      print('MultiPrinterManager: Saved ${_printers.length} printers');
+    } catch (e) {
+      print('MultiPrinterManager: Error saving printers: $e');
+    }
+  }
+
   Future<void> _attemptAutoReconnect() async {
-    if (!_isBluetoothSupported) {
-      print(
-          'BluetoothPrinterManager: Auto reconnect skipped - Bluetooth not supported');
-      return;
-    }
+    if (!_isBluetoothSupported || _isReconnecting || _printers.isEmpty) return;
 
-    if (_isReconnecting) return;
-
-    String? savedPrinterId = _storage.getString(_printerIdKey);
-    String? savedPrinterName = _storage.getString(_printerNameKey);
-
-    if (savedPrinterId == null) {
-      print('BluetoothPrinterManager: No saved printer found');
-      return;
-    }
-
-    print(
-        'BluetoothPrinterManager: Attempting to reconnect to saved printer: $savedPrinterName ($savedPrinterId)');
     _isReconnecting = true;
+    print(
+        'MultiPrinterManager: Auto reconnecting to ${_printers.length} printers...');
 
     try {
-      // Check if bluetooth is available
       BluetoothAdapterState state = await FlutterBluePlus.adapterState.first;
       if (state != BluetoothAdapterState.on) {
-        print('BluetoothPrinterManager: Bluetooth not available');
         _isReconnecting = false;
         return;
       }
 
-      // Try to find the device in system devices first
       List<BluetoothDevice> systemDevices =
           await FlutterBluePlus.systemDevices([]);
-      BluetoothDevice? targetDevice = systemDevices.firstWhere(
-        (device) => device.remoteId.toString() == savedPrinterId,
-        orElse: () => null as BluetoothDevice,
-      );
 
-      if (targetDevice == null) {
-        print(
-            'BluetoothPrinterManager: Saved printer not found in system devices');
-        try {
-          targetDevice = BluetoothDevice.fromId(savedPrinterId);
-        } catch (e) {
-          print('BluetoothPrinterManager: Failed to create device from ID: $e');
-          _clearSavedPrinter();
-          _isReconnecting = false;
-          return;
+      for (var entry in _printers.entries) {
+        PrinterInfo printer = entry.value;
+
+        BluetoothDevice? targetDevice = systemDevices.firstWhere(
+          (device) => device.remoteId.toString() == printer.id,
+          orElse: () => null as BluetoothDevice,
+        );
+
+        if (targetDevice == null) {
+          try {
+            targetDevice = BluetoothDevice.fromId(printer.id);
+          } catch (e) {
+            print(
+                'MultiPrinterManager: Failed to create device for ${printer.role}');
+            continue;
+          }
         }
-      }
 
-      // Attempt to connect
-      bool connected =
-          await _connectToDeviceInternal(targetDevice, isAutoReconnect: true);
-
-      if (connected) {
-        print(
-            'BluetoothPrinterManager: Successfully reconnected to saved printer');
-      } else {
-        print('BluetoothPrinterManager: Failed to reconnect to saved printer');
+        await _connectToDeviceInternal(targetDevice, printer.role, printer.name,
+            isAutoReconnect: true);
+        await Future.delayed(Duration(milliseconds: 500));
       }
     } catch (e) {
-      print('BluetoothPrinterManager: Auto reconnect error: $e');
+      print('MultiPrinterManager: Auto reconnect error: $e');
     }
 
     _isReconnecting = false;
   }
 
-  Future<bool> connectToDevice(BluetoothDevice device) async {
-    if (!_isBluetoothSupported) {
-      print(
-          'BluetoothPrinterManager: Connect failed - Bluetooth not supported');
-      return false;
-    }
-    return await _connectToDeviceInternal(device, isAutoReconnect: false);
+  // Connect to device with role assignment
+  Future<bool> connectToDevice(
+      BluetoothDevice device, String role, String name) async {
+    if (!_isBluetoothSupported) return false;
+    return await _connectToDeviceInternal(device, role, name,
+        isAutoReconnect: false);
   }
 
-  Future<bool> _connectToDeviceInternal(BluetoothDevice device,
-      {required bool isAutoReconnect}) async {
+  Future<bool> _connectToDeviceInternal(
+    BluetoothDevice device,
+    String role,
+    String name, {
+    required bool isAutoReconnect,
+  }) async {
     if (!_isBluetoothSupported) return false;
 
     try {
-      if (_isConnected && _selectedDevice?.remoteId == device.remoteId) {
-        print('BluetoothPrinterManager: Already connected to this device');
+      // Check if already connected
+      if (_printers[role]?.isConnected == true &&
+          _printers[role]?.id == device.remoteId.toString()) {
+        print('MultiPrinterManager: $role already connected');
         return true;
       }
 
-      // Disconnect from current device if connected to different one
-      if (_isConnected && _selectedDevice?.remoteId != device.remoteId) {
-        await _disconnectInternal(clearStorage: false);
-      }
+      print('MultiPrinterManager: Connecting to $name as $role...');
 
-      print(
-          'BluetoothPrinterManager: Connecting to ${device.platformName} (${device.remoteId})...');
-
-      // Check if device is already connected
       bool alreadyConnected = await device.connectionState.first
           .then((state) => state == BluetoothConnectionState.connected)
           .catchError((_) => false);
@@ -227,33 +241,21 @@ class BluetoothPrinterManager {
         await device.connect(timeout: Duration(seconds: 15));
       }
 
-      // NEW: Get and update MTU
+      // Get MTU
+      int mtu = 23;
       try {
-        _mtu = await device.mtu.first;
-        print('BluetoothPrinterManager: Current MTU: $_mtu');
-
-        // Try to request larger MTU if possible
-        if (_mtu < 200) {
-          try {
-            int newMtu = await device.requestMtu(250);
-            _mtu = newMtu;
-            print('BluetoothPrinterManager: MTU updated to: $_mtu');
-          } catch (e) {
-            print('BluetoothPrinterManager: Could not increase MTU: $e');
-          }
+        mtu = await device.mtu.first;
+        if (mtu < 200) {
+          int newMtu = await device.requestMtu(250);
+          mtu = newMtu;
         }
-
-        _calculateChunkSize();
       } catch (e) {
-        print('BluetoothPrinterManager: Error handling MTU: $e');
-        _mtu = 23; // Default
-        _calculateChunkSize();
+        print('MultiPrinterManager: MTU error for $role: $e');
       }
 
       // Discover services
       List<BluetoothService> services = await device.discoverServices();
 
-      // Find writable characteristic
       BluetoothCharacteristic? writeChar;
       for (BluetoothService service in services) {
         for (BluetoothCharacteristic characteristic
@@ -268,215 +270,178 @@ class BluetoothPrinterManager {
       }
 
       if (writeChar == null) {
-        throw Exception(
-            'Tidak dapat menemukan characteristic yang dapat ditulis');
+        throw Exception('No writable characteristic found');
       }
 
-      _selectedDevice = device;
-      _writeCharacteristic = writeChar;
+      // Create or update printer info
+      PrinterInfo printer = PrinterInfo(
+        id: device.remoteId.toString(),
+        name: name,
+        role: role,
+        device: device,
+        writeCharacteristic: writeChar,
+        isConnected: true,
+        mtu: mtu,
+      );
 
-      // Save printer info for future reconnection
+      _calculateChunkSize(printer);
+      _printers[role] = printer;
+
       if (!isAutoReconnect) {
-        _storage.setString(_printerIdKey, device.remoteId.toString());
-        _storage.setString(_printerNameKey, device.platformName);
-        print(
-            'BluetoothPrinterManager: Printer info saved for future reconnection');
+        await _savePrinters();
       }
 
-      _updateConnectionStatus(true);
+      _updateNotifiers();
 
-      // Listen to connection state changes
+      // Listen to disconnection
       device.connectionState.listen((BluetoothConnectionState state) {
-        print('BluetoothPrinterManager: Connection state changed: $state');
-
         if (state == BluetoothConnectionState.disconnected) {
-          _selectedDevice = null;
-          _writeCharacteristic = null;
-          _updateConnectionStatus(false);
-
-          if (!_isManualDisconnect) {
-            print(
-                'BluetoothPrinterManager: Unexpected disconnection, attempting to reconnect...');
-            Future.delayed(Duration(seconds: 3), () {
-              _attemptAutoReconnect();
-            });
-          }
-          _isManualDisconnect = false;
+          _handleDisconnection(role);
         }
       });
 
-      print(
-          'BluetoothPrinterManager: Successfully connected to ${device.platformName}');
+      print('MultiPrinterManager: Successfully connected $role');
       return true;
     } catch (e) {
-      print('BluetoothPrinterManager: Connection error: $e');
-      _selectedDevice = null;
-      _writeCharacteristic = null;
-      _updateConnectionStatus(false);
-      rethrow;
+      print('MultiPrinterManager: Connection error for $role: $e');
+      return false;
     }
   }
 
-  bool _isManualDisconnect = false;
+  void _handleDisconnection(String role) {
+    PrinterInfo? printer = _printers[role];
+    if (printer != null) {
+      printer.isConnected = false;
+      printer.device = null;
+      printer.writeCharacteristic = null;
+      _updateNotifiers();
 
-  Future<void> disconnect() async {
-    await _disconnectInternal(clearStorage: true);
+      print('MultiPrinterManager: $role disconnected, attempting reconnect...');
+      Future.delayed(Duration(seconds: 3), () {
+        _attemptAutoReconnect();
+      });
+    }
   }
 
-  Future<void> _disconnectInternal({required bool clearStorage}) async {
-    if (!_isBluetoothSupported) return;
-
-    _isManualDisconnect = clearStorage;
-
-    if (_selectedDevice != null) {
+  // Disconnect specific printer
+  Future<void> disconnectPrinter(String role) async {
+    PrinterInfo? printer = _printers[role];
+    if (printer?.device != null) {
       try {
-        print(
-            'BluetoothPrinterManager: Disconnecting from ${_selectedDevice!.platformName}...');
-        await _selectedDevice!.disconnect();
+        await printer!.device!.disconnect();
       } catch (e) {
-        print('BluetoothPrinterManager: Error disconnecting: $e');
+        print('MultiPrinterManager: Error disconnecting $role: $e');
       }
     }
 
-    _selectedDevice = null;
-    _writeCharacteristic = null;
-    _updateConnectionStatus(false);
+    _printers.remove(role);
+    await _savePrinters();
+    _updateNotifiers();
+    print('MultiPrinterManager: $role removed');
+  }
 
-    if (clearStorage) {
-      _clearSavedPrinter();
-      print('BluetoothPrinterManager: Saved printer info cleared');
+  // Disconnect all printers
+  Future<void> disconnectAll() async {
+    await _disconnectAll();
+    _printers.clear();
+    await _savePrinters();
+    _updateNotifiers();
+  }
+
+  Future<void> _disconnectAll() async {
+    for (var printer in _printers.values) {
+      if (printer.device != null) {
+        try {
+          await printer.device!.disconnect();
+        } catch (e) {
+          print('MultiPrinterManager: Error disconnecting ${printer.role}: $e');
+        }
+      }
+      printer.isConnected = false;
     }
+    _updateNotifiers();
   }
 
-  void _updateConnectionStatus(bool connected) {
-    _isConnected = connected;
-    connectionStatus.value = connected;
-    selectedDeviceNotifier.value = connected ? _selectedDevice : null;
-    print('BluetoothPrinterManager: Connection status updated: $connected');
+  void _updateNotifiers() {
+    printersNotifier.value = Map.from(_printers);
+    connectedCountNotifier.value = connectedCount;
   }
 
-  void _clearSavedPrinter() {
-    _storage.removeKey(_printerIdKey);
-    _storage.removeKey(_printerNameKey);
-  }
-
-  // Get saved printer info
-  Map<String, String?> getSavedPrinterInfo() {
-    return {
-      'id': _storage.getString(_printerIdKey),
-      'name': _storage.getString(_printerNameKey),
-    };
-  }
-
-  // Check if there's a saved printer
-  bool hasSavedPrinter() {
-    return _storage.getString(_printerIdKey) != null;
-  }
-
-  Future<bool> testPrint() async {
-    if (!_isBluetoothSupported) {
-      print(
-          'BluetoothPrinterManager: Test print failed - Bluetooth not supported');
+  // Print to specific printer
+  Future<bool> printToRole(String role, List<int> data) async {
+    PrinterInfo? printer = _printers[role];
+    if (printer == null ||
+        !printer.isConnected ||
+        printer.writeCharacteristic == null) {
+      print('MultiPrinterManager: Cannot print to $role - not connected');
       return false;
     }
 
-    if (!_isConnected || _writeCharacteristic == null) {
-      print('BluetoothPrinterManager: Cannot test print - not connected');
-      return false;
-    }
-
-    try {
-      List<int> commands = [];
-
-      // Initialize printer
-      commands.addAll([0x1B, 0x40]);
-      commands.addAll([0x1B, 0x61, 0x01]);
-      commands.addAll([0x1D, 0x21, 0x11]);
-
-      String testText = "=== TES PRINTER ===\n\n";
-      commands.addAll(utf8.encode(testText));
-
-      commands.addAll([0x1D, 0x21, 0x00]);
-      commands.addAll([0x1B, 0x61, 0x00]);
-
-      String detailText = "";
-      detailText += "Printer: ${_selectedDevice?.platformName}\n";
-      detailText +=
-          "Platform: ${_isBluetoothSupported ? 'Mobile' : 'Unsupported'}\n";
-      detailText += "Status: Terhubung\n";
-      detailText += "MTU: $_mtu, Chunk: $_maxChunkSize\n";
-      detailText += "Waktu: ${DateTime.now().toString().split('.')[0]}\n\n";
-      detailText +=
-          "Test karakter:\n1234567890\nABCDEFGHIJK\nabcdefghijk\n\nTest print berhasil!\n\n";
-
-      commands.addAll(utf8.encode(detailText));
-      commands.addAll([0x0A, 0x0A, 0x0A]);
-      commands.addAll([0x1D, 0x56, 0x00]);
-
-      // Use the new chunked print method
-      return await _printDataChunked(commands);
-    } catch (e) {
-      print('BluetoothPrinterManager: Test print error: $e');
-      return false;
-    }
+    return await _printDataChunked(printer, data);
   }
 
-  // NEW: Chunked data printing method
-  Future<bool> _printDataChunked(List<int> data) async {
-    if (!_isConnected || _writeCharacteristic == null) {
-      print('BluetoothPrinterManager: Cannot print - not connected');
+  // Print to multiple printers
+  Future<Map<String, bool>> printToMultiple(
+      List<String> roles, List<int> data) async {
+    Map<String, bool> results = {};
+
+    for (String role in roles) {
+      results[role] = await printToRole(role, data);
+      await Future.delayed(Duration(milliseconds: 100));
+    }
+
+    return results;
+  }
+
+  // Print to all connected printers
+  Future<Map<String, bool>> printToAll(List<int> data) async {
+    List<String> connectedRoles = _printers.entries
+        .where((e) => e.value.isConnected)
+        .map((e) => e.key)
+        .toList();
+
+    return await printToMultiple(connectedRoles, data);
+  }
+
+  Future<bool> _printDataChunked(PrinterInfo printer, List<int> data) async {
+    if (!printer.isConnected || printer.writeCharacteristic == null) {
       return false;
     }
 
     try {
+      int chunkSize = printer.maxChunkSize;
+      int totalChunks = (data.length / chunkSize).ceil();
+
       print(
-          'BluetoothPrinterManager: Printing ${data.length} bytes in chunks of $_maxChunkSize');
+          'MultiPrinterManager: Printing to ${printer.role} - ${data.length} bytes in $totalChunks chunks');
 
-      int totalChunks = (data.length / _maxChunkSize).ceil();
-      print('BluetoothPrinterManager: Total chunks to send: $totalChunks');
-
-      for (int i = 0; i < data.length; i += _maxChunkSize) {
-        int end =
-            (i + _maxChunkSize < data.length) ? i + _maxChunkSize : data.length;
+      for (int i = 0; i < data.length; i += chunkSize) {
+        int end = (i + chunkSize < data.length) ? i + chunkSize : data.length;
         List<int> chunk = data.sublist(i, end);
-
-        int chunkNumber = (i / _maxChunkSize).floor() + 1;
-        print(
-            'BluetoothPrinterManager: Sending chunk $chunkNumber/$totalChunks (${chunk.length} bytes)');
 
         try {
           Uint8List chunkData = Uint8List.fromList(chunk);
-          await _writeCharacteristic!.write(chunkData, withoutResponse: true);
+          await printer.writeCharacteristic!
+              .write(chunkData, withoutResponse: true);
 
-          // Small delay between chunks to prevent overwhelming the printer
-          if (i + _maxChunkSize < data.length) {
+          if (i + chunkSize < data.length) {
             await Future.delayed(Duration(milliseconds: 50));
           }
         } catch (e) {
-          print(
-              'BluetoothPrinterManager: Error sending chunk $chunkNumber: $e');
-
-          // If chunk still too large, try smaller size
           if (e.toString().contains('data longer than allowed')) {
-            print(
-                'BluetoothPrinterManager: Chunk too large, reducing size and retrying...');
-            int smallerChunkSize = (_maxChunkSize / 2).floor();
+            int smallerChunkSize = (chunkSize / 2).floor();
             if (smallerChunkSize < _minChunkSize) {
-              throw Exception('Data chunk too large even at minimum size');
+              throw Exception('Chunk too large');
             }
 
-            // Temporarily reduce chunk size and retry this chunk
             for (int j = i; j < end; j += smallerChunkSize) {
               int smallEnd =
                   (j + smallerChunkSize < end) ? j + smallerChunkSize : end;
               List<int> smallChunk = data.sublist(j, smallEnd);
               Uint8List smallChunkData = Uint8List.fromList(smallChunk);
 
-              print(
-                  'BluetoothPrinterManager: Sending smaller chunk (${smallChunk.length} bytes)');
-              await _writeCharacteristic!
+              await printer.writeCharacteristic!
                   .write(smallChunkData, withoutResponse: true);
-
               if (j + smallerChunkSize < end) {
                 await Future.delayed(Duration(milliseconds: 50));
               }
@@ -487,42 +452,64 @@ class BluetoothPrinterManager {
         }
       }
 
-      print('BluetoothPrinterManager: All chunks sent successfully');
+      print('MultiPrinterManager: Print to ${printer.role} successful');
       return true;
     } catch (e) {
-      print('BluetoothPrinterManager: Chunked print error: $e');
+      print('MultiPrinterManager: Print error to ${printer.role}: $e');
       return false;
     }
   }
 
-  // Updated printData method to use chunking
-  Future<bool> printData(List<int> data) async {
-    if (!_isBluetoothSupported) {
-      print('BluetoothPrinterManager: Print failed - Bluetooth not supported');
+  // Test print for specific printer
+  Future<bool> testPrint(String role) async {
+    PrinterInfo? printer = _printers[role];
+    if (printer == null || !printer.isConnected) {
       return false;
     }
 
-    return await _printDataChunked(data);
-  }
+    try {
+      List<int> commands = [];
 
-  Future<bool> reconnect() async {
-    if (!_isBluetoothSupported) {
-      print(
-          'BluetoothPrinterManager: Reconnect failed - Bluetooth not supported');
+      commands.addAll([0x1B, 0x40]); // Initialize
+      commands.addAll([0x1B, 0x61, 0x01]); // Center align
+      commands.addAll([0x1D, 0x21, 0x11]); // Double size
+
+      String testText = "=== TES PRINTER ===\n\n";
+      commands.addAll(utf8.encode(testText));
+
+      commands.addAll([0x1D, 0x21, 0x00]); // Normal size
+      commands.addAll([0x1B, 0x61, 0x00]); // Left align
+
+      String detailText = "";
+      detailText += "Nama: ${printer.name}\n";
+      detailText += "Role: ${printer.role}\n";
+      detailText += "Status: Terhubung\n";
+      detailText += "MTU: ${printer.mtu}, Chunk: ${printer.maxChunkSize}\n";
+      detailText += "Waktu: ${DateTime.now().toString().split('.')[0]}\n\n";
+      detailText += "Test print berhasil!\n\n";
+
+      commands.addAll(utf8.encode(detailText));
+      commands.addAll([0x0A, 0x0A, 0x0A]);
+      commands.addAll([0x1D, 0x56, 0x00]); // Cut paper
+
+      return await _printDataChunked(printer, commands);
+    } catch (e) {
+      print('MultiPrinterManager: Test print error for $role: $e');
       return false;
     }
-
-    if (_isReconnecting) {
-      print('BluetoothPrinterManager: Reconnection already in progress');
-      return false;
-    }
-
-    print('BluetoothPrinterManager: Manual reconnect requested');
-    await _attemptAutoReconnect();
-    return _isConnected;
   }
 
-  void debugInfo() {
-    Map<String, String?> savedInfo = getSavedPrinterInfo();
+  // Get saved printers info
+  List<Map<String, String>> getSavedPrintersInfo() {
+    return _printers.values
+        .map((p) => {
+              'role': p.role,
+              'name': p.name,
+              'id': p.id,
+              'connected': p.isConnected.toString(),
+            })
+        .toList();
   }
+
+  bool hasSavedPrinters() => _printers.isNotEmpty;
 }
