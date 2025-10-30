@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
-import 'package:shao_kao/controller/splash/splash_controller.dart';
+import 'package:shao_kao/bloc/splash/splash_bloc.dart';
+import 'package:shao_kao/bloc/splash/splash_event.dart';
+import 'package:shao_kao/bloc/splash/splash_state.dart';
+import 'package:shao_kao/screens/dashboard/dashboard_screen.dart';
+import 'package:shao_kao/screens/dashboard/sidebar.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,8 +20,7 @@ class _SplashScreenState extends State<SplashScreen>
   Animation<double>? _fadeAnimation;
   Animation<double>? _scaleAnimation;
 
-  // Initialize the controller
-  final SplashController splashController = Get.put(SplashController());
+
 
   @override
   void initState() {
@@ -46,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController!.forward();
 
     // Check authentication status after animation completes
-    splashController.checkAuthenticationStatus();
+    context.read<SplashBloc>().add(const SplashAuthenticationChecked());
   }
 
   @override
@@ -57,96 +61,108 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFF8C00), Color(0xFFFF7F50), Color(0xFFFFA500)],
+    return BlocListener<SplashBloc, SplashState>(
+      listener: (context, state) {
+        if (state is SplashNavigateToLogin) {
+          Get.offAllNamed('/login');
+        } else if (state is SplashNavigateToDashboard) {
+          Get.offAll(() => const MainLayout(
+            currentRoute: '/dashboard',
+            child: DashboardScreen(),
+          ));
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFFF8C00), Color(0xFFFF7F50), Color(0xFFFFA500)],
+            ),
           ),
-        ),
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _animationController!,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation!,
-                child: ScaleTransition(
-                  scale: _scaleAnimation!,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo Container
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 20,
-                              offset: Offset(0, 10),
+          child: Center(
+            child: AnimatedBuilder(
+              animation: _animationController!,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation!,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation!,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Logo Container
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 20,
+                                offset: Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Image.asset(
+                              'assets/icons/shaokao.png',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                // Fallback jika gambar tidak ditemukan
+                                return Icon(
+                                  Icons.restaurant,
+                                  size: 60,
+                                  color: Color(0xFFFF8C00),
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Image.asset(
-                            'assets/icons/shaokao.png',
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              // Fallback jika gambar tidak ditemukan
-                              return Icon(
-                                Icons.restaurant,
-                                size: 60,
-                                color: Color(0xFFFF8C00),
-                              );
-                            },
                           ),
                         ),
-                      ),
-                      SizedBox(height: 30),
+                        SizedBox(height: 30),
 
-                      // App Name
-                      Text(
-                        'Shao Kao',
-                        style: TextStyle(
-                          fontSize: 42,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 2,
+                        // App Name
+                        Text(
+                          'Shao Kao',
+                          style: TextStyle(
+                            fontSize: 42,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 2,
+                          ),
                         ),
-                      ),
 
-                      SizedBox(height: 10),
+                        SizedBox(height: 10),
 
-                      // Tagline
-                      Text(
-                        'Sistem Informasi Restaurant',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
-                          letterSpacing: 1,
+                        // Tagline
+                        Text(
+                          'Sistem Informasi Restaurant',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.9),
+                            letterSpacing: 1,
+                          ),
                         ),
-                      ),
 
-                      SizedBox(height: 80),
+                        SizedBox(height: 80),
 
-                      // Loading Indicator
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 3,
-                      ),
-                    ],
+                        // Loading Indicator
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 3,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),

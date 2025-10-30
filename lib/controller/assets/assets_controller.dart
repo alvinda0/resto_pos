@@ -74,22 +74,30 @@ class AssetController extends GetxController {
         if (response.metadata != null) {
           totalItems.value = response.metadata!.total;
           totalPages.value = response.metadata!.totalPages;
+        } else {
+          // If no metadata, set defaults
+          totalItems.value = response.data.length;
+          totalPages.value = 1;
         }
 
         // Update available categories
         availableCategories.value = _assetService.getUniqueCategories(assets);
       } else {
         errorMessage.value = response.message;
+        if (response.message.isNotEmpty) {
+          Get.snackbar(
+            'Info',
+            response.message,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.orange.withOpacity(0.1),
+            colorText: Colors.orange,
+          );
+        }
       }
     } catch (e) {
       errorMessage.value = e.toString();
-      Get.snackbar(
-        'Error',
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-      );
+      print('Error loading assets: $e');
+      // Don't show snackbar for every error, just log it
     } finally {
       isLoading.value = false;
     }

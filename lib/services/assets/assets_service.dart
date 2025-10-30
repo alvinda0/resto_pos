@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:shao_kao/http_client.dart';
 import 'package:shao_kao/models/assets/assets_model.dart';
 
@@ -25,8 +24,11 @@ class AssetService extends GetxService {
       final Map<String, String> queryParams = {
         'page': page.toString(),
         'limit': limit.toString(),
-        'search': search,
       };
+
+      if (search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
 
       final response = await _httpClient.get(
         '/assets',
@@ -38,10 +40,21 @@ class AssetService extends GetxService {
         final jsonData = jsonDecode(response.body);
         return AssetResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to get assets: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+            errorData['message'] ?? 'Failed to get assets: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Error getting assets: $e');
+      print('Error getting assets: $e');
+      // Return empty response instead of throwing
+      return AssetResponse(
+        success: false,
+        message: e.toString(),
+        status: 0,
+        timestamp: DateTime.now().toIso8601String(),
+        data: [],
+        metadata: null,
+      );
     }
   }
 
@@ -57,14 +70,15 @@ class AssetService extends GetxService {
         final jsonData = jsonDecode(response.body);
         return AssetSingleResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to get asset: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+            errorData['message'] ?? 'Failed to get asset: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error getting asset: $e');
     }
   }
 
-  // Create new asset
   // Create new asset
   Future<AssetSingleResponse> createAsset(
     Asset asset, {
@@ -82,13 +96,17 @@ class AssetService extends GetxService {
         'name': asset.name,
         'category': asset.category,
         'acquisition_date': asset.acquisitionDate.toIso8601String(),
-        'coverage_end_date': asset.coverageEndDate?.toIso8601String(),
         'cost': asset.cost,
         'residual_value': asset.residualValue,
         'useful_life_months': asset.usefulLifeMonths,
         'dep_method': asset.depMethod,
         'dep_factor': asset.depFactor,
       };
+
+      // Only add coverage_end_date if it's not null
+      if (asset.coverageEndDate != null) {
+        payload['coverage_end_date'] = asset.coverageEndDate!.toIso8601String();
+      }
 
       final response = await _httpClient.post(
         '/assets',
@@ -100,7 +118,9 @@ class AssetService extends GetxService {
         final jsonData = jsonDecode(response.body);
         return AssetSingleResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to create asset: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+            errorData['message'] ?? 'Failed to create asset: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error creating asset: $e');
@@ -124,7 +144,9 @@ class AssetService extends GetxService {
         final jsonData = jsonDecode(response.body);
         return AssetSingleResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to update asset: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+            errorData['message'] ?? 'Failed to update asset: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error updating asset: $e');
@@ -146,7 +168,9 @@ class AssetService extends GetxService {
         final jsonData = jsonDecode(response.body);
         return AssetDeleteResponse.fromJson(jsonData);
       } else {
-        throw Exception('Failed to delete asset: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+            errorData['message'] ?? 'Failed to delete asset: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error deleting asset: $e');

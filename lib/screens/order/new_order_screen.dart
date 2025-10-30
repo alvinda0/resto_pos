@@ -913,77 +913,264 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   }
 
   Widget _buildOrderItem(Map<String, dynamic> item, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 0,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing based on available width
+        bool isCompact = constraints.maxWidth < 300;
+        double iconSize = isCompact ? 32 : 40;
+        double fontSize = isCompact ? 12 : 14;
+        double priceSize = isCompact ? 11 : 12;
+        double padding = isCompact ? 8 : 12;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.08),
+                spreadRadius: 0,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Icon produk
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.restaurant_menu,
-              size: 20,
-              color: Colors.blue.shade600,
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Detail produk
-          Expanded(
-            child: Column(
+          child: IntrinsicHeight(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item['name'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                // Icon produk
+                Container(
+                  width: iconSize,
+                  height: iconSize,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.restaurant_menu,
+                    size: iconSize * 0.5,
+                    color: Colors.blue.shade600,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())} per item',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
+                SizedBox(width: isCompact ? 8 : 12),
+                // Detail produk
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        item['name'] ?? '',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())} per item',
+                        style: TextStyle(
+                          fontSize: priceSize,
+                          color: Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
+                ),
+                SizedBox(width: isCompact ? 6 : 8),
+                // Harga total dan quantity controls
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth * 0.3,
+                      ),
+                      child: Text(
+                        'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFFF8C00),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Quantity controls
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () =>
+                                orderController.decreaseQuantity(index),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              width: isCompact ? 24 : 28,
+                              height: isCompact ? 24 : 28,
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.remove,
+                                size: isCompact ? 14 : 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            constraints: BoxConstraints(
+                              minWidth: isCompact ? 24 : 32,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${item['quantity'] ?? 0}',
+                              style: TextStyle(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () =>
+                                orderController.increaseQuantity(index),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              width: isCompact ? 24 : 28,
+                              height: isCompact ? 24 : 28,
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.add,
+                                size: isCompact ? 14 : 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          // Harga total
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFFF8C00), // Orange color seperti gambar
-                ),
+        );
+      },
+    );
+  }
+
+  // Mobile-specific order item with better spacing
+  Widget _buildMobileOrderItem(Map<String, dynamic> item, int index) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing for mobile
+        bool isVerySmall = constraints.maxWidth < 320;
+        double padding = isVerySmall ? 12 : 16;
+        double iconSize = isVerySmall ? 36 : 40;
+        double fontSize = isVerySmall ? 13 : 14;
+        double priceSize = isVerySmall ? 11 : 12;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.08),
+                spreadRadius: 0,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              const SizedBox(height: 8),
-              // Quantity controls
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with icon and details
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: iconSize,
+                    height: iconSize,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.restaurant_menu,
+                      size: iconSize * 0.5,
+                      color: Colors.blue.shade600,
+                    ),
+                  ),
+                  SizedBox(width: isVerySmall ? 8 : 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          item['name'] ?? '',
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())} per item',
+                          style: TextStyle(
+                            fontSize: priceSize,
+                            color: Colors.grey.shade600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: isVerySmall ? 6 : 8),
+                  Flexible(
+                    child: Text(
+                      'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFF8C00),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Quantity controls centered
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
@@ -997,23 +1184,25 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       onTap: () => orderController.decreaseQuantity(index),
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
-                        width: 28,
-                        height: 28,
+                        width: isVerySmall ? 32 : 36,
+                        height: isVerySmall ? 32 : 36,
                         alignment: Alignment.center,
-                        child: const Icon(
+                        child: Icon(
                           Icons.remove,
-                          size: 16,
+                          size: isVerySmall ? 16 : 18,
                           color: Colors.grey,
                         ),
                       ),
                     ),
                     Container(
-                      constraints: const BoxConstraints(minWidth: 32),
+                      constraints: BoxConstraints(
+                        minWidth: isVerySmall ? 36 : 40,
+                      ),
                       alignment: Alignment.center,
                       child: Text(
                         '${item['quantity'] ?? 0}',
-                        style: const TextStyle(
-                          fontSize: 14,
+                        style: TextStyle(
+                          fontSize: isVerySmall ? 14 : 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
                         ),
@@ -1023,12 +1212,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       onTap: () => orderController.increaseQuantity(index),
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
-                        width: 28,
-                        height: 28,
+                        width: isVerySmall ? 32 : 36,
+                        height: isVerySmall ? 32 : 36,
                         alignment: Alignment.center,
-                        child: const Icon(
+                        child: Icon(
                           Icons.add,
-                          size: 16,
+                          size: isVerySmall ? 16 : 18,
                           color: Colors.grey,
                         ),
                       ),
@@ -1038,137 +1227,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  // Mobile-specific order item with better spacing
-  Widget _buildMobileOrderItem(Map<String, dynamic> item, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 0,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header with icon and details
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.restaurant_menu,
-                  size: 20,
-                  color: Colors.blue.shade600,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item['name'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Rp${orderController.formatPrice((item['price']?.toDouble() ?? 0.0).round())} per item',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                'Rp${orderController.formatPrice((item['totalPrice']?.toDouble() ?? 0.0).round())}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFFF8C00), // Orange color
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Quantity controls centered
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap: () => orderController.decreaseQuantity(index),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.remove,
-                      size: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-                Container(
-                  constraints: const BoxConstraints(minWidth: 40),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '${item['quantity'] ?? 0}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                InkWell(
-                  onTap: () => orderController.increaseQuantity(index),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.add,
-                      size: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

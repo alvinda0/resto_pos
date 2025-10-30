@@ -1,14 +1,13 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shao_kao/controller/category/category_controller.dart';
+import 'package:shao_kao/bloc/bloc_providers.dart';
 import 'package:shao_kao/models/routes.dart';
-import 'package:shao_kao/controller/auth/auth_controller.dart';
 import 'package:shao_kao/screens/splash_screen/splash_screen.dart';
 import 'package:shao_kao/services/auth_service.dart';
 import 'package:shao_kao/services/tables/tables_qr_code_service.dart';
 import 'package:shao_kao/storage_service.dart';
-import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart'; // Add this import
+import 'package:shao_kao/screens/printer/BluetoothPrinterManager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,17 +22,13 @@ void main() async {
 Future<void> initServices() async {
   try {
     // Initialize storage service first
-    Get.put(StorageService.instance);
+    await StorageService.instance.init();
 
     // Initialize auth service
     Get.put(AuthService.instance);
 
     // Initialize services with lazy loading to avoid conflicts
     Get.lazyPut(() => QRCodeService());
-
-    // Initialize auth controller
-    Get.put(AuthController());
-    Get.lazyPut<CategoryController>(() => CategoryController());
 
     // Initialize Bluetooth Printer Manager untuk auto reconnect
     // This will attempt to reconnect to saved printer if available
@@ -54,16 +49,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'RESTOT',
-      initialRoute: AppRoutes.splash,
-      getPages: AppRoutes.getPages(),
-      home: SplashScreen(),
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return BlocProviders(
+      child: GetMaterialApp(
+        title: 'RESTOT',
+        initialRoute: AppRoutes.splash,
+        getPages: AppRoutes.getPages(),
+        home: SplashScreen(),
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        debugShowCheckedModeBanner: false,
       ),
-      debugShowCheckedModeBanner: false,
     );
   }
 }

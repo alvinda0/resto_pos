@@ -433,180 +433,307 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   Widget _buildOrderSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Order header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Pesanan (${currentOrderItems.length} items)',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
-                  ),
-                ),
-                Text(
-                  'Rp${_formatPrice(_calculateOrderTotal().round())}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Order items list
-          Expanded(
-            child: currentOrderItems.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.shopping_cart_outlined,
-                            size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'Belum ada pesanan',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Tambahkan produk untuk memulai',
-                          style: TextStyle(color: Colors.grey),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: currentOrderItems.length,
-                    itemBuilder: (context, index) =>
-                        _buildOrderItem(currentOrderItems[index], index),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderItem(dynamic item, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Icon(Icons.fastfood, size: 24, color: Colors.blue.shade600),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _getItemName(item),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_getItemUnitPrice(item)} per item',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _getItemTotalPrice(item),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade600,
-                ),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.05),
+                spreadRadius: 0,
+                blurRadius: 2,
+                offset: const Offset(0, 1),
               ),
-              const SizedBox(height: 8),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.receipt_long, color: Colors.green, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Daftar Pesanan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
               Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.shade200),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () => _decreaseQuantity(index),
-                      icon: const Icon(Icons.remove, size: 16),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        minimumSize: const Size(32, 32),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        _getItemQuantity(item).toString(),
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => _increaseQuantity(index),
-                      icon: const Icon(Icons.add, size: 16),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        minimumSize: const Size(32, 32),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  '${currentOrderItems.length} items',
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: currentOrderItems.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shopping_cart_outlined,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Belum ada pesanan',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Tambahkan produk untuk memulai',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        color: Colors.grey.shade50,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: currentOrderItems.length,
+                          itemBuilder: (context, index) =>
+                              _buildOrderItem(currentOrderItems[index], index),
+                        ),
+                      ),
+                    ),
+                    // Footer dengan total
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border(
+                          top: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 0,
+                            blurRadius: 4,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total Pesanan',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'Rp${_formatPrice(_calculateOrderTotal().round())}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFFF8C00),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrderItem(dynamic item, int index) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing based on available width
+        bool isCompact = constraints.maxWidth < 300;
+        double iconSize = isCompact ? 32 : 40;
+        double fontSize = isCompact ? 12 : 14;
+        double priceSize = isCompact ? 11 : 12;
+        double padding = isCompact ? 8 : 12;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.08),
+                spreadRadius: 0,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon produk
+                Container(
+                  width: iconSize,
+                  height: iconSize,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.restaurant_menu,
+                    size: iconSize * 0.5,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+                SizedBox(width: isCompact ? 8 : 12),
+                // Detail produk
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _getItemName(item),
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_getItemUnitPrice(item)} per item',
+                        style: TextStyle(
+                          fontSize: priceSize,
+                          color: Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isCompact ? 6 : 8),
+                // Harga total dan quantity controls
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth * 0.3,
+                      ),
+                      child: Text(
+                        _getItemTotalPrice(item),
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFFF8C00),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Quantity controls
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () => _decreaseQuantity(index),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              width: isCompact ? 24 : 28,
+                              height: isCompact ? 24 : 28,
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.remove,
+                                size: isCompact ? 14 : 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            constraints: BoxConstraints(
+                              minWidth: isCompact ? 24 : 32,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _getItemQuantity(item).toString(),
+                              style: TextStyle(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => _increaseQuantity(index),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              width: isCompact ? 24 : 28,
+                              height: isCompact ? 24 : 28,
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.add,
+                                size: isCompact ? 14 : 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -805,98 +932,147 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
 // 5. Add mobile-specific order item
   Widget _buildMobileOrderItem(dynamic item, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Icon(Icons.fastfood, size: 20, color: Colors.blue.shade600),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _getItemName(item),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_getItemUnitPrice(item)} per item',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _getItemTotalPrice(item),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade600,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive sizing for mobile
+        bool isVerySmall = constraints.maxWidth < 320;
+        double padding = isVerySmall ? 12 : 16;
+        double iconSize = isVerySmall ? 36 : 40;
+        double fontSize = isVerySmall ? 13 : 14;
+        double priceSize = isVerySmall ? 11 : 12;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.08),
+                spreadRadius: 0,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              const SizedBox(height: 6),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with icon and details
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: iconSize,
+                    height: iconSize,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.restaurant_menu,
+                      size: iconSize * 0.5,
+                      color: Colors.blue.shade600,
+                    ),
+                  ),
+                  SizedBox(width: isVerySmall ? 8 : 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getItemName(item),
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_getItemUnitPrice(item)} per item',
+                          style: TextStyle(
+                            fontSize: priceSize,
+                            color: Colors.grey.shade600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: isVerySmall ? 6 : 8),
+                  Flexible(
+                    child: Text(
+                      _getItemTotalPrice(item),
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFF8C00),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Quantity controls centered
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      onPressed: () => _decreaseQuantity(index),
-                      icon: const Icon(Icons.remove, size: 14),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        minimumSize: const Size(28, 28),
-                        padding: EdgeInsets.zero,
+                    InkWell(
+                      onTap: () => _decreaseQuantity(index),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: isVerySmall ? 32 : 36,
+                        height: isVerySmall ? 32 : 36,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.remove,
+                          size: isVerySmall ? 16 : 18,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      constraints: BoxConstraints(
+                        minWidth: isVerySmall ? 36 : 40,
+                      ),
+                      alignment: Alignment.center,
                       child: Text(
                         _getItemQuantity(item).toString(),
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: isVerySmall ? 14 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => _increaseQuantity(index),
-                      icon: const Icon(Icons.add, size: 14),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        minimumSize: const Size(28, 28),
-                        padding: EdgeInsets.zero,
+                    InkWell(
+                      onTap: () => _increaseQuantity(index),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: isVerySmall ? 32 : 36,
+                        height: isVerySmall ? 32 : 36,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.add,
+                          size: isVerySmall ? 16 : 18,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   ],
@@ -904,8 +1080,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

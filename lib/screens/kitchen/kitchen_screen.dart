@@ -694,48 +694,60 @@ class _KitchenScreenState extends State<KitchenScreen> {
                         ),
                       ),
                     )
-                  : ElevatedButton(
-                      onPressed: () => _handleCompleteOrder(kitchen),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        minimumSize: const Size(0, 32),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.check, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Selesai',
-                            style: TextStyle(
-                              fontSize: isMobile ? 12 : 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
+                  : Flexible(
+  child: ElevatedButton(
+    onPressed: () => _handleCompleteOrder(kitchen),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.green,
+      foregroundColor: Colors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 12,
+        vertical: 8,
+      ),
+      minimumSize: Size(isMobile ? 70 : 80, 32),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.check, size: isMobile ? 14 : 16),
+        SizedBox(width: isMobile ? 2 : 4),
+        Flexible(
+          child: Text(
+            'Selesai',
+            style: TextStyle(
+              fontSize: isMobile ? 11 : 13,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    ),
+  ),
+)
             else
-              // Tampilkan status jika tidak bisa diselesaikan
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  kitchenController.getStatusLabel(kitchen.dishStatus),
-                  style: TextStyle(
-                    fontSize: isMobile ? 12 : 13,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+  Flexible(
+    child: Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 12,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        kitchenController.getStatusLabel(kitchen.dishStatus),
+        style: TextStyle(
+          fontSize: isMobile ? 11 : 13,
+          color: Colors.grey.shade600,
+          fontWeight: FontWeight.w500,
+        ),
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+      ),
+    ),
+  ),
           ],
         ));
   }

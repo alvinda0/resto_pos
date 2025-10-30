@@ -37,26 +37,30 @@ class Asset {
 
   factory Asset.fromJson(Map<String, dynamic> json) {
     return Asset(
-      id: json['id'],
-      storeId: json['store_id'],
-      type: json['type'],
-      name: json['name'],
-      category: json['category'],
-      sku: json['sku'],
-      acquisitionDate: DateTime.parse(json['acquisition_date']),
+      id: json['id'] ?? '',
+      storeId: json['store_id'] ?? '',
+      type: json['type'] ?? AssetType.fixedTangible,
+      name: json['name'] ?? '',
+      category: json['category'] ?? '',
+      sku: json['sku'] ?? '',
+      acquisitionDate: json['acquisition_date'] != null
+          ? DateTime.parse(json['acquisition_date'])
+          : DateTime.now(),
       coverageEndDate: json['coverage_end_date'] != null
           ? DateTime.parse(json['coverage_end_date'])
           : null,
-      cost: json['cost'],
-      residualValue: json['residual_value'],
-      usefulLifeMonths: json['useful_life_months'],
-      depMethod: json['dep_method'],
-      depFactor: (json['dep_factor'] as num).toDouble(),
-      accumulatedDepreciation: json['accumulated_depreciation'],
+      cost: json['cost'] ?? 0,
+      residualValue: json['residual_value'] ?? 0,
+      usefulLifeMonths: json['useful_life_months'] ?? 0,
+      depMethod: json['dep_method'] ?? DepreciationMethod.straightLine,
+      depFactor: json['dep_factor'] != null
+          ? (json['dep_factor'] as num).toDouble()
+          : 1.0,
+      accumulatedDepreciation: json['accumulated_depreciation'] ?? 0,
       lastDepreciatedAt: json['last_depreciated_at'] != null
           ? DateTime.parse(json['last_depreciated_at'])
           : null,
-      status: json['status'],
+      status: json['status'] ?? AssetStatus.active,
     );
   }
 
@@ -161,11 +165,14 @@ class AssetResponse {
 
   factory AssetResponse.fromJson(Map<String, dynamic> json) {
     return AssetResponse(
-      success: json['success'],
-      message: json['message'],
-      status: json['status'],
-      timestamp: json['timestamp'],
-      data: (json['data'] as List).map((item) => Asset.fromJson(item)).toList(),
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: json['timestamp'] ?? '',
+      data: (json['data'] as List<dynamic>?)
+              ?.map((item) => Asset.fromJson(item as Map<String, dynamic>))
+              .toList() ??
+          [],
       metadata: json['metadata'] != null
           ? AssetMetadata.fromJson(json['metadata'])
           : null,
@@ -190,11 +197,11 @@ class AssetSingleResponse {
 
   factory AssetSingleResponse.fromJson(Map<String, dynamic> json) {
     return AssetSingleResponse(
-      success: json['success'],
-      message: json['message'],
-      status: json['status'],
-      timestamp: json['timestamp'],
-      data: Asset.fromJson(json['data']),
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: json['timestamp'] ?? '',
+      data: Asset.fromJson(json['data'] ?? {}),
     );
   }
 }
@@ -214,10 +221,10 @@ class AssetMetadata {
 
   factory AssetMetadata.fromJson(Map<String, dynamic> json) {
     return AssetMetadata(
-      page: json['page'],
-      limit: json['limit'],
-      total: json['total'],
-      totalPages: json['total_pages'],
+      page: json['page'] ?? 1,
+      limit: json['limit'] ?? 10,
+      total: json['total'] ?? 0,
+      totalPages: json['total_pages'] ?? 0,
     );
   }
 }
@@ -237,10 +244,10 @@ class AssetDeleteResponse {
 
   factory AssetDeleteResponse.fromJson(Map<String, dynamic> json) {
     return AssetDeleteResponse(
-      success: json['success'],
-      message: json['message'],
-      status: json['status'],
-      timestamp: json['timestamp'],
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      status: json['status'] ?? 0,
+      timestamp: json['timestamp'] ?? '',
     );
   }
 }

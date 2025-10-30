@@ -344,20 +344,22 @@ class _OrderScreenState extends State<OrderScreen> {
         ),
         const SizedBox(width: 16),
         Expanded(
-            flex: 2,
-            child: _buildDropdown(
-                orderController.selectedStatus,
-                orderController.statusOptions,
-                orderController.updateStatusFilter,
-                Icons.filter_list)),
-        const SizedBox(width: 16),
-        Expanded(
-            flex: 2,
-            child: _buildDropdown(
-                orderController.selectedMethod,
-                orderController.methodOptions,
-                orderController.updateMethodFilter,
-                Icons.payment)),
+    flex: 2,
+    child: _buildDropdown(
+        orderController.selectedStatus,
+        orderController.statusOptions,
+        orderController.updateStatusFilter,
+        Icons.filter_list,
+        isMobile: false)),
+const SizedBox(width: 16),
+Expanded(
+    flex: 2,
+    child: _buildDropdown(
+        orderController.selectedMethod,
+        orderController.methodOptions,
+        orderController.updateMethodFilter,
+        Icons.payment,
+        isMobile: false)),
         const SizedBox(width: 16),
         ElevatedButton.icon(
           onPressed: () {
@@ -403,20 +405,29 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   Widget _buildDropdown(RxString selectedValue, List<String> options,
-      Function(String) onChanged, IconData icon) {
+      Function(String) onChanged, IconData icon, {bool isMobile = false}) {
     return Obx(() => DropdownButtonFormField<String>(
           value: selectedValue.value,
           onChanged: (value) => value != null ? onChanged(value) : null,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon),
+            prefixIcon: Icon(icon, size: isMobile ? 18 : 24),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 8 : 12,
+            ),
           ),
+          style: TextStyle(fontSize: isMobile ? 12 : 14, color: Colors.black87),
+          icon: Icon(Icons.keyboard_arrow_down, size: isMobile ? 18 : 24),
+          isExpanded: true,
           items: options
               .map((option) => DropdownMenuItem(
                     value: option,
-                    child: Text(option),
+                    child: Text(
+                      option,
+                      style: TextStyle(fontSize: isMobile ? 12 : 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ))
               .toList(),
         ));
@@ -688,19 +699,25 @@ class _OrderScreenState extends State<OrderScreen> {
         const SizedBox(width: 8),
         // Button Bayar (hanya tampil jika status pending)
         if (order.status.toLowerCase() == 'pending')
-          ElevatedButton(
-            onPressed: () => _processPayment(order),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: const Size(60, 32),
-            ),
-            child: Text(
-              'Bayar',
-              style: TextStyle(fontSize: isMobile ? 12 : 14),
-            ),
-          ),
+  Flexible(
+    child: ElevatedButton(
+      onPressed: () => _processPayment(order),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 8 : 12,
+          vertical: 8,
+        ),
+        minimumSize: Size(isMobile ? 50 : 60, 32),
+      ),
+      child: Text(
+        'Bayar',
+        style: TextStyle(fontSize: isMobile ? 11 : 14),
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+  ),
       ],
     );
   }
