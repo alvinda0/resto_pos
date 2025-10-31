@@ -299,7 +299,7 @@ class KitchenController extends GetxController {
     }
   }
 
-  // Print kitchen receipt with kitchen-specific format
+  // Print kitchen receipt with kitchen-specific format (only to kitchen printers)
   Future<bool> _printKitchenReceipt(Map<String, dynamic> orderData) async {
     try {
       bool connectionOk = await _printService.checkPrinterConnection();
@@ -309,13 +309,29 @@ class KitchenController extends GetxController {
         return false;
       }
 
-      // Use the existing print service method with kitchen-specific data
-      // The BluetoothPrinterManager will handle role-specific printing
+      // Print only to kitchen printers (dapur1, dapur2), NOT admin
       final printerManager = BluetoothPrinterManager();
-      Map<String, bool> results = await printerManager.printToAllWithContent(orderData);
+      List<String> kitchenRoles = ['dapur1', 'dapur2'];
       
-      // Return true if at least one printer succeeded
-      return results.values.any((success) => success);
+      print('KitchenController: Printing to kitchen printers only: $kitchenRoles');
+      
+      Map<String, bool> results = {};
+      
+      // Print to each kitchen printer individually
+      for (String role in kitchenRoles) {
+        bool success = await printerManager.printToRoleWithContent(role, orderData);
+        results[role] = success;
+        print('KitchenController: Print to $role: $success');
+        
+        // Small delay between prints
+        await Future.delayed(Duration(milliseconds: 100));
+      }
+      
+      // Return true if at least one kitchen printer succeeded
+      bool anySuccess = results.values.any((success) => success);
+      print('KitchenController: Kitchen print results: $results, anySuccess: $anySuccess');
+      
+      return anySuccess;
     } catch (e) {
       print('KitchenController: Error printing kitchen receipt: $e');
       return false;
