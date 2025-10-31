@@ -17,25 +17,37 @@ class OrderService extends GetxService {
   // Create Order
   Future<Order> createOrder(CreateOrderRequest request) async {
     try {
+      // Debug: Print the request payload
+      final requestPayload = request.toJson();
+      print('OrderService: Creating order with payload: ${jsonEncode(requestPayload)}');
+      
       final response = await _httpClient.post(
         '/orders',
-        request.toJson(),
+        requestPayload,
       );
+
+      print('OrderService: Response status: ${response.statusCode}');
+      print('OrderService: Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
+          print('OrderService: Order created successfully');
           return Order.fromJson(responseData['data']);
         } else {
-          throw Exception(responseData['message'] ?? 'Failed to create order');
+          final errorMessage = responseData['message'] ?? 'Failed to create order';
+          print('OrderService: API returned success=false: $errorMessage');
+          throw Exception(errorMessage);
         }
       } else {
         final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Failed to create order');
+        final errorMessage = errorData['message'] ?? 'Failed to create order';
+        print('OrderService: HTTP error ${response.statusCode}: $errorMessage');
+        throw Exception(errorMessage);
       }
     } catch (e) {
-      print('Error creating order: $e');
+      print('OrderService: Error creating order: $e');
       throw Exception('Failed to create order: $e');
     }
   }

@@ -163,14 +163,25 @@ class HttpClient extends GetxService {
           ? _getHeadersWithStoreId(storeId, requireAuth: requireAuth)
           : (requireAuth ? _headers : _headersWithoutAuth);
 
+      final url = '$baseUrl$endpoint';
+      final body = jsonEncode(data);
+      
+      print('HttpClient: POST $url');
+      print('HttpClient: Headers: $headers');
+      print('HttpClient: Body: $body');
+
       final response = await http.post(
-        Uri.parse('$baseUrl$endpoint'),
+        Uri.parse(url),
         headers: headers,
-        body: jsonEncode(data),
+        body: body,
       );
+
+      print('HttpClient: Response status: ${response.statusCode}');
+      print('HttpClient: Response body: ${response.body}');
 
       return _handleResponse(response);
     } catch (e) {
+      print('HttpClient: POST error: $e');
       throw Exception('Error saat POST request: $e');
     }
   }

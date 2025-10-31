@@ -9,6 +9,7 @@ import 'package:shao_kao/models/product/product_model.dart';
 import 'package:shao_kao/models/promotion/promotion_model.dart';
 import 'package:shao_kao/services/order/PrintServiceOrder.dart';
 import 'package:shao_kao/services/order/new_order_service.dart';
+import 'package:shao_kao/screens/order/new_order_screen.dart';
 
 class NewOrderController extends GetxController {
   final OrderService _orderService = OrderService.instance;
@@ -325,17 +326,19 @@ class NewOrderController extends GetxController {
     }
   }
 
-  void addProductToOrder(Product product) {
+  void addProductToOrder(Product product, {String? note}) {
     try {
-      int existingIndex =
-          orderItems.indexWhere((item) => item['productId'] == product.id);
+      int existingIndex = orderItems.indexWhere((item) =>
+          item['productId'] == product.id && item['note'] == (note ?? ''));
 
       if (existingIndex >= 0) {
+        // If same product with same note exists, increase quantity
         orderItems[existingIndex]['quantity']++;
         orderItems[existingIndex]['totalPrice'] = orderItems[existingIndex]
                 ['quantity'] *
             product.basePrice.toDouble();
       } else {
+        // Add new item (even if same product but different note)
         orderItems.add({
           'id': product.id,
           'productId': product.id,
@@ -344,7 +347,7 @@ class NewOrderController extends GetxController {
           'quantity': 1,
           'price': product.basePrice.toDouble(),
           'totalPrice': product.basePrice.toDouble(),
-          'note': '',
+          'note': note ?? '',
         });
       }
 
@@ -354,6 +357,60 @@ class NewOrderController extends GetxController {
     } catch (e) {
       error.value = 'Failed to add product: $e';
       _showErrorSnackbar(error.value);
+    }
+  }
+
+  void showAddProductDialog(Product product) {
+    try {
+      print('NewOrderController: Opening add product dialog for: ${product.name}');
+      
+      Get.dialog(
+        AlertDialog(
+          title: const Text('Tambah Produk'),
+          content: SingleChildScrollView(
+            child: AddProductDialogContent(
+              product: product,
+              onAdd: (String? note) {
+                try {
+                  print('NewOrderController: Adding product with note: "$note"');
+                  
+                  // Close dialog first
+                  Get.back();
+                  
+                  // Add product to order
+                  addProductToOrder(product, note: note);
+                  
+                  // Show success message
+                  _showSuccessMessage('${product.name} berhasil ditambahkan');
+                  
+                  print('NewOrderController: Product added successfully');
+                } catch (e) {
+                  print('NewOrderController: Error adding product: $e');
+                  _showErrorSnackbar('Gagal menambahkan produk: $e');
+                }
+              },
+              onCancel: () {
+                print('NewOrderController: Add product dialog cancelled');
+                Get.back();
+              },
+            ),
+          ),
+        ),
+        barrierDismissible: true,
+      );
+    } catch (e) {
+      print('NewOrderController: Error showing add product dialog: $e');
+      _showErrorSnackbar('Gagal membuka dialog produk: $e');
+    }
+  }
+
+  // Simple method to add product without dialog (for quick add)
+  void addProductQuick(Product product) {
+    try {
+      addProductToOrder(product);
+      _showSuccessMessage('${product.name} berhasil ditambahkan');
+    } catch (e) {
+      _showErrorSnackbar('Gagal menambahkan produk: $e');
     }
   }
 
@@ -425,8 +482,36 @@ class NewOrderController extends GetxController {
         return false;
       }
 
+      if (customerPhone.value.trim().isEmpty) {
+        error.value = 'Nomor telepon customer tidak boleh kosong';
+        return false;
+      }
+
+      if (tableNumber.value <= 0) {
+        error.value = 'Nomor meja harus lebih dari 0';
+        return false;
+      }
+
       if (orderItems.isEmpty) {
         error.value = 'Belum ada item pesanan';
+        return false;
+      }
+
+      // Validate each order item
+      for (int i = 0; i < orderItems.length; i++) {
+        final item = orderItems[i];
+        if (item['productId'] == null || item['productId'].toString().isEmpty) {
+          error.value = 'Item ${i + 1}: Product ID tidak valid';
+          return false;
+        }
+        if (item['quantity'] == null || item['quantity'] <= 0) {
+          error.value = 'Item ${i + 1}: Quantity harus lebih dari 0';
+          return false;
+        }
+      }
+
+      if (selectedPaymentMethod.value.trim().isEmpty) {
+        error.value = 'Metode pembayaran harus dipilih';
         return false;
       }
 
@@ -454,6 +539,15 @@ class NewOrderController extends GetxController {
       error.value = '';
       update();
 
+      print('NewOrderController: Starting order creation process');
+      print('NewOrderController: Customer Name: ${customerName.value.trim()}');
+      print(
+          'NewOrderController: Customer Phone: ${customerPhone.value.trim()}');
+      print('NewOrderController: Table Number: ${tableNumber.value}');
+      print('NewOrderController: Order Items Count: ${orderItems.length}');
+      print(
+          'NewOrderController: Payment Method: ${selectedPaymentMethod.value}');
+
       final orderRequest = CreateOrderRequest(
         order: OrderDetails(
           customerName: customerName.value.trim(),
@@ -475,11 +569,16 @@ class NewOrderController extends GetxController {
         ],
       );
 
+      print('NewOrderController: Order request created, calling service...');
       final order = await _orderService.createOrder(orderRequest);
+      print(
+          'NewOrderController: Order created successfully with ID: ${order.id}');
+
       currentOrder.value = order;
 
       await _processPayment(order.id);
     } catch (e) {
+      print('NewOrderController: Error in processOrder: $e');
       error.value = e.toString();
       _showErrorSnackbar('Gagal membuat pesanan: ${error.value}');
     } finally {

@@ -630,7 +630,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
         return GestureDetector(
           onTap: product.isAvailable
-              ? () => orderController.addProductToOrder(product)
+              ? () => orderController.showAddProductDialog(product)
+              : null,
+          onLongPress: product.isAvailable
+              ? () => orderController.addProductQuick(product)
               : null,
           child: Container(
             decoration: BoxDecoration(
@@ -983,6 +986,41 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      // Display note if exists
+                      if (item['note'] != null && item['note'].toString().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.note,
+                                size: 12,
+                                color: Colors.blue.shade600,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  item['note'].toString(),
+                                  style: TextStyle(
+                                    fontSize: priceSize - 1,
+                                    color: Colors.blue.shade700,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                     ],
                   ),
                 ),
@@ -1150,6 +1188,40 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        // Display note if exists
+                        if (item['note'] != null && item['note'].toString().isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.note,
+                                  size: 14,
+                                  color: Colors.blue.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    item['note'].toString(),
+                                    style: TextStyle(
+                                      fontSize: priceSize,
+                                      color: Colors.blue.shade700,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -2565,5 +2637,93 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       default:
         return 'Proses Pembayaran';
     }
+  }
+}
+
+// Dialog content widget for adding products with notes
+class AddProductDialogContent extends StatefulWidget {
+  final Product product;
+  final Function(String?) onAdd;
+  final VoidCallback onCancel;
+
+  const AddProductDialogContent({
+    super.key,
+    required this.product,
+    required this.onAdd,
+    required this.onCancel,
+  });
+
+  @override
+  State<AddProductDialogContent> createState() => _AddProductDialogContentState();
+}
+
+class _AddProductDialogContentState extends State<AddProductDialogContent> {
+  final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(int price) {
+    return price.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Produk: ${widget.product.name}',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Harga: Rp${_formatPrice(widget.product.basePrice.round())}',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _noteController,
+          decoration: const InputDecoration(
+            labelText: 'Catatan (Opsional)',
+            hintText: 'Contoh: Extra pedas, tanpa bawang, dll',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 2,
+          maxLength: 200,
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: widget.onCancel,
+              child: const Text('Batal'),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: () {
+                final noteText = _noteController.text.trim();
+                widget.onAdd(noteText.isEmpty ? null : noteText);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Tambah'),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
