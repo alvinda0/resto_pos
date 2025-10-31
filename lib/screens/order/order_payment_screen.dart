@@ -161,26 +161,81 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       MediaQuery.of(context).size.width < 1024;
   bool get isDesktop => MediaQuery.of(context).size.width >= 1024;
 
-  void _addProductToOrder(Product product) {
+  void _addProductToOrder(Product product, {String? note}) {
     setState(() {
+      // Check for existing item with same product AND same note
       int existingIndex = currentOrderItems.indexWhere((item) {
+        String itemProductId;
+        String itemNote;
+        
         if (item is Map) {
-          return (item['productId'] ?? item['id']) == product.id;
+          itemProductId = (item['productId'] ?? item['id']).toString();
+          itemNote = (item['note'] ?? '').toString();
+        } else {
+          itemProductId = (item.productId ?? item.id).toString();
+          itemNote = (item.note ?? '').toString();
         }
-        return (item.productId ?? item.id) == product.id;
+        
+        return itemProductId == product.id && itemNote == (note ?? '');
       });
 
       if (existingIndex >= 0) {
+        // Increase quantity for same product with same note
+        int currentQuantity = _getItemQuantity(currentOrderItems[existingIndex]);
         currentOrderItems[existingIndex] = _createOrderItem(
-            product, _getItemQuantity(currentOrderItems[existingIndex]) + 1);
+            product, currentQuantity + 1, note: note);
       } else {
-        currentOrderItems.add(_createOrderItem(product, 1));
+        // Add new item (even if same product but different note)
+        currentOrderItems.add(_createOrderItem(product, 1, note: note));
       }
     });
     _calculateChange();
   }
 
-  dynamic _createOrderItem(Product product, int quantity) {
+  void _showAddProductDialog(Product product) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Tambah Produk'),
+          content: SingleChildScrollView(
+            child: AddProductDialogContentPayment(
+              product: product,
+              onAdd: (String? note) {
+                Navigator.of(context).pop();
+                _addProductToOrder(product, note: note);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${product.name} berhasil ditambahkan'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              onCancel: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _addProductQuick(Product product) {
+    _addProductToOrder(product);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.name} berhasil ditambahkan'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  dynamic _createOrderItem(Product product, int quantity, {String? note}) {
     return {
       'id': product.id,
       'productId': product.id,
@@ -189,6 +244,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       'quantity': quantity,
       'price': product.basePrice.toDouble(),
       'totalPrice': (product.basePrice * quantity).toDouble(),
+      'note': note ?? '',
     };
   }
 
@@ -645,6 +701,40 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      // Display note if exists
+                      if (_getItemNote(item) != null && _getItemNote(item)!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.note,
+                                size: 12,
+                                color: Colors.blue.shade600,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  _getItemNote(item)!,
+                                  style: TextStyle(
+                                    fontSize: priceSize - 1,
+                                    color: Colors.blue.shade700,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1003,6 +1093,40 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        // Display note if exists
+                        if (_getItemNote(item) != null && _getItemNote(item)!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.note,
+                                  size: 14,
+                                  color: Colors.blue.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    _getItemNote(item)!,
+                                    style: TextStyle(
+                                      fontSize: priceSize,
+                                      color: Colors.blue.shade700,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1105,7 +1229,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         bool isSmallCard = constraints.maxWidth < 100;
 
         return GestureDetector(
-          onTap: product.isAvailable ? () => _addProductToOrder(product) : null,
+          onTap: product.isAvailable ? () => _showAddProductDialog(product) : null,
+          onLongPress: product.isAvailable ? () => _addProductQuick(product) : null,
           child: Container(
             decoration: BoxDecoration(
               border: Border.all(
@@ -2057,6 +2182,20 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
   }
 
+  String? _getItemNote(dynamic item) {
+    try {
+      if (item is Map) {
+        return item['note']?.toString();
+      } else {
+        // Handle object with note property
+        return item.note?.toString();
+      }
+    } catch (e) {
+      print('Error getting item note: $e');
+      return null;
+    }
+  }
+
   void _increaseQuantity(int index) {
     setState(() {
       var item = currentOrderItems[index];
@@ -2074,6 +2213,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         'quantity': newQuantity,
         'price': unitPrice,
         'totalPrice': unitPrice * newQuantity,
+        'note': _getItemNote(item) ?? '',
       };
     });
     _calculateChange();
@@ -2099,6 +2239,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           'quantity': newQuantity,
           'price': unitPrice,
           'totalPrice': unitPrice * newQuantity,
+          'note': _getItemNote(item) ?? '',
         };
       } else {
         currentOrderItems.removeAt(index);
@@ -2302,5 +2443,93 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ),
       );
     }
+  }
+}
+
+// Dialog content widget for adding products with notes in payment screen
+class AddProductDialogContentPayment extends StatefulWidget {
+  final Product product;
+  final Function(String?) onAdd;
+  final VoidCallback onCancel;
+
+  const AddProductDialogContentPayment({
+    super.key,
+    required this.product,
+    required this.onAdd,
+    required this.onCancel,
+  });
+
+  @override
+  State<AddProductDialogContentPayment> createState() => _AddProductDialogContentPaymentState();
+}
+
+class _AddProductDialogContentPaymentState extends State<AddProductDialogContentPayment> {
+  final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(int price) {
+    return price.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Produk: ${widget.product.name}',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Harga: Rp${_formatPrice(widget.product.basePrice.round())}',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _noteController,
+          decoration: const InputDecoration(
+            labelText: 'Catatan (Opsional)',
+            hintText: 'Contoh: Extra pedas, tanpa bawang, dll',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 2,
+          maxLength: 200,
+          textInputAction: TextInputAction.done,
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: widget.onCancel,
+              child: const Text('Batal'),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: () {
+                final noteText = _noteController.text.trim();
+                widget.onAdd(noteText.isEmpty ? null : noteText);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Tambah'),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }

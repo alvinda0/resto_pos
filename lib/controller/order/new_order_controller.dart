@@ -362,8 +362,9 @@ class NewOrderController extends GetxController {
 
   void showAddProductDialog(Product product) {
     try {
-      print('NewOrderController: Opening add product dialog for: ${product.name}');
-      
+      print(
+          'NewOrderController: Opening add product dialog for: ${product.name}');
+
       Get.dialog(
         AlertDialog(
           title: const Text('Tambah Produk'),
@@ -372,17 +373,18 @@ class NewOrderController extends GetxController {
               product: product,
               onAdd: (String? note) {
                 try {
-                  print('NewOrderController: Adding product with note: "$note"');
-                  
+                  print(
+                      'NewOrderController: Adding product with note: "$note"');
+
                   // Close dialog first
                   Get.back();
-                  
+
                   // Add product to order
                   addProductToOrder(product, note: note);
-                  
+
                   // Show success message
                   _showSuccessMessage('${product.name} berhasil ditambahkan');
-                  
+
                   print('NewOrderController: Product added successfully');
                 } catch (e) {
                   print('NewOrderController: Error adding product: $e');
