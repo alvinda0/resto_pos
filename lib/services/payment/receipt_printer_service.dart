@@ -78,23 +78,26 @@ class ReceiptPrinterService {
         }).toList(),
       };
 
-      // Print to ALL connected printers with role-specific content
-      Map<String, bool> results = await _printerManager.printToAllWithContent(orderData);
+      // Print ONLY to admin printer for payment receipt
+      Map<String, bool> results = {};
+      
+      print('ReceiptPrinterService: ===== DEBUGGING PAYMENT PRINT CALL =====');
+      print('ReceiptPrinterService: About to call printToRoleWithContent for ADMIN ONLY');
+      print('ReceiptPrinterService: Connected printers: ${_printerManager.connectedCount}');
+      print('ReceiptPrinterService: Available printer roles: ${_printerManager.printers.keys.toList()}');
+      
+      bool adminSuccess = await _printerManager.printToRoleWithContent('admin', orderData);
+      results['admin'] = adminSuccess;
+      
+      print('ReceiptPrinterService: Admin printer result: $adminSuccess');
+      print('ReceiptPrinterService: ===== END DEBUGGING PAYMENT PRINT CALL =====');
 
-      // Check results
-      int successCount = results.values.where((v) => v).length;
-      int totalPrinters = results.length;
-
-      print(
-          'ReceiptPrinterService: Print result: $successCount/$totalPrinters printers succeeded');
-
-      bool success = successCount > 0;
+      bool success = results['admin'] ?? false;
 
       if (success) {
-        print(
-            'ReceiptPrinterService: Receipt printed to $successCount printer(s)');
+        print('ReceiptPrinterService: Payment receipt printed to admin printer successfully');
       } else {
-        print('ReceiptPrinterService: Failed to print to any printer');
+        print('ReceiptPrinterService: Failed to print payment receipt to admin printer');
       }
 
       return success;
@@ -236,17 +239,19 @@ class ReceiptPrinterService {
       print(
           'ReceiptPrinterService: Test receipt data size: ${commands.length} bytes');
 
-      Map<String, bool> results = await _printerManager.printToAll(commands);
-      int successCount = results.values.where((v) => v).length;
+      // Print test receipt ONLY to admin printer
+      print('ReceiptPrinterService: Printing test receipt to admin printer only');
+      bool adminSuccess = await _printerManager.printToRole('admin', commands);
+      
+      print('ReceiptPrinterService: Admin test print result: $adminSuccess');
 
-      bool success = successCount > 0;
-
-      if (success) {
-        print(
-            'ReceiptPrinterService: Test receipt printed to $successCount printer(s)');
+      if (adminSuccess) {
+        print('ReceiptPrinterService: Test receipt printed to admin printer successfully');
       } else {
-        print('ReceiptPrinterService: Failed to print test receipt');
+        print('ReceiptPrinterService: Failed to print test receipt to admin printer');
       }
+
+      bool success = adminSuccess;
 
       return success;
     } catch (e) {

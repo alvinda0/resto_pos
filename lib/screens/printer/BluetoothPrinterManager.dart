@@ -384,17 +384,32 @@ class BluetoothPrinterManager {
 
   // Print with role-specific content filtering
   Future<bool> printToRoleWithContent(String role, Map<String, dynamic> orderData) async {
+    print('MultiPrinterManager: ===== PRINT TO ROLE WITH CONTENT DEBUG =====');
+    print('MultiPrinterManager: Requested role: $role');
+    print('MultiPrinterManager: All available printers: ${_printers.keys.toList()}');
+    
     PrinterInfo? printer = _printers[role];
     if (printer == null ||
         !printer.isConnected ||
         printer.writeCharacteristic == null) {
       print('MultiPrinterManager: Cannot print to $role - not connected');
+      print('MultiPrinterManager: Printer exists: ${printer != null}');
+      print('MultiPrinterManager: Printer connected: ${printer?.isConnected}');
+      print('MultiPrinterManager: Write characteristic exists: ${printer?.writeCharacteristic != null}');
       return false;
     }
 
+    print('MultiPrinterManager: Printing ONLY to role: $role');
+    print('MultiPrinterManager: NOT printing to other roles: ${_printers.keys.where((k) => k != role).toList()}');
+
     // Generate role-specific print data
     List<int> printData = _generateRoleSpecificPrintData(role, orderData);
-    return await _printDataChunked(printer, printData);
+    bool result = await _printDataChunked(printer, printData);
+    
+    print('MultiPrinterManager: Print result for $role: $result');
+    print('MultiPrinterManager: ===== END PRINT TO ROLE WITH CONTENT DEBUG =====');
+    
+    return result;
   }
 
   // Add role-specific header to print data
