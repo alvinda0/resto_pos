@@ -257,6 +257,45 @@ class _KitchenScreenState extends State<KitchenScreen> {
                     Icons.payment)),
           ],
         ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: _buildAutoRefreshToggle()),
+            const SizedBox(width: 8),
+            Expanded(child: _buildAutoPrintToggle()),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Debug buttons for testing
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => kitchenController.resetPrintedOrders(),
+                icon: Icon(Icons.refresh, size: 16),
+                label: Text('Reset Print List', style: TextStyle(fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => kitchenController.checkPrinterStatus(),
+                icon: Icon(Icons.print, size: 16),
+                label: Text('Cek Printer', style: TextStyle(fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -281,6 +320,33 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 kitchenController.methodOptions,
                 kitchenController.updateMethodFilter,
                 Icons.payment)),
+        const SizedBox(width: 16),
+        _buildAutoRefreshToggle(),
+        const SizedBox(width: 16),
+        _buildAutoPrintToggle(),
+        const SizedBox(width: 16),
+        // Debug buttons
+        ElevatedButton.icon(
+          onPressed: () => kitchenController.resetPrintedOrders(),
+          icon: Icon(Icons.refresh, size: 16),
+          label: Text('Reset', style: TextStyle(fontSize: 12)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange.shade600,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+        const SizedBox(width: 8),
+        ElevatedButton.icon(
+          onPressed: () => kitchenController.checkPrinterStatus(),
+          icon: Icon(Icons.print, size: 16),
+          label: Text('Printer', style: TextStyle(fontSize: 12)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue.shade600,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
       ],
     );
   }
@@ -340,6 +406,132 @@ class _KitchenScreenState extends State<KitchenScreen> {
         ));
   }
 
+  Widget _buildAutoRefreshToggle() {
+    return Obx(() => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.refresh,
+            size: 18,
+            color: kitchenController.isAutoRefreshEnabled.value 
+              ? Colors.blue.shade600 
+              : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'Auto Refresh',
+              style: TextStyle(
+                fontSize: 13,
+                color: kitchenController.isAutoRefreshEnabled.value 
+                  ? Colors.blue.shade600 
+                  : Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch(
+            value: kitchenController.isAutoRefreshEnabled.value,
+            onChanged: (value) => kitchenController.toggleAutoRefresh(),
+            activeColor: Colors.blue.shade600,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ],
+      ),
+    ));
+  }
+
+  Widget _buildAutoPrintToggle() {
+    return Obx(() => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(
+          color: kitchenController.isAutoPrintEnabled.value 
+            ? Colors.green.shade300 
+            : Colors.grey.shade300,
+          width: kitchenController.isAutoPrintEnabled.value ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            children: [
+              Icon(
+                Icons.print,
+                size: 18,
+                color: kitchenController.isAutoPrintEnabled.value 
+                  ? Colors.green.shade600 
+                  : Colors.grey.shade600,
+              ),
+              if (kitchenController.isAutoPrintEnabled.value)
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade600,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Auto Print',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: kitchenController.isAutoPrintEnabled.value 
+                      ? Colors.green.shade600 
+                      : Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (kitchenController.isAutoPrintEnabled.value)
+                  Text(
+                    'Pesanan PROCESSED otomatis cetak',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.green.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch(
+            value: kitchenController.isAutoPrintEnabled.value,
+            onChanged: (value) => kitchenController.toggleAutoPrint(),
+            activeColor: Colors.green.shade600,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ],
+      ),
+    ));
+  }
+
   Widget _buildDataTable(bool isDesktop) {
     return Expanded(
       child: Container(
@@ -397,45 +589,83 @@ class _KitchenScreenState extends State<KitchenScreen> {
         ),
       ),
       child: isDesktop
-          ? const Row(
+          ? Row(
               children: [
-                Expanded(
+                const Expanded(
                     flex: 2,
                     child: Text('Id Kitchen',
                         style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
+                const Expanded(
                     flex: 2,
                     child: Text('Tanggal',
                         style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
+                const Expanded(
                     flex: 2,
                     child: Text('Customer',
                         style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
+                const Expanded(
                     flex: 1,
                     child: Text('Meja',
                         style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
+                const Expanded(
                     flex: 1,
                     child: Text('Items',
                         style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
+                const Expanded(
                     flex: 2,
                     child: Text('Total',
                         style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
+                const Expanded(
                     flex: 2,
                     child: Text('Status Masakan',
                         style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(
+                const Expanded(
                     flex: 2,
                     child: Text('Aksi',
                         style: TextStyle(fontWeight: FontWeight.bold))),
+                // Manual refresh button
+                Obx(() => IconButton(
+                  onPressed: kitchenController.isRefreshing.value 
+                    ? null 
+                    : () => kitchenController.refreshKitchens(),
+                  icon: kitchenController.isRefreshing.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                  tooltip: 'Refresh Manual',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.blue.shade100,
+                    foregroundColor: Colors.blue.shade700,
+                  ),
+                )),
               ],
             )
-          : const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [],
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Data Pesanan Dapur', 
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+                Obx(() => IconButton(
+                  onPressed: kitchenController.isRefreshing.value 
+                    ? null 
+                    : () => kitchenController.refreshKitchens(),
+                  icon: kitchenController.isRefreshing.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                  tooltip: 'Refresh Manual',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.blue.shade100,
+                    foregroundColor: Colors.blue.shade700,
+                  ),
+                )),
+              ],
             ),
     );
   }
