@@ -367,7 +367,7 @@ class BluetoothPrinterManager {
     connectedCountNotifier.value = connectedCount;
   }
 
-  // Print to specific printer
+  // Print to specific printer with role-specific header and content
   Future<bool> printToRole(String role, List<int> data) async {
     PrinterInfo? printer = _printers[role];
     if (printer == null ||
@@ -377,30 +377,202 @@ class BluetoothPrinterManager {
       return false;
     }
 
-    return await _printDataChunked(printer, data);
+    // Add role-specific header to the data
+    List<int> dataWithHeader = _addRoleHeader(role, data);
+    return await _printDataChunked(printer, dataWithHeader);
   }
 
-  // Print to multiple printers
-  Future<Map<String, bool>> printToMultiple(
-      List<String> roles, List<int> data) async {
-    Map<String, bool> results = {};
+  // Print with role-specific content filtering
+  Future<bool> printToRoleWithContent(String role, Map<String, dynamic> orderData) async {
+    PrinterInfo? printer = _printers[role];
+    if (printer == null ||
+        !printer.isConnected ||
+        printer.writeCharacteristic == null) {
+      print('MultiPrinterManager: Cannot print to $role - not connected');
+      return false;
+    }
 
-    for (String role in roles) {
-      results[role] = await printToRole(role, data);
-      await Future.delayed(Duration(milliseconds: 100));
+    // Generate role-specific print data
+    List<int> printData = _generateRoleSpecificPrintData(role, orderData);
+    return await _printDataChunked(printer, printData);
+  }
+
+  // Add role-specific header to print data
+  List<int> _addRoleHeader(String role, List<int> originalData) {
+    List<int> headerCommands = [];
+
+    // Initialize printer
+    headerCommands.addAll([0x1B, 0x40]); // ESC @
+
+    // Center align and bold
+    headerCommands.addAll([0x1B, 0x61, 0x01]); // Center align
+    headerCommands.addAll([0x1B, 0x45, 0x01]); // Bold on
+
+    // Add role-specific label
+    String roleLabel = _getRoleLabel(role);
+    headerCommands.addAll(utf8.encode("$roleLabel\n"));
+    headerCommands.addAll(utf8.encode("${'-' * roleLabel.length}\n"));
+
+    // Reset formatting
+    headerCommands.addAll([0x1B, 0x45, 0x00]); // Bold off
+    headerCommands.addAll([0x1B, 0x61, 0x00]); // Left align
+    headerCommands.addAll(utf8.encode("\n"));
+
+    // Combine header with original data
+    return [...headerCommands, ...originalData];
+  }
+
+  // Get role-specific label
+  String _getRoleLabel(String role) {
+    switch (role) {
+      case 'admin':
+        return 'BY ADMIN';
+      case 'dapur1':
+        return 'KITCHEN MAKANAN';
+      case 'dapur2':
+        return 'KITCHEN MINUMAN';
+      default:
+        return 'PRINTER $role';
+    }
+  }
+
+  // Generate role-specific print data
+  List<int> _generateRoleSpecificPrintData(String role, Map<String, dynamic> orderData) {
+    List<int> commands = [];
+
+    // Initialize printer
+    commands.addAll([0x1B, 0x40]); // ESC @
+
+    // Add role-specific header
+    commands.addAll([0x1B, 0x61, 0x01]); // Center align
+    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
+    String roleLabel = _getRoleLabel(role);
+    commands.addAll(utf8.encode("$roleLabel\n"));
+    commands.addAll(utf8.encode("${'-' * roleLabel.length}\n\n"));
+
+    // Restaurant header
+    commands.addAll([0x1D, 0x21, 0x11]); // Double size
+    commands.addAll(utf8.encode("== SHAOKAO ==\n\n"));
+
+    // Reset formatting
+    commands.addAll([0x1D, 0x21, 0x00]); // Normal size
+    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+    commands.addAll([0x1B, 0x61, 0x00]); // Left align
+
+    // Order details
+    commands.addAll(utf8.encode("ID Pesanan: ${orderData['displayId']}\n"));
+    commands.addAll(utf8.encode("Tanggal: ${orderData['date']}\n"));
+    commands.addAll(utf8.encode("Customer: ${orderData['customerName']}\n"));
+    
+    // Only include phone for admin printer, not for kitchen printers
+    if (role == 'admin') {
+      commands.addAll(utf8.encode("Phone: ${orderData['customerPhone']}\n"));
+    }
+    
+    commands.addAll(utf8.encode("Meja: ${orderData['tableNumber']}\n"));
+    commands.addAll(utf8.encode("Status: ${orderData['status']}\n"));
+    commands.addAll(utf8.encode("Status Masakan: ${orderData['dishStatus']}\n"));
+    
+    // Only show order notes for all printers (not item notes)
+    if (orderData['notes'] != null && orderData['notes'].toString().isNotEmpty) {
+      commands.addAll(utf8.encode("Notes: ${orderData['notes']}\n"));
+    }
+    
+    commands.addAll(utf8.encode("--------------------------------\n"));
+
+    // Items header
+    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
+    commands.addAll(utf8.encode("ITEMS:\n"));
+    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+
+    // List items with role-specific content
+    List<dynamic> items = orderData['items'] ?? [];
+    for (var item in items) {
+      commands.addAll(utf8.encode("${item['productName']}\n"));
+      commands.addAll(utf8.encode("  ${item['quantity']}x @ Rp${item['unitPrice'].toStringAsFixed(0)}\n"));
+      
+      // Only include item notes for kitchen printers (dapur1, dapur2), not admin
+      if (role != 'admin' && item['note'] != null && item['note'].toString().isNotEmpty) {
+        commands.addAll(utf8.encode("  Note: ${item['note']}\n"));
+      }
+      
+      commands.addAll(utf8.encode("\n"));
+    }
+
+    commands.addAll(utf8.encode("--------------------------------\n"));
+
+    // Total
+    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
+    commands.addAll(utf8.encode("TOTAL: ${orderData['formattedTotal']}\n"));
+    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+
+    // Footer
+    commands.addAll(utf8.encode("\n\n"));
+    commands.addAll([0x1B, 0x61, 0x01]); // Center align
+    commands.addAll(utf8.encode("Terima kasih!\n"));
+    commands.addAll(utf8.encode("${DateTime.now().toString().split('.')[0]}\n"));
+
+    // Cut paper
+    commands.addAll(utf8.encode("\n\n\n"));
+    commands.addAll([0x1D, 0x56, 0x00]); // Cut paper
+
+    return commands;
+  }
+
+  // Print to all connected printers with role-specific content
+  Future<Map<String, bool>> printToAllWithContent(Map<String, dynamic> orderData) async {
+    Map<String, bool> results = {};
+    
+    for (var entry in _printers.entries) {
+      String role = entry.key;
+      PrinterInfo printer = entry.value;
+      
+      if (printer.isConnected) {
+        results[role] = await printToRoleWithContent(role, orderData);
+        await Future.delayed(Duration(milliseconds: 100));
+      }
     }
 
     return results;
   }
 
-  // Print to all connected printers
-  Future<Map<String, bool>> printToAll(List<int> data) async {
-    List<String> connectedRoles = _printers.entries
-        .where((e) => e.value.isConnected)
-        .map((e) => e.key)
-        .toList();
+  // Print to multiple printers with role-specific headers
+  Future<Map<String, bool>> printToMultiple(
+      List<String> roles, List<int> data) async {
+    Map<String, bool> results = {};
 
-    return await printToMultiple(connectedRoles, data);
+    for (String role in roles) {
+      PrinterInfo? printer = _printers[role];
+      if (printer != null && printer.isConnected) {
+        // Add role-specific header for each printer
+        List<int> dataWithHeader = _addRoleHeader(role, data);
+        results[role] = await _printDataChunked(printer, dataWithHeader);
+        await Future.delayed(Duration(milliseconds: 100));
+      } else {
+        results[role] = false;
+      }
+    }
+
+    return results;
+  }
+
+  // Print to all connected printers with role-specific headers
+  Future<Map<String, bool>> printToAll(List<int> data) async {
+    Map<String, bool> results = {};
+
+    for (var entry in _printers.entries) {
+      String role = entry.key;
+      PrinterInfo printer = entry.value;
+
+      if (printer.isConnected) {
+        // Add role-specific header for each printer
+        List<int> dataWithHeader = _addRoleHeader(role, data);
+        results[role] = await _printDataChunked(printer, dataWithHeader);
+        await Future.delayed(Duration(milliseconds: 100));
+      }
+    }
+
+    return results;
   }
 
   Future<bool> _printDataChunked(PrinterInfo printer, List<int> data) async {
@@ -472,17 +644,25 @@ class BluetoothPrinterManager {
 
       commands.addAll([0x1B, 0x40]); // Initialize
       commands.addAll([0x1B, 0x61, 0x01]); // Center align
-      commands.addAll([0x1D, 0x21, 0x11]); // Double size
+      commands.addAll([0x1B, 0x45, 0x01]); // Bold on
 
+      // Add role-specific label
+      String roleLabel = _getRoleLabel(role);
+      commands.addAll(utf8.encode("$roleLabel\n"));
+      commands.addAll(utf8.encode("${'-' * roleLabel.length}\n\n"));
+
+      commands.addAll([0x1D, 0x21, 0x11]); // Double size
       String testText = "=== TES PRINTER ===\n\n";
       commands.addAll(utf8.encode(testText));
 
       commands.addAll([0x1D, 0x21, 0x00]); // Normal size
+      commands.addAll([0x1B, 0x45, 0x00]); // Bold off
       commands.addAll([0x1B, 0x61, 0x00]); // Left align
 
       String detailText = "";
       detailText += "Nama: ${printer.name}\n";
       detailText += "Role: ${printer.role}\n";
+      detailText += "Label: $roleLabel\n";
       detailText += "Status: Terhubung\n";
       detailText += "MTU: ${printer.mtu}, Chunk: ${printer.maxChunkSize}\n";
       detailText += "Waktu: ${DateTime.now().toString().split('.')[0]}\n\n";

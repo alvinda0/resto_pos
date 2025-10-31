@@ -45,7 +45,7 @@ class ReceiptPrinterService {
     }
   }
 
-  // UPDATED: Print receipt to all connected printers
+  // UPDATED: Print receipt to all connected printers with role-specific content
   Future<bool> printReceipt(OrderModel order) async {
     try {
       bool connectionOk = await checkPrinterConnection();
@@ -59,13 +59,27 @@ class ReceiptPrinterService {
       print(
           'ReceiptPrinterService: Starting receipt print for order ${order.id}');
 
-      // Build receipt data
-      List<int> receiptData = _buildReceiptData(order);
-      print(
-          'ReceiptPrinterService: Receipt data built - ${receiptData.length} bytes');
+      // Prepare order data for role-specific printing
+      Map<String, dynamic> orderData = {
+        'displayId': order.displayId,
+        'date': _formatDateTime(order.createdAt),
+        'customerName': order.customerName,
+        'customerPhone': order.customerPhone,
+        'tableNumber': order.tableNumber.toString(),
+        'status': order.status,
+        'dishStatus': 'N/A',
+        'notes': order.notes,
+        'formattedTotal': 'Rp${_formatPrice(order.totalAmount.round())}',
+        'items': order.items.map((item) => {
+          'productName': item.productName,
+          'quantity': item.quantity,
+          'unitPrice': item.unitPrice,
+          'note': item.note,
+        }).toList(),
+      };
 
-      // Print to ALL connected printers
-      Map<String, bool> results = await _printerManager.printToAll(receiptData);
+      // Print to ALL connected printers with role-specific content
+      Map<String, bool> results = await _printerManager.printToAllWithContent(orderData);
 
       // Check results
       int successCount = results.values.where((v) => v).length;

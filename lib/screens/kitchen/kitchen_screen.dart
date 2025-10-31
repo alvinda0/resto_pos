@@ -695,59 +695,59 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       ),
                     )
                   : Flexible(
-  child: ElevatedButton(
-    onPressed: () => _handleCompleteOrder(kitchen),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.green,
-      foregroundColor: Colors.white,
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 8 : 12,
-        vertical: 8,
-      ),
-      minimumSize: Size(isMobile ? 70 : 80, 32),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.check, size: isMobile ? 14 : 16),
-        SizedBox(width: isMobile ? 2 : 4),
-        Flexible(
-          child: Text(
-            'Selesai',
-            style: TextStyle(
-              fontSize: isMobile ? 11 : 13,
-              fontWeight: FontWeight.w500,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    ),
-  ),
-)
+                      child: ElevatedButton(
+                        onPressed: () => _handleCompleteOrder(kitchen),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 8 : 12,
+                            vertical: 8,
+                          ),
+                          minimumSize: Size(isMobile ? 70 : 80, 32),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, size: isMobile ? 14 : 16),
+                            SizedBox(width: isMobile ? 2 : 4),
+                            Flexible(
+                              child: Text(
+                                'Selesai',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 11 : 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
             else
-  Flexible(
-    child: Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 8 : 12,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        kitchenController.getStatusLabel(kitchen.dishStatus),
-        style: TextStyle(
-          fontSize: isMobile ? 11 : 13,
-          color: Colors.grey.shade600,
-          fontWeight: FontWeight.w500,
-        ),
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-      ),
-    ),
-  ),
+              Flexible(
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 8 : 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    kitchenController.getStatusLabel(kitchen.dishStatus),
+                    style: TextStyle(
+                      fontSize: isMobile ? 11 : 13,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
           ],
         ));
   }
@@ -827,9 +827,60 @@ class _KitchenScreenState extends State<KitchenScreen> {
               ],
               const Text('Items:',
                   style: TextStyle(fontWeight: FontWeight.bold)),
-              ...kitchen.items.map((item) => Padding(
-                    padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text('• ${item.productName} x${item.quantity}'),
+              ...kitchen.items.map((item) => Container(
+                    margin: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '• ${item.productName} x${item.quantity}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (item.note != null && item.note!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.note,
+                                  size: 14,
+                                  color: Colors.blue.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'Note: ${item.note}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue.shade700,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   )),
             ],
           ),
@@ -878,11 +929,30 @@ class _KitchenScreenState extends State<KitchenScreen> {
         ),
       );
 
-      // Generate print data
-      List<int> printData = _generateOrderPrintData(kitchen);
+      // Prepare order data for role-specific printing
+      Map<String, dynamic> orderData = {
+        'displayId': kitchen.displayId,
+        'date': kitchenController.formatDate(kitchen.createdAt),
+        'customerName': kitchen.customerName,
+        'customerPhone': kitchen.customerPhone,
+        'tableNumber': kitchen.tableNumber.toString(),
+        'status': kitchen.status,
+        'dishStatus': kitchen.dishStatus,
+        'notes': kitchen.notes,
+        'formattedTotal': kitchen.formattedTotal,
+        'items': kitchen.items
+            .map((item) => {
+                  'productName': item.productName,
+                  'quantity': item.quantity,
+                  'unitPrice': item.unitPrice,
+                  'note': item.note,
+                })
+            .toList(),
+      };
 
-      // Send to ALL connected printers
-      Map<String, bool> results = await printerManager.printToAll(printData);
+      // Send to ALL connected printers with role-specific content
+      Map<String, bool> results =
+          await printerManager.printToAllWithContent(orderData);
 
       // Close loading dialog
       Navigator.of(context).pop();
@@ -939,70 +1009,5 @@ class _KitchenScreenState extends State<KitchenScreen> {
         ],
       ),
     );
-  }
-
-  List<int> _generateOrderPrintData(KitchenModel kitchen) {
-    List<int> commands = [];
-
-    // Initialize printer
-    commands.addAll([0x1B, 0x40]); // ESC @
-
-    // Center align and bold title
-    commands.addAll([0x1B, 0x61, 0x01]); // Center align
-    commands.addAll([0x1D, 0x21, 0x11]); // Double size
-    commands.addAll('=== PESANAN DAPUR ===\n\n'.codeUnits);
-
-    // Reset formatting
-    commands.addAll([0x1D, 0x21, 0x00]); // Normal size
-    commands.addAll([0x1B, 0x61, 0x00]); // Left align
-
-    // Order details
-    commands.addAll('ID Pesanan: ${kitchen.displayId}\n'.codeUnits);
-    commands.addAll(
-        'Tanggal: ${kitchenController.formatDate(kitchen.createdAt)}\n'
-            .codeUnits);
-    commands.addAll('Customer: ${kitchen.customerName}\n'.codeUnits);
-    commands.addAll('Phone: ${kitchen.customerPhone}\n'.codeUnits);
-    commands.addAll('Meja: ${kitchen.tableNumber}\n'.codeUnits);
-    commands.addAll('Status: ${kitchen.status}\n'.codeUnits);
-    commands.addAll('Status Masakan: ${kitchen.dishStatus}\n'.codeUnits);
-    commands.addAll('Notes: ${kitchen.notes ?? '-'}\n'.codeUnits);
-    commands.addAll('--------------------------------\n'.codeUnits);
-
-    // Items header
-    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
-    commands.addAll('ITEMS:\n'.codeUnits);
-    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
-
-    // List items
-    for (var item in kitchen.items) {
-      commands.addAll('${item.productName}\n'.codeUnits);
-      commands.addAll(
-          '  ${item.quantity}x @ Rp${item.unitPrice.toStringAsFixed(0)}\n'
-              .codeUnits);
-      if (item.note != null && item.note!.isNotEmpty) {
-        commands.addAll('  Note: ${item.note}\n'.codeUnits);
-      }
-      commands.addAll('\n'.codeUnits);
-    }
-
-    commands.addAll('--------------------------------\n'.codeUnits);
-
-    // Total
-    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
-    commands.addAll('TOTAL: ${kitchen.formattedTotal}\n'.codeUnits);
-    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
-
-    // Footer
-    commands.addAll('\n\n'.codeUnits);
-    commands.addAll([0x1B, 0x61, 0x01]); // Center align
-    commands.addAll('Terima kasih!\n'.codeUnits);
-    commands.addAll('${DateTime.now().toString().split('.')[0]}\n'.codeUnits);
-
-    // Cut paper
-    commands.addAll('\n\n\n'.codeUnits);
-    commands.addAll([0x1D, 0x56, 0x00]); // Cut paper
-
-    return commands;
   }
 }

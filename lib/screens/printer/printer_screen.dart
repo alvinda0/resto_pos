@@ -19,8 +19,8 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
   // Available printer roles
   final List<Map<String, String>> _availableRoles = [
     {'role': 'admin', 'name': 'Printer Admin'},
-    {'role': 'dapur1', 'name': 'Printer Dapur 1'},
-    {'role': 'dapur2', 'name': 'Printer Dapur 2'},
+    {'role': 'dapur1', 'name': 'Printer Makanan'},
+    {'role': 'dapur2', 'name': 'Printer Minuman'},
   ];
 
   @override
