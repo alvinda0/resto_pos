@@ -279,19 +279,21 @@ class KitchenController extends GetxController {
         'customerName': kitchenOrder.customerName,
         'customerPhone': kitchenOrder.customerPhone,
         'tableNumber': kitchenOrder.tableNumber.toString(),
+        'orderMethod': kitchenOrder.orderMethodDisplay,
         'status': 'Kitchen Order',
         'dishStatus': kitchenOrder.dishStatus,
         'notes': kitchenOrder.notes ?? '',
         'formattedTotal': 'Rp${_formatPrice(kitchenOrder.totalAmount.round())}',
         'items': kitchenOrder.items.map((item) => {
           'productName': item.productName,
+          'categoryName': item.categoryName ?? '',
           'quantity': item.quantity,
           'unitPrice': item.unitPrice,
           'note': item.note ?? '',
         }).toList(),
       };
 
-      // Print using kitchen-specific format
+      // Print using kitchen-specific format (will separate by category)
       return await _printKitchenReceipt(orderData);
     } catch (e) {
       print('KitchenController: Error printing kitchen order: $e');
@@ -300,6 +302,7 @@ class KitchenController extends GetxController {
   }
 
   // Print kitchen receipt with kitchen-specific format (only to kitchen printers)
+  // Separate items by category: Minuman -> dapur2, Others -> dapur1
   Future<bool> _printKitchenReceipt(Map<String, dynamic> orderData) async {
     try {
       bool connectionOk = await _printService.checkPrinterConnection();
@@ -309,21 +312,48 @@ class KitchenController extends GetxController {
         return false;
       }
 
-      // Print only to kitchen printers (dapur1, dapur2), NOT admin
       final printerManager = BluetoothPrinterManager();
-      List<String> kitchenRoles = ['dapur1', 'dapur2'];
-      
-      print('KitchenController: Printing to kitchen printers only: $kitchenRoles');
-      
       Map<String, bool> results = {};
       
-      // Print to each kitchen printer individually
-      for (String role in kitchenRoles) {
-        bool success = await printerManager.printToRoleWithContent(role, orderData);
-        results[role] = success;
-        print('KitchenController: Print to $role: $success');
+      // Separate items by category
+      List<dynamic> allItems = orderData['items'] as List<dynamic>;
+      List<dynamic> minumanItems = [];
+      List<dynamic> makananItems = [];
+      
+      for (var item in allItems) {
+        String categoryName = (item['categoryName'] ?? '').toString().toLowerCase();
+        if (categoryName == 'minuman') {
+          minumanItems.add(item);
+        } else {
+          makananItems.add(item);
+        }
+      }
+      
+      print('KitchenController: Separated items - Minuman: ${minumanItems.length}, Makanan: ${makananItems.length}');
+      
+      // Print to dapur2 (Minuman) if there are beverage items
+      if (minumanItems.isNotEmpty) {
+        Map<String, dynamic> minumanOrderData = Map.from(orderData);
+        minumanOrderData['items'] = minumanItems;
+        minumanOrderData['printerType'] = 'MINUMAN';
         
-        // Small delay between prints
+        bool success = await printerManager.printToRoleWithContent('dapur2', minumanOrderData);
+        results['dapur2'] = success;
+        print('KitchenController: Print to dapur2 (Minuman): $success');
+        
+        await Future.delayed(Duration(milliseconds: 100));
+      }
+      
+      // Print to dapur1 (Makanan) if there are food items
+      if (makananItems.isNotEmpty) {
+        Map<String, dynamic> makananOrderData = Map.from(orderData);
+        makananOrderData['items'] = makananItems;
+        makananOrderData['printerType'] = 'MAKANAN';
+        
+        bool success = await printerManager.printToRoleWithContent('dapur1', makananOrderData);
+        results['dapur1'] = success;
+        print('KitchenController: Print to dapur1 (Makanan): $success');
+        
         await Future.delayed(Duration(milliseconds: 100));
       }
       

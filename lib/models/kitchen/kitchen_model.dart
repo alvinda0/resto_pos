@@ -236,6 +236,8 @@ class KitchenItem {
   final String id;
   final String productId;
   final String productName;
+  final String? categoryId;
+  final String? categoryName;
   final int quantity;
   final double unitPrice;
   final double totalPrice;
@@ -246,6 +248,8 @@ class KitchenItem {
     required this.id,
     required this.productId,
     required this.productName,
+    this.categoryId,
+    this.categoryName,
     required this.quantity,
     required this.unitPrice,
     required this.totalPrice,
@@ -258,6 +262,8 @@ class KitchenItem {
       id: json['id'],
       productId: json['product_id'],
       productName: json['product_name'],
+      categoryId: json['category_id'],
+      categoryName: json['category_name'],
       quantity: json['quantity'],
       unitPrice: (json['unit_price'] as num).toDouble(),
       totalPrice: (json['total_price'] as num).toDouble(),
@@ -271,6 +277,8 @@ class KitchenItem {
       'id': id,
       'product_id': productId,
       'product_name': productName,
+      'category_id': categoryId,
+      'category_name': categoryName,
       'quantity': quantity,
       'unit_price': unitPrice,
       'total_price': totalPrice,
