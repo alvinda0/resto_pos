@@ -5,6 +5,7 @@ class KitchenModel {
   final String customerName;
   final String customerPhone;
   final int tableNumber;
+  final String orderMethod;
   final String status;
   final String dishStatus;
   final double baseAmount;
@@ -23,6 +24,7 @@ class KitchenModel {
     required this.customerName,
     required this.customerPhone,
     required this.tableNumber,
+    required this.orderMethod,
     required this.status,
     required this.dishStatus,
     required this.baseAmount,
@@ -43,6 +45,7 @@ class KitchenModel {
       customerName: json['customer_name'],
       customerPhone: json['customer_phone'],
       tableNumber: json['table_number'],
+      orderMethod: json['order_method'] ?? 'DINE_IN',
       status: json['status'],
       dishStatus: json['dish_status'],
       baseAmount: (json['base_amount'] as num).toDouble(),
@@ -70,6 +73,7 @@ class KitchenModel {
       'customer_name': customerName,
       'customer_phone': customerPhone,
       'table_number': tableNumber,
+      'order_method': orderMethod,
       'status': status,
       'dish_status': dishStatus,
       'base_amount': baseAmount,
@@ -90,6 +94,19 @@ class KitchenModel {
   String get paymentMethod =>
       paymentMethods.isNotEmpty ? paymentMethods.first.method : 'N/A';
   int get totalItems => items.length;
+  
+  String get orderMethodDisplay {
+    switch (orderMethod.toUpperCase()) {
+      case 'DINE_IN':
+        return 'Dine In';
+      case 'TAKE_AWAY':
+        return 'Take Away';
+      case 'DELIVERY':
+        return 'Delivery';
+      default:
+        return orderMethod;
+    }
+  }
 
   // Status color helpers - using dish_status instead
   String get dishStatusColor {

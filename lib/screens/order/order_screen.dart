@@ -509,6 +509,10 @@ Expanded(
                         style: TextStyle(fontWeight: FontWeight.bold))),
                 Expanded(
                     flex: 1,
+                    child: Text('Tipe',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(
+                    flex: 1,
                     child: Text('Items',
                         style: TextStyle(fontWeight: FontWeight.bold))),
                 Expanded(
@@ -584,8 +588,15 @@ Expanded(
             ],
           ),
           const SizedBox(height: 8),
-          Text('Metode: ${order.paymentMethod}',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Tipe: ${order.orderMethodDisplay}',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              Text('Metode: ${order.paymentMethod}',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+            ],
+          ),
           const SizedBox(height: 12),
           _buildActionButtons(order, true),
         ],
@@ -610,6 +621,8 @@ Expanded(
               child: Text(orderController.formatDate(order.createdAt))),
           Expanded(flex: 2, child: Text(order.customerName)),
           Expanded(flex: 1, child: Text(order.tableNumber.toString())),
+          Expanded(flex: 1, child: Text(order.orderMethodDisplay,
+              style: const TextStyle(fontSize: 12))),
           Expanded(flex: 1, child: Text('${order.totalItems} items')),
           Expanded(
               flex: 2,

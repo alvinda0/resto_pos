@@ -5,6 +5,7 @@ class OrderModel {
   final String customerName;
   final String customerPhone;
   final int tableNumber;
+  final String orderMethod;
   final String status;
   final String dishStatus;
   final double baseAmount;
@@ -12,8 +13,8 @@ class OrderModel {
   final double taxAmount;
   final double totalAmount;
   final String? notes;
-  final String? promoCode; // TAMBAHKAN INI
-  final String? referralCode; // TAMBAHKAN INI
+  final String? promoCode;
+  final String? referralCode;
   final DateTime createdAt;
   final List<PaymentMethod> paymentMethods;
   final List<OrderItem> items;
@@ -24,6 +25,7 @@ class OrderModel {
     required this.customerName,
     required this.customerPhone,
     required this.tableNumber,
+    required this.orderMethod,
     required this.status,
     required this.dishStatus,
     required this.baseAmount,
@@ -31,8 +33,8 @@ class OrderModel {
     required this.taxAmount,
     required this.totalAmount,
     this.notes,
-    this.promoCode, // TAMBAHKAN INI
-    this.referralCode, // TAMBAHKAN INI
+    this.promoCode,
+    this.referralCode,
     required this.createdAt,
     required this.paymentMethods,
     required this.items,
@@ -45,6 +47,7 @@ class OrderModel {
       customerName: json['customer_name'],
       customerPhone: json['customer_phone'],
       tableNumber: json['table_number'],
+      orderMethod: json['order_method'] ?? 'DINE_IN',
       status: json['status'],
       dishStatus: json['dish_status'],
       baseAmount: (json['base_amount'] as num).toDouble(),
@@ -52,8 +55,8 @@ class OrderModel {
       taxAmount: (json['tax_amount'] as num).toDouble(),
       totalAmount: (json['total_amount'] as num).toDouble(),
       notes: json['notes'],
-      promoCode: json['promo_code'], // TAMBAHKAN INI
-      referralCode: json['referral_code'], // TAMBAHKAN INI
+      promoCode: json['promo_code'],
+      referralCode: json['referral_code'],
       createdAt: DateTime.parse(json['created_at']),
       paymentMethods: (json['payment_methods'] as List)
           .map((e) => PaymentMethod.fromJson(e))
@@ -69,6 +72,7 @@ class OrderModel {
       'customer_name': customerName,
       'customer_phone': customerPhone,
       'table_number': tableNumber,
+      'order_method': orderMethod,
       'status': status,
       'dish_status': dishStatus,
       'base_amount': baseAmount,
@@ -76,8 +80,8 @@ class OrderModel {
       'tax_amount': taxAmount,
       'total_amount': totalAmount,
       'notes': notes,
-      'promo_code': promoCode, // TAMBAHKAN INI
-      'referral_code': referralCode, // TAMBAHKAN INI
+      'promo_code': promoCode,
+      'referral_code': referralCode,
       'created_at': createdAt.toIso8601String(),
       'payment_methods': paymentMethods.map((e) => e.toJson()).toList(),
       'items': items.map((e) => e.toJson()).toList(),
@@ -90,6 +94,19 @@ class OrderModel {
   String get paymentMethod =>
       paymentMethods.isNotEmpty ? paymentMethods.first.method : 'N/A';
   int get totalItems => items.length;
+  
+  String get orderMethodDisplay {
+    switch (orderMethod.toUpperCase()) {
+      case 'DINE_IN':
+        return 'Dine In';
+      case 'TAKE_AWAY':
+        return 'Take Away';
+      case 'DELIVERY':
+        return 'Delivery';
+      default:
+        return orderMethod;
+    }
+  }
 
   // Status color helpers
   String get statusColor {

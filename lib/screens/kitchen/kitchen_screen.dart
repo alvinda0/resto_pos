@@ -609,6 +609,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold))),
                 const Expanded(
                     flex: 1,
+                    child: Text('Tipe',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                const Expanded(
+                    flex: 1,
                     child: Text('Items',
                         style: TextStyle(fontWeight: FontWeight.bold))),
                 const Expanded(
@@ -710,10 +714,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          // Add dish status badge for mobile
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Status Masakan: ',
+              Text('Tipe: ${kitchen.orderMethodDisplay}',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
               _buildDishStatusBadge(kitchen.dishStatus),
             ],
@@ -753,6 +757,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
               child: Text(kitchenController.formatDate(kitchen.createdAt))),
           Expanded(flex: 2, child: Text(kitchen.customerName)),
           Expanded(flex: 1, child: Text(kitchen.tableNumber.toString())),
+          Expanded(flex: 1, child: Text(kitchen.orderMethodDisplay,
+              style: const TextStyle(fontSize: 12))),
           Expanded(flex: 1, child: Text('${kitchen.totalItems} items')),
           Expanded(
               flex: 2,
