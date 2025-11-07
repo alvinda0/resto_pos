@@ -465,9 +465,10 @@ class BluetoothPrinterManager {
     commands.addAll(utf8.encode("$roleLabel\n"));
     commands.addAll(utf8.encode("${'-' * roleLabel.length}\n\n"));
 
-    // Restaurant header
+    // Restaurant header with store name
     commands.addAll([0x1D, 0x21, 0x11]); // Double size
-    commands.addAll(utf8.encode("== SHAOKAO ==\n\n"));
+    String storeName = orderData['storeName'] ?? 'SHAOKAO';
+    commands.addAll(utf8.encode("== $storeName ==\n\n"));
 
     // Reset formatting
     commands.addAll([0x1D, 0x21, 0x00]); // Normal size

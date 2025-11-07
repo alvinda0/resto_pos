@@ -1168,6 +1168,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
       // Prepare order data for role-specific printing
       Map<String, dynamic> orderData = {
         'displayId': kitchen.displayId,
+        'storeName': kitchen.storeName ?? 'SHAOKAO',
         'date': kitchenController.formatDate(kitchen.createdAt),
         'customerName': kitchen.customerName,
         'customerPhone': kitchen.customerPhone,

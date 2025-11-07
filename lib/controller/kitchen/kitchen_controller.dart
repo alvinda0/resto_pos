@@ -275,6 +275,7 @@ class KitchenController extends GetxController {
       // Convert KitchenModel to format expected by BluetoothPrinterManager
       final orderData = {
         'displayId': kitchenOrder.displayId,
+        'storeName': kitchenOrder.storeName ?? 'SHAOKAO',
         'date': formatDate(kitchenOrder.createdAt),
         'customerName': kitchenOrder.customerName,
         'customerPhone': kitchenOrder.customerPhone,

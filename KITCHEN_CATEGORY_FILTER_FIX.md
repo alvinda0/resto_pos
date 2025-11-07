@@ -14,8 +14,9 @@ Menambahkan logika filter kategori di `BluetoothPrinterManager` untuk memisahkan
 ### 1. `lib/screens/printer/BluetoothPrinterManager.dart`
 - **Fungsi `_generateRoleSpecificPrintData`**: 
   - Menambahkan filter items berdasarkan role printer
-  - Menampilkan kategori item di struk
+  - Menampilkan store name di header struk
   - Menampilkan jumlah item yang difilter untuk kitchen printers
+  - Menambahkan checkbox di setiap item untuk ceklis manual
   
 - **Fungsi baru `_filterItemsByRole`**:
   - Memfilter items berdasarkan kategori
@@ -24,15 +25,23 @@ Menambahkan logika filter kategori di `BluetoothPrinterManager` untuk memisahkan
   - admin: semua items
   - Menambahkan debug logging untuk tracking
 
-### 2. `lib/screens/kitchen/kitchen_screen.dart`
+### 2. `lib/models/kitchen/kitchen_model.dart`
+- **Model KitchenModel**:
+  - Menambahkan field `storeName` (optional)
+  - Update `fromJson` untuk parse `store_name` dari API
+  - Update `toJson` untuk include `store_name`
+
+### 3. `lib/screens/kitchen/kitchen_screen.dart`
 - **Fungsi `_printOrderDetails`**:
   - Menambahkan `categoryName` ke dalam orderData items
+  - Menambahkan `storeName` ke dalam orderData
   - Memastikan data kategori dikirim ke printer manager
 
-### 3. `lib/controller/kitchen/kitchen_controller.dart`
+### 4. `lib/controller/kitchen/kitchen_controller.dart`
 - **Fungsi `_printKitchenOrder`**:
-  - Sudah menyertakan `categoryName` di items (tidak perlu diubah)
-  
+  - Menambahkan `storeName` ke dalam orderData
+  - Sudah menyertakan `categoryName` di items
+
 - **Fungsi `_printKitchenReceipt`**:
   - Menghapus logika pemisahan manual items
   - Menggunakan auto-filter dari BluetoothPrinterManager
@@ -70,14 +79,36 @@ Menambahkan logika filter kategori di `BluetoothPrinterManager` untuk memisahkan
 ### Checkbox untuk Ceklis Manual
 Setiap item di struk print memiliki checkbox `[ ]` di pojok kanan untuk karyawan bisa ceklis dengan pulpen setelah item selesai dibuat.
 
-Format struk:
-```
-Nasi Goreng              [ ]
-  2x @ Rp25000
+### Store Name di Header
+Nama toko (store_name) dari API akan ditampilkan di header struk menggantikan "SHAOKAO" default.
 
+Format struk lengkap:
+```
+      KITCHEN MINUMAN
+      ---------------
+
+      == GAMMA ==
+
+ID Pesanan: ABC12345
+Tanggal: 2024-01-15 10:30
+Customer: John Doe
+Meja: 5
+Status: PAID
+Status Masakan: PROCESSED
+--------------------------------
+ITEMS:
 Es Teh Manis             [ ]
   1x @ Rp5000
   Note: Gula sedikit
+
+Es Jeruk                 [ ]
+  2x @ Rp7000
+
+--------------------------------
+TOTAL ITEM: 2
+
+      Terima kasih!
+      2024-01-15 10:30:45
 ```
 
 ## Testing

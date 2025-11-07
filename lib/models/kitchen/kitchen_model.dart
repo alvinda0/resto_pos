@@ -2,6 +2,7 @@
 class KitchenModel {
   final String id;
   final String storeId;
+  final String? storeName;
   final String customerName;
   final String customerPhone;
   final int tableNumber;
@@ -21,6 +22,7 @@ class KitchenModel {
   KitchenModel({
     required this.id,
     required this.storeId,
+    this.storeName,
     required this.customerName,
     required this.customerPhone,
     required this.tableNumber,
@@ -42,6 +44,7 @@ class KitchenModel {
     return KitchenModel(
       id: json['id'],
       storeId: json['store_id'],
+      storeName: json['store_name'],
       customerName: json['customer_name'],
       customerPhone: json['customer_phone'],
       tableNumber: json['table_number'],
@@ -70,6 +73,7 @@ class KitchenModel {
     return {
       'id': id,
       'store_id': storeId,
+      'store_name': storeName,
       'customer_name': customerName,
       'customer_phone': customerPhone,
       'table_number': tableNumber,
