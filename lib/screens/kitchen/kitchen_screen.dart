@@ -1179,6 +1179,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
         'items': kitchen.items
             .map((item) => {
                   'productName': item.productName,
+                  'categoryName': item.categoryName,
                   'quantity': item.quantity,
                   'unitPrice': item.unitPrice,
                   'note': item.note,

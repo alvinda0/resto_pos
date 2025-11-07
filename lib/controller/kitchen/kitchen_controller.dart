@@ -302,7 +302,7 @@ class KitchenController extends GetxController {
   }
 
   // Print kitchen receipt with kitchen-specific format (only to kitchen printers)
-  // Separate items by category: Minuman -> dapur2, Others -> dapur1
+  // Items will be automatically filtered by category in BluetoothPrinterManager
   Future<bool> _printKitchenReceipt(Map<String, dynamic> orderData) async {
     try {
       bool connectionOk = await _printService.checkPrinterConnection();
@@ -315,45 +315,21 @@ class KitchenController extends GetxController {
       final printerManager = BluetoothPrinterManager();
       Map<String, bool> results = {};
       
-      // Separate items by category
-      List<dynamic> allItems = orderData['items'] as List<dynamic>;
-      List<dynamic> minumanItems = [];
-      List<dynamic> makananItems = [];
+      print('KitchenController: Printing to kitchen printers with ${orderData['items'].length} total items');
       
-      for (var item in allItems) {
-        String categoryName = (item['categoryName'] ?? '').toString().toLowerCase();
-        if (categoryName == 'minuman') {
-          minumanItems.add(item);
-        } else {
-          makananItems.add(item);
-        }
-      }
-      
-      print('KitchenController: Separated items - Minuman: ${minumanItems.length}, Makanan: ${makananItems.length}');
-      
-      // Print to dapur2 (Minuman) if there are beverage items
-      if (minumanItems.isNotEmpty) {
-        Map<String, dynamic> minumanOrderData = Map.from(orderData);
-        minumanOrderData['items'] = minumanItems;
-        minumanOrderData['printerType'] = 'MINUMAN';
-        
-        bool success = await printerManager.printToRoleWithContent('dapur2', minumanOrderData);
+      // Print to dapur2 (Minuman) - will auto-filter beverage items
+      if (printerManager.isRoleConnected('dapur2')) {
+        bool success = await printerManager.printToRoleWithContent('dapur2', orderData);
         results['dapur2'] = success;
         print('KitchenController: Print to dapur2 (Minuman): $success');
-        
         await Future.delayed(Duration(milliseconds: 100));
       }
       
-      // Print to dapur1 (Makanan) if there are food items
-      if (makananItems.isNotEmpty) {
-        Map<String, dynamic> makananOrderData = Map.from(orderData);
-        makananOrderData['items'] = makananItems;
-        makananOrderData['printerType'] = 'MAKANAN';
-        
-        bool success = await printerManager.printToRoleWithContent('dapur1', makananOrderData);
+      // Print to dapur1 (Makanan) - will auto-filter food items
+      if (printerManager.isRoleConnected('dapur1')) {
+        bool success = await printerManager.printToRoleWithContent('dapur1', orderData);
         results['dapur1'] = success;
         print('KitchenController: Print to dapur1 (Makanan): $success');
-        
         await Future.delayed(Duration(milliseconds: 100));
       }
       

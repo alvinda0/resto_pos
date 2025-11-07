@@ -500,26 +500,41 @@ class BluetoothPrinterManager {
     commands.addAll(utf8.encode("ITEMS:\n"));
     commands.addAll([0x1B, 0x45, 0x00]); // Bold off
 
-    // List items with role-specific content
-    List<dynamic> items = orderData['items'] ?? [];
-    for (var item in items) {
-      commands.addAll(utf8.encode("${item['productName']}\n"));
-      commands.addAll(utf8.encode("  ${item['quantity']}x @ Rp${item['unitPrice'].toStringAsFixed(0)}\n"));
-      
-      // Only include item notes for kitchen printers (dapur1, dapur2), not admin
-      if (role != 'admin' && item['note'] != null && item['note'].toString().isNotEmpty) {
-        commands.addAll(utf8.encode("  Note: ${item['note']}\n"));
+    // Filter items based on role and category
+    List<dynamic> allItems = orderData['items'] ?? [];
+    List<dynamic> filteredItems = _filterItemsByRole(role, allItems);
+    
+    // If no items match the filter, show a message
+    if (filteredItems.isEmpty) {
+      commands.addAll(utf8.encode("(Tidak ada item untuk kategori ini)\n\n"));
+    } else {
+      // List filtered items with role-specific content
+      for (var item in filteredItems) {
+        commands.addAll(utf8.encode("${item['productName']}\n"));
+        commands.addAll(utf8.encode("  ${item['quantity']}x @ Rp${item['unitPrice'].toStringAsFixed(0)}\n"));
+        
+        // Only include item notes for kitchen printers (dapur1, dapur2), not admin
+        if (role != 'admin' && item['note'] != null && item['note'].toString().isNotEmpty) {
+          commands.addAll(utf8.encode("  Note: ${item['note']}\n"));
+        }
+        
+        commands.addAll(utf8.encode("\n"));
       }
-      
-      commands.addAll(utf8.encode("\n"));
     }
 
     commands.addAll(utf8.encode("--------------------------------\n"));
 
-    // Total
-    commands.addAll([0x1B, 0x45, 0x01]); // Bold on
-    commands.addAll(utf8.encode("TOTAL: ${orderData['formattedTotal']}\n"));
-    commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+    // Total (only for admin, kitchen printers don't need total)
+    if (role == 'admin') {
+      commands.addAll([0x1B, 0x45, 0x01]); // Bold on
+      commands.addAll(utf8.encode("TOTAL: ${orderData['formattedTotal']}\n"));
+      commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+    } else {
+      // For kitchen printers, show item count
+      commands.addAll([0x1B, 0x45, 0x01]); // Bold on
+      commands.addAll(utf8.encode("TOTAL ITEM: ${filteredItems.length}\n"));
+      commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+    }
 
     // Footer
     commands.addAll(utf8.encode("\n\n"));
@@ -532,6 +547,47 @@ class BluetoothPrinterManager {
     commands.addAll([0x1D, 0x56, 0x00]); // Cut paper
 
     return commands;
+  }
+
+  // Filter items based on printer role and category
+  List<dynamic> _filterItemsByRole(String role, List<dynamic> items) {
+    print('MultiPrinterManager: Filtering items for role: $role, total items: ${items.length}');
+    
+    // Admin printer gets all items
+    if (role == 'admin') {
+      print('MultiPrinterManager: Admin role - returning all ${items.length} items');
+      return items;
+    }
+    
+    // dapur1 = Makanan (food items)
+    // dapur2 = Minuman (beverage items)
+    List<dynamic> filtered = items.where((item) {
+      String categoryName = (item['categoryName'] ?? '').toString().toLowerCase();
+      
+      print('MultiPrinterManager: Item: ${item['productName']}, Category: "$categoryName"');
+      
+      if (role == 'dapur1') {
+        // Makanan: exclude items with "minuman" in category name
+        bool isFood = categoryName != 'minuman' && 
+                      !categoryName.contains('beverage') &&
+                      !categoryName.contains('drink');
+        print('MultiPrinterManager: dapur1 check - isFood: $isFood');
+        return isFood;
+      } else if (role == 'dapur2') {
+        // Minuman: only items with "minuman" in category name
+        bool isBeverage = categoryName == 'minuman' || 
+                         categoryName.contains('beverage') ||
+                         categoryName.contains('drink');
+        print('MultiPrinterManager: dapur2 check - isBeverage: $isBeverage');
+        return isBeverage;
+      }
+      
+      // Default: include all items
+      return true;
+    }).toList();
+    
+    print('MultiPrinterManager: Filtered result for $role: ${filtered.length} items');
+    return filtered;
   }
 
   // Print to all connected printers with role-specific content
