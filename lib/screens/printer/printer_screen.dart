@@ -319,28 +319,54 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
+    
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Multi Printer Manager'),
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
+        leading: SizedBox.shrink(),
+        title: Text(
+          isMobile ? 'Printer Manager' : 'Multi Printer Manager',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
         actions: [
           ValueListenableBuilder<int>(
             valueListenable: _printerManager.connectedCountNotifier,
             builder: (context, count, child) {
               return Container(
                 margin: EdgeInsets.only(right: 16),
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 8 : 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: count > 0 ? Colors.green : Colors.red,
+                  color: count > 0 ? Colors.green.shade100 : Colors.red.shade100,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: count > 0 ? Colors.green.shade300 : Colors.red.shade300,
+                  ),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.print, size: 16),
+                    Icon(
+                      Icons.print,
+                      size: 16,
+                      color: count > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                    ),
                     SizedBox(width: 4),
-                    Text('$count/3',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      '$count/3',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: count > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -348,308 +374,510 @@ class _BluetoothPrinterPageState extends State<BluetoothPrinterPage> {
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue[700]!, Colors.blue[50]!],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (isMobile) {
+            return _buildMobileLayout();
+          } else {
+            return _buildDesktopLayout();
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return Column(
+      children: [
+        // Connected Printers Section
+        _buildConnectedPrintersSection(isMobile: true),
+        
+        // Control Buttons
+        _buildControlButtons(isMobile: true),
+        
+        SizedBox(height: 12),
+        
+        // Device List
+        Expanded(
+          child: _buildDeviceList(isMobile: true),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left Panel - Connected Printers
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: [
+              _buildConnectedPrintersSection(isMobile: false),
+              _buildControlButtons(isMobile: false),
+            ],
           ),
         ),
+        
+        SizedBox(width: 16),
+        
+        // Right Panel - Device List
+        Expanded(
+          flex: 3,
+          child: _buildDeviceList(isMobile: false),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConnectedPrintersSection({required bool isMobile}) {
+    return Container(
+      margin: EdgeInsets.all(isMobile ? 12 : 16),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ValueListenableBuilder<Map<String, PrinterInfo>>(
+        valueListenable: _printerManager.printersNotifier,
+        builder: (context, printers, child) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.print, color: Colors.blue.shade600, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Printer Terhubung',
+                        style: TextStyle(
+                          fontSize: isMobile ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (printers.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: _testPrintAll,
+                      icon: Icon(Icons.print_outlined, size: 16),
+                      label: Text('Test All'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.blue.shade700,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 8 : 12,
+                          vertical: 4,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(height: 12),
+              if (printers.isEmpty)
+                _buildEmptyPrintersState(isMobile: isMobile)
+              else
+                ..._availableRoles.map((roleData) {
+                  String role = roleData['role']!;
+                  PrinterInfo? printer = printers[role];
+                  return _buildPrinterCard(
+                    roleData: roleData,
+                    printer: printer,
+                    isMobile: isMobile,
+                  );
+                }).toList(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyPrintersState({required bool isMobile}) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: isMobile ? 24 : 32),
+      child: Center(
         child: Column(
           children: [
-            // Connected Printers Status
-            Container(
-              margin: EdgeInsets.all(16),
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: ValueListenableBuilder<Map<String, PrinterInfo>>(
-                valueListenable: _printerManager.printersNotifier,
-                builder: (context, printers, child) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Printer Terhubung',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          if (printers.isNotEmpty)
-                            TextButton.icon(
-                              onPressed: _testPrintAll,
-                              icon: Icon(Icons.print, size: 16),
-                              label: Text('Test All'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.blue[700],
-                              ),
-                            ),
-                        ],
-                      ),
-                      SizedBox(height: 12),
-                      if (printers.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text(
-                              'Belum ada printer terhubung',
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                          ),
-                        )
-                      else
-                        ..._availableRoles.map((roleData) {
-                          String role = roleData['role']!;
-                          PrinterInfo? printer = printers[role];
-
-                          return Container(
-                            margin: EdgeInsets.only(bottom: 8),
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: printer?.isConnected == true
-                                  ? Colors.green[50]
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: printer?.isConnected == true
-                                    ? Colors.green[300]!
-                                    : Colors.grey[300]!,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: _getRoleColor(role),
-                                  child: Icon(
-                                    _getRoleIcon(role),
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        roleData['name']!,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      if (printer != null) ...[
-                                        Text(
-                                          printer.device?.platformName ??
-                                              'Unknown',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ] else
-                                        Text(
-                                          'Tidak terhubung',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                if (printer?.isConnected == true) ...[
-                                  IconButton(
-                                    icon: Icon(Icons.print, size: 20),
-                                    color: Colors.blue[700],
-                                    onPressed: () => _testPrintRole(role),
-                                    tooltip: 'Test Print',
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.close, size: 20),
-                                    color: Colors.red,
-                                    onPressed: () => _disconnectPrinter(role),
-                                    tooltip: 'Putuskan',
-                                  ),
-                                ],
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                    ],
-                  );
-                },
+            Icon(
+              Icons.print_disabled,
+              size: isMobile ? 48 : 64,
+              color: Colors.grey.shade300,
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Belum ada printer terhubung',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: isMobile ? 13 : 14,
+                fontWeight: FontWeight.w500,
               ),
             ),
-
-            // Control Buttons
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isScanning ? null : _scanForDevices,
-                      icon: _isScanning
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Icon(Icons.search),
-                      label: Text(_isScanning ? 'Scanning...' : 'Scan Printer'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[600],
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  ValueListenableBuilder<Map<String, PrinterInfo>>(
-                    valueListenable: _printerManager.printersNotifier,
-                    builder: (context, printers, child) {
-                      return ElevatedButton.icon(
-                        onPressed: printers.isNotEmpty ? _disconnectAll : null,
-                        icon: Icon(Icons.delete_sweep),
-                        label: Text('Clear'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[600],
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 16),
-
-            // Device List
-            Expanded(
-              child: Container(
-                margin: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Icon(Icons.devices, color: Colors.blue[600]),
-                          SizedBox(width: 10),
-                          Text(
-                            'Daftar Perangkat',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: _devicesList.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.bluetooth_searching,
-                                      size: 80, color: Colors.grey[400]),
-                                  SizedBox(height: 20),
-                                  Text(
-                                    'Tidak ada perangkat ditemukan',
-                                    style: TextStyle(
-                                        fontSize: 16, color: Colors.grey[600]),
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'Tekan tombol scan untuk mencari',
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey[500]),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: _devicesList.length,
-                              itemBuilder: (context, index) {
-                                BluetoothDevice device = _devicesList[index];
-
-                                return Card(
-                                  margin: EdgeInsets.only(bottom: 10),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: Colors.blue[600],
-                                      child: Icon(Icons.print,
-                                          color: Colors.white),
-                                    ),
-                                    title: Text(
-                                      device.platformName.isNotEmpty
-                                          ? device.platformName
-                                          : 'Unknown Device',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: Text(device.remoteId.toString()),
-                                    trailing: ElevatedButton(
-                                      onPressed: () =>
-                                          _showRoleSelectionDialog(device),
-                                      child: Text('Hubungkan'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue[600],
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
+            SizedBox(height: 4),
+            Text(
+              'Scan untuk menemukan printer',
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: isMobile ? 11 : 12,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrinterCard({
+    required Map<String, String> roleData,
+    required PrinterInfo? printer,
+    required bool isMobile,
+  }) {
+    String role = roleData['role']!;
+    bool isConnected = printer?.isConnected == true;
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(isMobile ? 10 : 12),
+      decoration: BoxDecoration(
+        color: isConnected ? Colors.green.shade50 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isConnected ? Colors.green.shade200 : Colors.grey.shade200,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: isMobile ? 36 : 40,
+            height: isMobile ? 36 : 40,
+            decoration: BoxDecoration(
+              color: _getRoleColor(role),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _getRoleIcon(role),
+              color: Colors.white,
+              size: isMobile ? 18 : 20,
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  roleData['name']!,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: isMobile ? 13 : 14,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 2),
+                if (printer != null) ...[
+                  Text(
+                    printer.device?.platformName ?? 'Unknown',
+                    style: TextStyle(
+                      fontSize: isMobile ? 11 : 12,
+                      color: Colors.grey.shade600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      Icon(Icons.circle, size: 6, color: Colors.grey.shade400),
+                      SizedBox(width: 4),
+                      Text(
+                        'Tidak terhubung',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          if (isConnected) ...[
+            if (!isMobile) SizedBox(width: 8),
+            IconButton(
+              icon: Icon(Icons.print_outlined, size: isMobile ? 18 : 20),
+              color: Colors.blue.shade700,
+              onPressed: () => _testPrintRole(role),
+              tooltip: 'Test Print',
+              padding: EdgeInsets.all(isMobile ? 6 : 8),
+              constraints: BoxConstraints(),
+            ),
+            IconButton(
+              icon: Icon(Icons.close, size: isMobile ? 18 : 20),
+              color: Colors.red.shade600,
+              onPressed: () => _disconnectPrinter(role),
+              tooltip: 'Putuskan',
+              padding: EdgeInsets.all(isMobile ? 6 : 8),
+              constraints: BoxConstraints(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButtons({required bool isMobile}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _isScanning ? null : _scanForDevices,
+              icon: _isScanning
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(Icons.bluetooth_searching, size: isMobile ? 18 : 20),
+              label: Text(
+                _isScanning ? 'Scanning...' : 'Scan Printer',
+                style: TextStyle(fontSize: isMobile ? 13 : 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+          SizedBox(width: 8),
+          ValueListenableBuilder<Map<String, PrinterInfo>>(
+            valueListenable: _printerManager.printersNotifier,
+            builder: (context, printers, child) {
+              return ElevatedButton.icon(
+                onPressed: printers.isNotEmpty ? _disconnectAll : null,
+                icon: Icon(Icons.delete_sweep, size: isMobile ? 18 : 20),
+                label: isMobile
+                    ? SizedBox.shrink()
+                    : Text('Clear', style: TextStyle(fontSize: 14)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    vertical: isMobile ? 10 : 12,
+                    horizontal: isMobile ? 12 : 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceList({required bool isMobile}) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+        isMobile ? 12 : 0,
+        isMobile ? 0 : 16,
+        isMobile ? 12 : 16,
+        isMobile ? 12 : 16,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.devices, color: Colors.blue.shade600, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Daftar Perangkat',
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (_devicesList.isNotEmpty) ...[
+                  Spacer(),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_devicesList.length}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Expanded(
+            child: _devicesList.isEmpty
+                ? _buildEmptyDeviceState(isMobile: isMobile)
+                : ListView.builder(
+                    padding: EdgeInsets.all(isMobile ? 8 : 12),
+                    itemCount: _devicesList.length,
+                    itemBuilder: (context, index) {
+                      BluetoothDevice device = _devicesList[index];
+                      return _buildDeviceCard(device: device, isMobile: isMobile);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyDeviceState({required bool isMobile}) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(isMobile ? 24 : 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bluetooth_searching,
+              size: isMobile ? 64 : 80,
+              color: Colors.grey.shade300,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Tidak ada perangkat ditemukan',
+              style: TextStyle(
+                fontSize: isMobile ? 15 : 16,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Tekan tombol scan untuk mencari printer',
+              style: TextStyle(
+                fontSize: isMobile ? 12 : 14,
+                color: Colors.grey.shade500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeviceCard({
+    required BluetoothDevice device,
+    required bool isMobile,
+  }) {
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 12 : 16,
+          vertical: isMobile ? 4 : 8,
+        ),
+        leading: Container(
+          width: isMobile ? 36 : 40,
+          height: isMobile ? 36 : 40,
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.print,
+            color: Colors.blue.shade600,
+            size: isMobile ? 18 : 20,
+          ),
+        ),
+        title: Text(
+          device.platformName.isNotEmpty
+              ? device.platformName
+              : 'Unknown Device',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: isMobile ? 13 : 14,
+            color: Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          device.remoteId.toString(),
+          style: TextStyle(
+            fontSize: isMobile ? 10 : 11,
+            color: Colors.grey.shade600,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: ElevatedButton(
+          onPressed: () => _showRoleSelectionDialog(device),
+          child: Text(
+            'Hubungkan',
+            style: TextStyle(fontSize: isMobile ? 11 : 13),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue.shade600,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 6 : 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            elevation: 0,
+          ),
         ),
       ),
     );
