@@ -46,6 +46,7 @@ class NewOrderController extends GetxController {
   final RxString notes = ''.obs;
   final RxString promoCode = ''.obs;
   final RxString referralCode = ''.obs;
+  final RxString orderMethod = 'DINE_IN'.obs; // DINE_IN or TAKE_AWAY
   final RxString selectedPaymentMethod = 'Tunai'.obs;
   final RxDouble cashAmount = 0.0.obs;
   final RxDouble changeAmount = 0.0.obs;
@@ -119,6 +120,10 @@ class NewOrderController extends GetxController {
     } catch (e) {
       print('Error setting up listeners: $e');
     }
+  }
+
+  void updateReferralCode(String code) {
+    referralCode.value = code;
   }
 
   void _disposeControllers() {
@@ -558,6 +563,7 @@ class NewOrderController extends GetxController {
           notes: notes.value.trim(),
           referralCode: referralCode.value.trim(),
           promoCode: promoCode.value.trim(),
+          orderMethod: orderMethod.value,
         ),
         orderDetails: orderItems
             .map((item) => OrderDetailRequest(
@@ -830,6 +836,7 @@ class NewOrderController extends GetxController {
       notes.value = '';
       promoCode.value = '';
       referralCode.value = '';
+      orderMethod.value = 'DINE_IN';
       selectedPaymentMethod.value = 'Tunai';
       cashAmount.value = 0.0;
       changeAmount.value = 0.0;

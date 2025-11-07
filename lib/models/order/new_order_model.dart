@@ -216,6 +216,7 @@ class OrderDetails {
   final String notes;
   final String referralCode;
   final String promoCode;
+  final String orderMethod;
 
   OrderDetails({
     required this.customerName,
@@ -224,6 +225,7 @@ class OrderDetails {
     required this.notes,
     required this.referralCode,
     required this.promoCode,
+    required this.orderMethod,
   });
 
   Map<String, dynamic> toJson() {
@@ -234,6 +236,7 @@ class OrderDetails {
       'notes': notes,
       'referral_code': referralCode,
       'promo_code': promoCode,
+      'order_method': orderMethod,
     };
   }
 }

@@ -81,6 +81,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   void _setupListeners() {
     try {
       productSearchController.addListener(_onSearchChanged);
+      referralCodeController.addListener(() {
+        orderController.updateReferralCode(referralCodeController.text);
+      });
     } catch (e) {
       print('Error setting up listeners: $e');
     }
@@ -1882,6 +1885,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    // Order Method Selection
+                    _buildOrderMethodSelector(),
+                    const SizedBox(height: 12),
                     // TAMBAH INI: Referral Code Field
                     _buildResponsiveTextField(
                       'Kode Referral',
@@ -1929,6 +1935,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    // Order Method Selection
+                    _buildOrderMethodSelector(),
                     const SizedBox(height: 12),
                     _buildResponsiveTextField(
                       'Kode Promo',
@@ -2144,6 +2153,129 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   void _validatePromoCode(String promoCode) {
     // This method is no longer needed as validation is handled by checkAndApplyPromo
     orderController.checkAndApplyPromo(promoCode);
+  }
+
+  Widget _buildOrderMethodSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Metode Order',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GetBuilder<NewOrderController>(
+          init: orderController,
+          builder: (controller) {
+            return Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      controller.orderMethod.value = 'DINE_IN';
+                      controller.update();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: controller.orderMethod.value == 'DINE_IN'
+                            ? Colors.blue.shade50
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: controller.orderMethod.value == 'DINE_IN'
+                              ? Colors.blue.shade600
+                              : Colors.grey.shade300,
+                          width: controller.orderMethod.value == 'DINE_IN' ? 2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.restaurant,
+                            color: controller.orderMethod.value == 'DINE_IN'
+                                ? Colors.blue.shade600
+                                : Colors.grey.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Dine In',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: controller.orderMethod.value == 'DINE_IN'
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: controller.orderMethod.value == 'DINE_IN'
+                                  ? Colors.blue.shade700
+                                  : Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      controller.orderMethod.value = 'TAKE_AWAY';
+                      controller.update();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: controller.orderMethod.value == 'TAKE_AWAY'
+                            ? Colors.orange.shade50
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: controller.orderMethod.value == 'TAKE_AWAY'
+                              ? Colors.orange.shade600
+                              : Colors.grey.shade300,
+                          width: controller.orderMethod.value == 'TAKE_AWAY' ? 2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shopping_bag,
+                            color: controller.orderMethod.value == 'TAKE_AWAY'
+                                ? Colors.orange.shade600
+                                : Colors.grey.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Take Away',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: controller.orderMethod.value == 'TAKE_AWAY'
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: controller.orderMethod.value == 'TAKE_AWAY'
+                                  ? Colors.orange.shade700
+                                  : Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 
   Widget _buildPaymentCard() {
