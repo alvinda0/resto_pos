@@ -451,6 +451,24 @@ class BluetoothPrinterManager {
     }
   }
 
+  // Get store address based on store name
+  String _getStoreAddress(String storeName) {
+    String name = storeName.toUpperCase();
+    
+    if (name.contains('GAMMA')) {
+      return 'Ruko Crown Golf Marina\n'
+             'Blok B.52-56, RT.6/RW.2\n'
+             'Kamal Muara, Jkt Utara\n'
+             'DKI Jakarta 14470';
+    } else {
+      return 'Rukan Cordoba\n'
+             'Jl. Marina Raya No.10 blok a\n'
+             'RT.6/RW.2, Kamal Muara\n'
+             'Penjaringan, North Jakarta\n'
+             'Jakarta 14470';
+    }
+  }
+
   // Generate role-specific print data
   List<int> _generateRoleSpecificPrintData(String role, Map<String, dynamic> orderData) {
     List<int> commands = [];
@@ -473,6 +491,12 @@ class BluetoothPrinterManager {
     // Reset formatting
     commands.addAll([0x1D, 0x21, 0x00]); // Normal size
     commands.addAll([0x1B, 0x45, 0x00]); // Bold off
+    
+    // Store address based on store name
+    String address = _getStoreAddress(storeName);
+    commands.addAll(utf8.encode("$address\n"));
+    commands.addAll(utf8.encode("--------------------------------\n"));
+    
     commands.addAll([0x1B, 0x61, 0x00]); // Left align
 
     // Order details

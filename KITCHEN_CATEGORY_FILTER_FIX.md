@@ -15,8 +15,14 @@ Menambahkan logika filter kategori di `BluetoothPrinterManager` untuk memisahkan
 - **Fungsi `_generateRoleSpecificPrintData`**: 
   - Menambahkan filter items berdasarkan role printer
   - Menampilkan store name di header struk
+  - Menampilkan alamat toko berdasarkan store name
   - Menampilkan jumlah item yang difilter untuk kitchen printers
   - Menambahkan checkbox di setiap item untuk ceklis manual
+
+- **Fungsi baru `_getStoreAddress`**:
+  - Mengembalikan alamat berdasarkan store name
+  - Gamma: Ruko Crown Golf Marina
+  - Selain Gamma: Rukan Cordoba
   
 - **Fungsi baru `_filterItemsByRole`**:
   - Memfilter items berdasarkan kategori
@@ -79,16 +85,27 @@ Menambahkan logika filter kategori di `BluetoothPrinterManager` untuk memisahkan
 ### Checkbox untuk Ceklis Manual
 Setiap item di struk print memiliki checkbox `[ ]` di pojok kanan untuk karyawan bisa ceklis dengan pulpen setelah item selesai dibuat.
 
-### Store Name di Header
-Nama toko (store_name) dari API akan ditampilkan di header struk menggantikan "SHAOKAO" default.
+### Store Name dan Alamat di Header
+Nama toko (store_name) dari API akan ditampilkan di header struk dengan alamat yang sesuai:
 
-Format struk lengkap:
+**Jika store_name = "Gamma":**
+- Alamat: Ruko Crown Golf Marina, Blok B.52-56, RT.6/RW.2, Kamal Muara, Jkt Utara, DKI Jakarta 14470
+
+**Jika store_name selain "Gamma":**
+- Alamat: Rukan Cordoba, Jl. Marina Raya No.10 blok a, RT.6/RW.2, Kamal Muara, Penjaringan, North Jakarta, Jakarta 14470
+
+Format struk lengkap (contoh untuk Gamma):
 ```
       KITCHEN MINUMAN
       ---------------
 
       == GAMMA ==
 
+Ruko Crown Golf Marina
+Blok B.52-56, RT.6/RW.2
+Kamal Muara, Jkt Utara
+DKI Jakarta 14470
+--------------------------------
 ID Pesanan: ABC12345
 Tanggal: 2024-01-15 10:30
 Customer: John Doe
