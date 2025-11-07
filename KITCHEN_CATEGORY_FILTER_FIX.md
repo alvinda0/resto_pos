@@ -65,6 +65,21 @@ Menambahkan logika filter kategori di `BluetoothPrinterManager` untuk memisahkan
 ### Makanan (dapur1):
 - Semua kategori SELAIN yang disebutkan di atas
 
+## Fitur Tambahan
+
+### Checkbox untuk Ceklis Manual
+Setiap item di struk print memiliki checkbox `[ ]` di pojok kanan untuk karyawan bisa ceklis dengan pulpen setelah item selesai dibuat.
+
+Format struk:
+```
+Nasi Goreng              [ ]
+  2x @ Rp25000
+
+Es Teh Manis             [ ]
+  1x @ Rp5000
+  Note: Gula sedikit
+```
+
 ## Testing
 
 Untuk menguji perubahan:
@@ -77,9 +92,10 @@ Untuk menguji perubahan:
    - Buka detail pesanan yang memiliki item makanan dan minuman
    - Klik tombol Print
    - Verifikasi:
-     - dapur1 hanya mencetak item makanan
-     - dapur2 hanya mencetak item minuman
-     - admin mencetak semua item
+     - dapur1 hanya mencetak item makanan dengan checkbox
+     - dapur2 hanya mencetak item minuman dengan checkbox
+     - admin mencetak semua item dengan checkbox
+     - Checkbox muncul di pojok kanan setiap item
 
 3. **Test Auto Print**:
    - Aktifkan Auto Print di kitchen screen

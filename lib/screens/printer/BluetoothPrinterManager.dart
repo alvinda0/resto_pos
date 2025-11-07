@@ -508,9 +508,13 @@ class BluetoothPrinterManager {
     if (filteredItems.isEmpty) {
       commands.addAll(utf8.encode("(Tidak ada item untuk kategori ini)\n\n"));
     } else {
-      // List filtered items with role-specific content
+      // List filtered items with role-specific content and checkbox
       for (var item in filteredItems) {
-        commands.addAll(utf8.encode("${item['productName']}\n"));
+        // Product name with checkbox on the right
+        String productLine = _formatLineWithCheckbox(item['productName']);
+        commands.addAll(utf8.encode("$productLine\n"));
+        
+        // Quantity and price
         commands.addAll(utf8.encode("  ${item['quantity']}x @ Rp${item['unitPrice'].toStringAsFixed(0)}\n"));
         
         // Only include item notes for kitchen printers (dapur1, dapur2), not admin
@@ -547,6 +551,36 @@ class BluetoothPrinterManager {
     commands.addAll([0x1D, 0x56, 0x00]); // Cut paper
 
     return commands;
+  }
+
+  // Format line with checkbox on the right (for thermal printer 32 chars width)
+  String _formatLineWithCheckbox(String text) {
+    try {
+      const int maxWidth = 32; // Standard thermal printer width
+      const String checkbox = "[ ]"; // Checkbox symbol
+      
+      // Calculate available space for text (total width - checkbox - 1 space)
+      int availableSpace = maxWidth - checkbox.length - 1;
+      
+      // Truncate text if too long
+      String displayText = text.length > availableSpace 
+          ? text.substring(0, availableSpace) 
+          : text;
+      
+      // Calculate padding needed
+      int padding = maxWidth - displayText.length - checkbox.length;
+      padding = padding.clamp(0, maxWidth);
+      
+      // Create padding string
+      String spaces = List.filled(padding, ' ').join();
+      
+      // Return formatted line: "Product Name          [ ]"
+      return displayText + spaces + checkbox;
+    } catch (e) {
+      // Fallback: return text with checkbox without formatting
+      print('MultiPrinterManager: Error formatting checkbox line: $e');
+      return '$text [ ]';
+    }
   }
 
   // Filter items based on printer role and category
